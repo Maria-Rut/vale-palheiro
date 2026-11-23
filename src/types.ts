@@ -157,6 +157,8 @@ export interface ScheduledMessage {
   statusNote?: string;
   subject?: string;
   body: string;
+  /** For the welcome email: what the recommendation agent picked and why. */
+  suggestions?: { date: string; activity: string; reason: string }[];
   /** Staff edited the wording — never overwrite it on re-plan. */
   edited?: boolean;
   sentAt?: string;

@@ -284,6 +284,23 @@
     .check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--earth-800); }
     .check input { margin-top: 3px; accent-color: var(--sage-dark); }
     .tabs { overflow-x: auto; scrollbar-width: none; }
+    .wx-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 8px; }
+    @media (max-width: 900px) { .wx-grid { grid-template-columns: repeat(2, 1fr); } }
+    .wx { background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px; font-size: 12.5px; color: var(--earth-700); }
+    .wx .d { font-family: var(--serif); font-size: 17px; color: var(--earth-800); }
+    .wx .t { font-size: 20px; font-family: var(--serif); color: var(--earth-900); margin: 2px 0 4px; }
+    .wx .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .cond { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--paper-2); color: var(--earth-700); }
+    .cond.rainy, .cond.showers { background: #dfe8f0; color: #3a5a74; }
+    .cond.sunny { background: #f6ebcf; color: #8a6412; }
+    .cond.big_sea { background: #d6e4ea; color: #24566b; font-weight: 600; }
+    .act { display: flex; gap: 14px; align-items: center; background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px; padding: 11px 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .act.off { opacity: 0.5; }
+    .act .info { flex: 1; min-width: 220px; font-size: 12.5px; color: var(--muted); }
+    .act .info b { font-size: 14px; color: var(--earth-800); font-weight: 600; }
+    .src-banner { font-size: 13px; padding: 10px 14px; border-radius: 10px; background: var(--paper-2); color: var(--earth-700); margin-bottom: 14px; }
+    .picks { margin: 0 20px 8px; padding: 10px 12px; border-radius: 8px; background: #eef2e6; font-size: 12.5px; color: var(--sage-dark); }
+    .picks div { margin-top: 2px; }
     .tabbtn { white-space: nowrap; }
     @media (max-width: 760px) {
       main { padding: 24px 16px 60px; }
@@ -338,6 +355,7 @@
         <button class="tabbtn" data-tab="tasks">Team tasks <span class="tab-count" id="taskCount"></span></button>
         <button class="tabbtn" data-tab="prefs">Guest preferences <span class="tab-count" id="prefCount"></span></button>
         <button class="tabbtn" data-tab="events">Events</button>
+        <button class="tabbtn" data-tab="weather">Weather &amp; activities</button>
         <button class="tabbtn" data-tab="property">Property info</button>
         <button class="tabbtn" data-tab="settings">Settings</button>
         <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
@@ -406,6 +424,18 @@
           </div>
           <div class="row-end"><button class="primary" type="submit">Add event</button></div>
         </form>
+      </section>
+
+      <section id="tab-weather" class="hidden">
+        <p class="hint muted" style="margin-top:0">
+          The recommendation agent reads the forecast for the estate and the sea, and picks one experience
+          for each day of a guest's stay. The picks go into the welcome email after check-in.
+        </p>
+        <div id="wxSource"></div>
+        <div class="wx-grid" id="forecast"></div>
+        <div class="section-title">Experiences the agent can suggest</div>
+        <p class="hint muted" style="margin-top:0">From the Experiences Menu. Switch one off (out of season, partner unavailable) and it won't be suggested.</p>
+        <div id="activities"></div>
       </section>
 
       <section id="tab-property" class="hidden">

@@ -20,6 +20,8 @@ import {
   setPreferences,
 } from "./preferences.ts";
 import { prop } from "./property.ts";
+import { getActivities, setActivityEnabled } from "./activities.ts";
+import { conditionsFor } from "./recommender.ts";
 
 /**
  * HTTP layer for Terra. Serves the staff dashboard and a small JSON API.
@@ -351,6 +353,25 @@ const server = http.createServer(async (req, res) => {
       updatePropertyInfo(patch);
       await scheduler.plan(); // re-render unedited messages with the new details
       return sendJson(res, 200, getPropertyInfo());
+    }
+
+    if (pathname === "/api/weather" && method === "GET") {
+      const f = scheduler.getForecast();
+      return sendJson(res, 200, {
+        ...scheduler.getWeatherStatus(),
+        fetchedAt: f?.fetchedAt,
+        days: (f?.days ?? []).slice(0, 7).map((d) => ({ ...d, conditions: conditionsFor(d) })),
+      });
+    }
+    if (pathname === "/api/activities" && method === "GET") {
+      return sendJson(res, 200, getActivities());
+    }
+    const actToggle = pathname.match(/^\/api\/activities\/([^/]+)\/toggle$/);
+    if (actToggle && method === "POST") {
+      const a = getActivities().find((x) => x.id === actToggle[1]);
+      const ok = !!a && setActivityEnabled(a.id, !a.enabled);
+      await scheduler.plan(); // re-pick suggestions in unsent welcome emails
+      return sendJson(res, ok ? 200 : 400, { ok });
     }
 
     if (pathname === "/api/simulate" && method === "POST") {

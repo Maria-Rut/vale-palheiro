@@ -24,6 +24,8 @@ export type PropertyKey =
   | "wifiNetwork"
   | "wifiPassword"
   | "receptionPhone"
+  | "email"
+  | "address"
   | "whatsappNumber"
   | "emergencyPhone"
   | "receptionHours"
@@ -52,8 +54,19 @@ const initial: PropertyInfo = {
   },
   receptionPhone: {
     label: "Reception phone",
-    value: "+351 282 000 000",
-    sample: true,
+    value: "+351 933 979 043",
+    sample: false,
+    help: "From the Experiences Menu.",
+  },
+  email: {
+    label: "Guest email",
+    value: "info@valepalheiro.com",
+    sample: false,
+  },
+  address: {
+    label: "Address",
+    value: "Rua Vale Palheiro, 8670-016 Aljezur",
+    sample: false,
   },
   whatsappNumber: {
     label: "WhatsApp (front office)",
@@ -98,7 +111,7 @@ const initial: PropertyInfo = {
   },
   mapsLink: {
     label: "Map link",
-    value: "https://maps.google.com/?q=Vale+Palheiro+Aljezur",
+    value: "https://maps.google.com/?q=Rua+Vale+Palheiro+8670-016+Aljezur",
     sample: true,
   },
   breakfastHours: {
