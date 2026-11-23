@@ -5,6 +5,9 @@
  * They are intentionally simple so the prototype can later map onto a real
  * PMS / booking system (Cloudbeds, Mews, Booking.com, etc.) without reshaping
  * the rest of the app.
+ *
+ * Fields mirror what Vale Palheiro's real booking flow captures (motive of
+ * stay, rate plan, breakfast, currency) so nothing here is invented.
  */
 
 /** Languages the resort serves (site is published in EN / PT / FR). */
@@ -13,15 +16,12 @@ export type Language = "en" | "pt" | "fr";
 /** Delivery channels a guest can be reached on. */
 export type Channel = "email" | "sms" | "whatsapp";
 
-/** Why the guest is visiting — drives tone and suggested experiences. */
-export type TripPurpose =
-  | "couple"
-  | "family"
-  | "solo"
-  | "friends"
-  | "hiking"
-  | "celebration"
-  | "business";
+/**
+ * Motive of stay — this is Vale Palheiro's actual booking-form field
+ * ("Business" / "Leisure" / "A little of both"). It gently shapes tone and the
+ * single experience we might mention, without inventing guest intent.
+ */
+export type Motive = "business" | "leisure" | "both";
 
 /** The two automated moments in the guest journey. */
 export type MessageKind = "pre_stay" | "post_stay";
@@ -45,14 +45,24 @@ export interface Reservation {
   /** Human-friendly booking reference shown to staff. */
   reference: string;
   guest: Guest;
-  /** Accommodation name, e.g. "Casa Atlantica", "Casita Oliveira". */
-  villa: string;
+  /**
+   * Accommodation booked. Vale Palheiro's collection is 13 villas, suites and
+   * casitas; confirmed real names are used where known (Casa Atlantica, Casa
+   * Lyra), otherwise a generic room type (Suite, Casita) — nothing invented.
+   */
+  accommodation: string;
   /** ISO datetime of arrival (check-in). */
   checkIn: string;
   /** ISO datetime of departure (check-out). */
   checkOut: string;
+  /** Number of guests, matching the booking ("1 Room, 2 Adults"). */
   partySize: number;
-  purpose: TripPurpose;
+  /** Real booking field: motive of stay. */
+  motive: Motive;
+  /** Rate plan as shown at booking, e.g. "Early Booking Rate". */
+  ratePlan: string;
+  /** Whether breakfast is included (true on breakfast-inclusive rates). */
+  breakfastIncluded: boolean;
   /** Optional free-text the staff noted, woven into personalisation. */
   notes?: string;
 }

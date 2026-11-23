@@ -22,18 +22,11 @@ function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2600);
+  setTimeout(() => t.classList.remove("show"), 2800);
 }
 
-function showLogin() {
-  $("#login").classList.remove("hidden");
-  $("#app").classList.add("hidden");
-}
-function showApp() {
-  $("#login").classList.add("hidden");
-  $("#app").classList.remove("hidden");
-  refreshAll();
-}
+function showLogin() { $("#login").classList.remove("hidden"); $("#app").classList.add("hidden"); }
+function showApp() { $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); refreshAll(); }
 
 // --- auth ---
 $("#loginForm").addEventListener("submit", async (e) => {
@@ -45,11 +38,7 @@ $("#loginForm").addEventListener("submit", async (e) => {
   if (res.ok) { $("#loginErr").textContent = ""; showApp(); }
   else $("#loginErr").textContent = res.error || "Login failed";
 });
-
-$("#logoutBtn").addEventListener("click", async () => {
-  await api.post("/api/logout");
-  showLogin();
-});
+$("#logoutBtn").addEventListener("click", async () => { await api.post("/api/logout"); showLogin(); });
 
 // --- tabs ---
 document.querySelectorAll(".tabbtn").forEach((btn) => {
@@ -63,34 +52,31 @@ document.querySelectorAll(".tabbtn").forEach((btn) => {
   });
 });
 
-// --- config ---
+// --- save timing ---
 $("#applyConfig").addEventListener("click", async () => {
-  const cfg = await api.post("/api/config", {
+  await api.post("/api/config", {
     preStayHoursBefore: Number($("#preHours").value),
     postStayHoursAfter: Number($("#postHours").value),
-    channelStrategy: $("#channelStrategy").value,
   });
-  toast("Schedule updated");
+  toast("Message timing saved");
   renderMessages();
 });
 
-// --- simulate ---
+// --- demo: simulate ---
 $("#simBtn").addEventListener("click", async () => {
   const hrs = Number($("#simSelect").value);
   const res = await api.post("/api/simulate", { atHoursFromNow: hrs });
   toast(res.sentCount > 0
-    ? `Scheduler ran — ${res.sentCount} message(s) delivered`
-    : "Scheduler ran — nothing due yet");
+    ? `${res.sentCount} message(s) sent`
+    : "Nothing due to send yet");
   renderMessages();
   renderLog();
 });
 
-// --- rendering ---
+// --- helpers ---
 function fmt(iso) {
-  const d = new Date(iso);
-  return d.toLocaleString(undefined, {
-    weekday: "short", day: "numeric", month: "short",
-    hour: "2-digit", minute: "2-digit",
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
   });
 }
 function relative(iso) {
@@ -100,42 +86,56 @@ function relative(iso) {
   if (h > 0 && h < 48) return `in ${h}h`;
   if (h < 0 && h > -48) return `${-h}h ago`;
   const d = Math.round(h / 24);
-  return d > 0 ? `in ${d}d` : `${-d}d ago`;
+  return d > 0 ? `in ${d} days` : `${-d} days ago`;
 }
+const KIND_LABEL = { pre_stay: "Welcome", post_stay: "Thank-you" };
+const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
+const MOTIVE_LABEL = { business: "Business", leisure: "Leisure", both: "Business & leisure" };
+const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
 
-const KIND_LABEL = { pre_stay: "Pre-stay", post_stay: "Post-stay" };
+function statusDotColor(status) {
+  return status === "sent" ? "#4f8a3f" : status === "cancelled" ? "#bbb" : "#c3a079";
+}
 
 async function renderMessages() {
   const msgs = await api.get("/api/messages");
+  $("#msgCount").textContent = `(${msgs.length})`;
   const el = $("#messages");
   el.innerHTML = "";
+  if (!msgs.length) { el.innerHTML = `<p class="empty">No messages planned.</p>`; return; }
+
   for (const m of msgs) {
+    const g = m.guest ?? {};
     const card = document.createElement("div");
     card.className = "msg-card";
     const kindClass = m.kind === "pre_stay" ? "pre" : "post";
+    const channelNote = m.channel === "email"
+      ? "Sent by email"
+      : `Short message sent by ${CHANNEL_LABEL[m.channel]}`;
+
     card.innerHTML = `
       <div class="msg-head">
-        <span class="who">${m.guest?.firstName ?? ""} ${m.guest?.lastName ?? ""}</span>
-        <span class="muted sans" style="font-size:12px">${m.villa ?? ""} · ${m.reference ?? ""}</span>
-        <span class="pill ${kindClass}">${KIND_LABEL[m.kind]}</span>
-        <span class="pill ${m.channel}">${m.channel}</span>
-        <span class="pill lang">${m.language}</span>
+        <span class="who">${esc(g.firstName)} ${esc(g.lastName)}</span>
+        <span class="book">${esc(m.accommodation)} · ${esc(MOTIVE_LABEL[m.motive] || "")} · ${esc(m.reference)}</span>
         <span class="spacer"></span>
-        <span class="pill ${m.status}">${m.status}</span>
+        <span class="pill ${kindClass}">${KIND_LABEL[m.kind]}</span>
+        <span class="pill ${m.channel}">${CHANNEL_LABEL[m.channel]}</span>
+        <span class="pill lang">${LANG_LABEL[m.language]}</span>
+        <span class="pill ${m.status}"><span class="status-dot" style="background:${statusDotColor(m.status)}"></span>${m.status}</span>
       </div>
+      <div class="channel-note">${channelNote}</div>
       <div class="msg-body">
-        ${m.subject ? `<div class="msg-subject">${escapeHtml(m.subject)}</div>` : ""}
-        <div class="msg-text">${escapeHtml(m.body)}</div>
-        <div class="msg-meta">
-          <span>Send ${relative(m.sendAt)} · ${fmt(m.sendAt)}</span>
-          <span>Copy by: ${m.generatedBy === "llm" ? "AI model" : "brand template"}</span>
-          ${m.sentAt ? `<span>Delivered ${fmt(m.sentAt)}</span>` : ""}
-        </div>
+        ${m.subject ? `<div class="msg-subject">${esc(m.subject)}</div>` : ""}
+        <div class="msg-text">${esc(m.body)}</div>
+      </div>
+      <div class="msg-meta">
+        <span>${m.status === "sent" ? "Sent " + fmt(m.sentAt) : "Sends " + relative(m.sendAt) + " · " + fmt(m.sendAt)}</span>
+        <span>Written by ${m.generatedBy === "llm" ? "AI, from the Vale Palheiro voice" : "the Vale Palheiro template"}</span>
       </div>
       ${m.status === "scheduled" ? `
       <div class="msg-actions">
         <button class="ghost" data-edit="${m.id}">Edit wording</button>
-        <button class="ghost" data-cancel="${m.id}">Cancel</button>
+        <button class="ghost" data-cancel="${m.id}">Don't send</button>
       </div>` : ""}
     `;
     el.appendChild(card);
@@ -146,7 +146,7 @@ async function renderMessages() {
   el.querySelectorAll("[data-cancel]").forEach((b) =>
     b.addEventListener("click", async () => {
       await api.post(`/api/messages/${b.dataset.cancel}/cancel`);
-      toast("Message cancelled");
+      toast("Message won't be sent");
       renderMessages();
     }));
 }
@@ -157,12 +157,16 @@ function openEditor(id, msgs) {
   const card = [...document.querySelectorAll(".msg-card")]
     .find((c) => c.querySelector(`[data-edit="${id}"]`));
   const body = card.querySelector(".msg-body");
+  const actions = card.querySelector(".msg-actions");
+  if (actions) actions.style.display = "none";
   body.innerHTML = `
-    ${m.subject !== undefined ? `<input id="editSubject" value="${escapeAttr(m.subject ?? "")}" />` : ""}
-    <textarea id="editBody">${escapeHtml(m.body)}</textarea>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="primary" id="saveEdit">Save</button>
-      <button class="ghost" id="cancelEdit">Discard</button>
+    <div class="edit-area">
+      ${m.subject !== undefined ? `<input id="editSubject" value="${escAttr(m.subject ?? "")}" placeholder="Subject" />` : ""}
+      <textarea id="editBody">${esc(m.body)}</textarea>
+      <div style="display:flex;gap:10px">
+        <button class="primary" id="saveEdit">Save</button>
+        <button class="ghost" id="cancelEdit">Discard</button>
+      </div>
     </div>
   `;
   body.querySelector("#saveEdit").addEventListener("click", async () => {
@@ -178,9 +182,10 @@ function openEditor(id, msgs) {
 
 async function renderLog() {
   const log = await api.get("/api/sent-log");
+  $("#logCount").textContent = `(${log.length})`;
   const el = $("#log");
   if (!log.length) {
-    el.innerHTML = `<p class="muted">Nothing delivered yet. Use “Run scheduler” to send what’s due.</p>`;
+    el.innerHTML = `<p class="empty">Nothing sent yet. Use the demo tools to send what's due.</p>`;
     return;
   }
   el.innerHTML = "";
@@ -189,14 +194,14 @@ async function renderLog() {
     d.className = "log-item";
     d.innerHTML = `
       <div class="top">
-        <span class="pill ${item.channel}">${item.channel}</span>
-        <b>${escapeHtml(item.guestName)}</b>
-        <span class="muted sans">${escapeHtml(item.villa)} · ${item.to}</span>
+        <span class="pill ${item.channel}">${CHANNEL_LABEL[item.channel]}</span>
+        <b>${esc(item.guestName)}</b>
+        <span class="muted">${esc(item.accommodation)} · to ${esc(item.to)}</span>
         <span class="spacer"></span>
-        <span class="muted sans" style="font-size:12px">${fmt(item.at)}</span>
+        <span class="muted" style="font-size:12px">${fmt(item.at)}</span>
       </div>
-      ${item.subject ? `<div><b>${escapeHtml(item.subject)}</b></div>` : ""}
-      <div class="msg-text" style="font-size:13px">${escapeHtml(item.body)}</div>
+      ${item.subject ? `<div class="msg-subject" style="font-size:16px">${esc(item.subject)}</div>` : ""}
+      <div class="msg-text" style="font-size:13.5px">${esc(item.body)}</div>
     `;
     el.appendChild(d);
   }
@@ -206,21 +211,14 @@ async function loadConfig() {
   const cfg = await api.get("/api/config");
   $("#preHours").value = cfg.preStayHoursBefore;
   $("#postHours").value = cfg.postStayHoursAfter;
-  $("#channelStrategy").value = cfg.channelStrategy;
 }
 
-function refreshAll() {
-  loadConfig();
-  renderMessages();
-}
+function refreshAll() { loadConfig(); renderMessages(); }
 
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+function esc(s) {
+  return String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
-function escapeAttr(s) {
-  return escapeHtml(s).replaceAll('"', "&quot;");
-}
+function escAttr(s) { return esc(s).replaceAll('"', "&quot;"); }
 
 // --- boot ---
 (async () => {

@@ -110,12 +110,20 @@ function serveStatic(res: ServerResponse, urlPath: string): void {
 
 function withReservationContext() {
   const byId = Object.fromEntries(scheduler.getReservations().map((r) => [r.id, r]));
-  return scheduler.getMessages().map((m) => ({
-    ...m,
-    guest: byId[m.reservationId]?.guest,
-    villa: byId[m.reservationId]?.villa,
-    reference: byId[m.reservationId]?.reference,
-  }));
+  return scheduler.getMessages().map((m) => {
+    const r = byId[m.reservationId];
+    return {
+      ...m,
+      guest: r?.guest,
+      accommodation: r?.accommodation,
+      reference: r?.reference,
+      motive: r?.motive,
+      ratePlan: r?.ratePlan,
+      partySize: r?.partySize,
+      checkIn: r?.checkIn,
+      checkOut: r?.checkOut,
+    };
+  });
 }
 
 // --- router ---

@@ -1,14 +1,18 @@
 import type { Reservation } from "./types.ts";
 
 /**
- * Fictional reservations for the demo. Villa names and the surrounding detail
- * are drawn from Vale Palheiro's real offering (13 villas, suites and casitas;
- * Casa Atlantica is their five-bedroom family villa) so the messages feel true
- * to the place. No real guest data is used.
+ * Fictional reservations for the demo. Everything factual is kept accurate to
+ * Vale Palheiro:
+ *   - Accommodation: only confirmed real names (Casa Atlantica — the 5-bedroom
+ *     villa; Casa Lyra — the two-bedroom villa) plus generic room *types*
+ *     (Suite, Casita) for the rest. No invented proper names.
+ *   - Rate plans and fields mirror the real booking flow (Early Booking Rate,
+ *     Non-refundable, breakfast included, motive of stay, EUR, +351).
+ * No real guest data is used — names, emails and phone numbers are fictional.
  *
  * Dates are generated relative to "now" so the demo always has a reservation
- * arriving soon (good for the pre-stay demo) and one that just checked out
- * (good for the post-stay demo), regardless of when it is run.
+ * arriving soon (for the pre-stay demo) and one that just checked out (for the
+ * post-stay demo), regardless of when it is run.
  */
 
 function iso(offsetHours: number): string {
@@ -21,13 +25,15 @@ export const reservations: Reservation[] = [
   {
     id: "res_001",
     reference: "VP-7F3A",
-    villa: "Casa Atlantica",
+    accommodation: "Casa Atlantica",
     // Arrives in ~3h, so the pre-stay message (2h before) is imminent.
     checkIn: iso(3),
     checkOut: iso(3 + 5 * DAY),
     partySize: 6,
-    purpose: "family",
-    notes: "Two young children. Requested a cot and late dinner at The Barn.",
+    motive: "leisure",
+    ratePlan: "Early Booking Rate",
+    breakfastIncluded: true,
+    notes: "Travelling with children. Requested a cot and a late dinner at The Barn.",
     guest: {
       id: "gst_001",
       firstName: "Charlotte",
@@ -41,13 +47,15 @@ export const reservations: Reservation[] = [
   {
     id: "res_002",
     reference: "VP-2B9C",
-    villa: "Casita Oliveira",
+    accommodation: "Casa Lyra",
     // Checked out ~20h ago, so the post-stay message (1 day after) is due.
     checkIn: iso(-6 * DAY),
     checkOut: iso(-20),
     partySize: 2,
-    purpose: "couple",
-    notes: "Celebrating a 10th wedding anniversary.",
+    motive: "both",
+    ratePlan: "Flexible Rate",
+    breakfastIncluded: true,
+    notes: "Returning guests. Enjoyed the spa.",
     guest: {
       id: "gst_002",
       firstName: "Miguel",
@@ -61,13 +69,15 @@ export const reservations: Reservation[] = [
   {
     id: "res_003",
     reference: "VP-5K1D",
-    villa: "Suite Cistus",
+    accommodation: "Suite",
     // Arrives in ~30h — upcoming, pre-stay still scheduled for later.
     checkIn: iso(30),
     checkOut: iso(30 + 3 * DAY),
     partySize: 2,
-    purpose: "hiking",
-    notes: "Walking the Rota Vicentina. Early breakfast requested.",
+    motive: "leisure",
+    ratePlan: "Early Booking Rate",
+    breakfastIncluded: true,
+    notes: "Planning to walk the Rota Vicentina. Early breakfast requested.",
     guest: {
       id: "gst_003",
       firstName: "Sophie",
@@ -81,13 +91,15 @@ export const reservations: Reservation[] = [
   {
     id: "res_004",
     reference: "VP-9Q4E",
-    villa: "Casita Medronho",
+    accommodation: "Casita",
     // Arrives in ~1h — pre-stay window already passed, good to show "sent".
     checkIn: iso(1),
     checkOut: iso(1 + 2 * DAY),
     partySize: 1,
-    purpose: "solo",
-    notes: "Writer on a quiet retreat. Prefers minimal contact.",
+    motive: "business",
+    ratePlan: "Non-refundable Rate",
+    breakfastIncluded: false,
+    notes: "Here to work for a few days. Prefers minimal contact.",
     guest: {
       id: "gst_004",
       firstName: "James",
@@ -101,13 +113,15 @@ export const reservations: Reservation[] = [
   {
     id: "res_005",
     reference: "VP-3T8F",
-    villa: "Villa Figueira",
+    accommodation: "Villa",
     // Checked out ~2 days ago.
     checkIn: iso(-5 * DAY),
     checkOut: iso(-2 * DAY),
     partySize: 4,
-    purpose: "friends",
-    notes: "Group of old university friends. Loved the wine cellar.",
+    motive: "leisure",
+    ratePlan: "Flexible Rate",
+    breakfastIncluded: true,
+    notes: "Group travelling together. Enjoyed dinner at The Barn.",
     guest: {
       id: "gst_005",
       firstName: "Ana",

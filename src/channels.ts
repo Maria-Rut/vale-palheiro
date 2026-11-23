@@ -25,7 +25,7 @@ export interface SentRecord {
   subject?: string;
   body: string;
   guestName: string;
-  villa: string;
+  accommodation: string;
 }
 
 const sentLog: SentRecord[] = [];
@@ -50,7 +50,7 @@ function record(
     subject: message.subject,
     body: message.body,
     guestName: `${reservation.guest.firstName} ${reservation.guest.lastName}`,
-    villa: reservation.villa,
+    accommodation: reservation.accommodation,
   });
 }
 

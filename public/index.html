@@ -4,149 +4,203 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Terra · Vale Palheiro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <style>
     :root {
-      --earth-900: #2e241b;
+      --earth-900: #2b2117;
+      --earth-800: #3a2d1f;
       --earth-700: #5a4632;
       --earth-500: #8a6f4e;
-      --clay: #b08963;
-      --sand: #e9dfcf;
-      --paper: #f6f1e7;
+      --clay: #a87f54;
+      --clay-soft: #c3a079;
+      --sand: #e7dcc8;
+      --paper: #f4efe4;
+      --paper-2: #efe8d9;
       --sage: #7c8a6a;
-      --sage-dark: #5d6a4e;
-      --white: #fffdf9;
-      --line: #ddd0bb;
-      --ok: #5d6a4e;
-      --muted: #9a8c77;
-      --shadow: 0 6px 24px rgba(46, 36, 27, 0.10);
+      --sage-dark: #566049;
+      --white: #fffdf8;
+      --line: #ddceb5;
+      --line-soft: #e6dac4;
+      --muted: #9c8d75;
+      --shadow: 0 10px 30px rgba(43, 33, 23, 0.08);
+      --shadow-sm: 0 3px 12px rgba(43, 33, 23, 0.06);
+      --serif: "Cormorant Garamond", "Georgia", "Times New Roman", serif;
+      --sans: -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif;
     }
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      font-family: "Georgia", "Times New Roman", serif;
-      background: var(--paper);
-      color: var(--earth-900);
-      line-height: 1.55;
+      margin: 0; font-family: var(--sans); background: var(--paper);
+      color: var(--earth-900); line-height: 1.6; -webkit-font-smoothing: antialiased;
     }
-    .sans { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: 0.3px; }
+    .serif { font-family: var(--serif); }
+    .muted { color: var(--muted); }
+
+    /* ---------- top bar ---------- */
     header.topbar {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 28px;
-      background: var(--earth-900);
-      color: var(--sand);
-      box-shadow: var(--shadow);
+      padding: 20px 32px; background: var(--earth-900); color: var(--sand);
     }
-    .brand { display: flex; flex-direction: column; }
-    .brand .name { font-size: 20px; letter-spacing: 2px; text-transform: uppercase; }
-    .brand .sub { font-size: 12px; color: var(--clay); letter-spacing: 1px; }
+    .brand { display: flex; flex-direction: column; line-height: 1.2; }
+    .brand .name { font-family: var(--serif); font-size: 24px; letter-spacing: 4px; text-transform: uppercase; }
+    .brand .sub { font-size: 11px; color: var(--clay-soft); letter-spacing: 3px; margin-top: 2px; }
     .topbar button {
-      background: transparent; color: var(--sand);
-      border: 1px solid var(--earth-500);
-      padding: 7px 14px; border-radius: 6px; cursor: pointer;
-      font-family: inherit;
+      background: transparent; color: var(--sand); border: 1px solid var(--earth-500);
+      padding: 8px 16px; border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 13px;
+      transition: background 0.2s;
     }
     .topbar button:hover { background: var(--earth-700); }
 
-    main { max-width: 1120px; margin: 0 auto; padding: 28px; }
-    h2 { font-weight: normal; letter-spacing: 1px; margin: 28px 0 10px; }
-    .muted { color: var(--muted); }
+    main { max-width: 1040px; margin: 0 auto; padding: 32px 28px 72px; }
 
-    /* Login */
-    .login-wrap {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      background:
-        linear-gradient(rgba(46,36,27,0.55), rgba(46,36,27,0.75)),
-        radial-gradient(circle at 30% 20%, #b08963, #5a4632 70%);
+    .intro { margin: 8px 0 26px; }
+    .intro h1 { font-size: 34px; margin: 0 0 6px; color: var(--earth-800); }
+    .intro p { margin: 0; color: var(--earth-700); max-width: 640px; font-size: 15px; }
+
+    /* ---------- settings panels ---------- */
+    .panels { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; margin-bottom: 30px; }
+    @media (max-width: 760px) { .panels { grid-template-columns: 1fr; } }
+    .panel {
+      background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px;
+      padding: 20px 22px; box-shadow: var(--shadow-sm);
     }
-    .login-card {
-      background: var(--paper); padding: 40px; border-radius: 12px;
-      width: 360px; box-shadow: var(--shadow); text-align: center;
+    .panel h3 { margin: 0 0 4px; font-size: 20px; color: var(--earth-800); }
+    .panel .hint { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+    .panel.demo { background: var(--paper-2); border-style: dashed; border-color: var(--line); }
+    .demo-tag {
+      display: inline-block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--clay); border: 1px solid var(--clay-soft); border-radius: 999px;
+      padding: 2px 9px; margin-left: 8px; vertical-align: middle;
     }
-    .login-card .name { font-size: 22px; letter-spacing: 3px; text-transform: uppercase; }
-    .login-card .sub { font-size: 12px; color: var(--clay); letter-spacing: 2px; margin-bottom: 24px; }
-    input, select, textarea {
-      font-family: inherit; font-size: 14px;
-      width: 100%; padding: 10px 12px; margin: 6px 0;
-      border: 1px solid var(--line); border-radius: 6px; background: var(--white);
-      color: var(--earth-900);
+
+    .timing-row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .timing-item { flex: 1; min-width: 190px; }
+    .timing-item .lead { font-size: 14px; color: var(--earth-800); font-weight: 600; margin-bottom: 2px; }
+    .timing-item .explain { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; min-height: 32px; }
+    .stepper { display: flex; align-items: center; gap: 8px; }
+    .stepper input {
+      width: 64px; text-align: center; font-family: var(--sans); font-size: 15px;
+      padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--white);
     }
-    textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
+    .stepper .unit { font-size: 13px; color: var(--earth-700); }
+
+    label.block { display: block; font-size: 13px; color: var(--earth-800); font-weight: 600; margin-bottom: 6px; }
+    select {
+      font-family: var(--sans); font-size: 14px; padding: 9px 12px; border: 1px solid var(--line);
+      border-radius: 8px; background: var(--white); color: var(--earth-900); width: 100%;
+    }
+    .row-end { display: flex; justify-content: flex-end; margin-top: 16px; }
+
     button.primary {
-      background: var(--sage-dark); color: var(--white); border: none;
-      padding: 11px 18px; border-radius: 6px; cursor: pointer; font-family: inherit;
-      font-size: 14px; letter-spacing: 0.5px;
+      background: var(--sage-dark); color: var(--white); border: none; padding: 11px 22px;
+      border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 14px; letter-spacing: 0.3px;
+      transition: background 0.2s;
     }
     button.primary:hover { background: var(--sage); }
     button.ghost {
-      background: transparent; border: 1px solid var(--line); color: var(--earth-700);
-      padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: inherit;
+      background: var(--white); border: 1px solid var(--line); color: var(--earth-700);
+      padding: 9px 18px; border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 13px;
+      transition: background 0.2s;
     }
     button.ghost:hover { background: var(--sand); }
-    .err { color: #9b3b2f; font-size: 13px; min-height: 18px; }
 
-    /* Controls bar */
-    .controls {
-      display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
-      background: var(--white); border: 1px solid var(--line);
-      padding: 16px 18px; border-radius: 10px; box-shadow: var(--shadow);
-    }
-    .field { display: flex; flex-direction: column; font-size: 12px; }
-    .field label { color: var(--earth-700); letter-spacing: 0.5px; margin-bottom: 2px; }
-    .field input, .field select { width: 150px; margin: 0; }
+    .demo-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .demo-controls .field { flex: 1; min-width: 150px; }
 
-    /* Cards / table */
-    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-    .msg-card {
-      background: var(--white); border: 1px solid var(--line); border-radius: 10px;
-      box-shadow: var(--shadow); overflow: hidden;
-    }
-    .msg-head {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-      padding: 14px 18px; border-bottom: 1px solid var(--line);
-      background: linear-gradient(var(--white), var(--paper));
-    }
-    .msg-head .who { font-size: 16px; }
-    .pill {
-      font-family: -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.5px;
-      padding: 3px 9px; border-radius: 999px; text-transform: uppercase;
-    }
-    .pill.pre { background: #e3ead7; color: var(--sage-dark); }
-    .pill.post { background: var(--sand); color: var(--earth-700); }
-    .pill.email { background: #dce6ef; color: #3a5a74; }
-    .pill.sms { background: #efe3dc; color: #7a4a36; }
-    .pill.whatsapp { background: #dcefe0; color: #2e7d4f; }
-    .pill.scheduled { background: #efe9dc; color: var(--earth-700); }
-    .pill.sent { background: #d9e8d4; color: #3f6b36; }
-    .pill.cancelled { background: #eee; color: #999; text-decoration: line-through; }
-    .pill.lang { background: #ece6f0; color: #5a4a6a; }
-    .spacer { flex: 1; }
-    .msg-body { padding: 16px 18px; }
-    .msg-subject { font-weight: bold; margin-bottom: 8px; }
-    .msg-text { white-space: pre-wrap; font-size: 15px; color: var(--earth-900); }
-    .msg-meta { font-size: 12px; color: var(--muted); margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; }
-    .msg-actions { display: flex; gap: 8px; padding: 0 18px 16px; }
-
-    .log-item {
-      background: var(--white); border: 1px solid var(--line); border-radius: 8px;
-      padding: 10px 14px; font-size: 13px; margin-bottom: 8px;
-    }
-    .log-item .top { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
-    .hidden { display: none; }
-    .section-note { font-size: 13px; color: var(--muted); margin: 2px 0 14px; }
+    /* ---------- tabs ---------- */
+    .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
     .tabbtn {
       background: transparent; border: none; border-bottom: 2px solid transparent;
-      font-family: inherit; font-size: 15px; padding: 8px 4px; margin-right: 18px;
-      cursor: pointer; color: var(--muted);
+      font-family: var(--serif); font-size: 19px; padding: 6px 4px 12px; margin-right: 22px;
+      cursor: pointer; color: var(--muted); transition: color 0.2s;
     }
     .tabbtn.active { color: var(--earth-900); border-bottom-color: var(--clay); }
+    .tab-count { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-left: 4px; }
+
+    /* ---------- message cards ---------- */
+    .grid { display: grid; gap: 16px; }
+    .msg-card {
+      background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px;
+      box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow 0.2s;
+    }
+    .msg-card:hover { box-shadow: var(--shadow); }
+    .msg-head {
+      display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center;
+      padding: 16px 20px 12px;
+    }
+    .msg-head .who { font-family: var(--serif); font-size: 20px; color: var(--earth-800); }
+    .msg-head .book { font-size: 12.5px; color: var(--muted); }
+    .spacer { flex: 1; }
+    .pill {
+      font-size: 11px; letter-spacing: 0.4px; padding: 3px 11px; border-radius: 999px; text-transform: capitalize;
+      border: 1px solid transparent;
+    }
+    .pill.pre { background: #e6ecd9; color: var(--sage-dark); }
+    .pill.post { background: var(--sand); color: var(--earth-700); }
+    .pill.email { background: #dfe8f0; color: #3a5a74; }
+    .pill.sms { background: #f0e4da; color: #7a4a36; }
+    .pill.whatsapp { background: #dcefe0; color: #2e7d4f; }
+    .pill.lang { background: #ece6f0; color: #5a4a6a; text-transform: uppercase; }
+    .pill.scheduled { background: #efe8d7; color: var(--earth-700); }
+    .pill.sent { background: #d7e7d1; color: #3f6b36; }
+    .pill.cancelled { background: #eee; color: #999; text-decoration: line-through; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+    .msg-sub { padding: 0 20px; }
+    .channel-note { font-size: 12.5px; color: var(--muted); padding: 0 20px 4px; }
+    .msg-body { padding: 8px 20px 4px; }
+    .msg-subject { font-family: var(--serif); font-size: 18px; color: var(--earth-800); margin-bottom: 8px; }
+    .msg-text { white-space: pre-wrap; font-size: 14.5px; color: var(--earth-900); }
+    .msg-meta {
+      font-size: 12px; color: var(--muted); padding: 12px 20px 16px; margin-top: 8px;
+      display: flex; gap: 18px; flex-wrap: wrap; border-top: 1px solid var(--line-soft);
+    }
+    .msg-actions { display: flex; gap: 10px; padding: 0 20px 18px; }
+
+    .edit-area { padding: 4px 20px 16px; }
+    .edit-area input, .edit-area textarea {
+      width: 100%; font-family: var(--sans); font-size: 14px; padding: 10px 12px;
+      border: 1px solid var(--line); border-radius: 8px; background: var(--white); margin-bottom: 8px;
+    }
+    .edit-area textarea { min-height: 170px; resize: vertical; line-height: 1.55; }
+
+    /* ---------- delivery log ---------- */
+    .log-item {
+      background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px;
+      padding: 14px 18px; margin-bottom: 12px; box-shadow: var(--shadow-sm);
+    }
+    .log-item .top { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .log-item .top b { font-family: var(--serif); font-size: 17px; }
+
+    /* ---------- login ---------- */
+    .login-wrap {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background:
+        linear-gradient(rgba(43,33,23,0.55), rgba(43,33,23,0.80)),
+        radial-gradient(circle at 35% 25%, #a87f54, #3a2d1f 72%);
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--paper); padding: 44px 40px; border-radius: 16px; width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+    }
+    .login-card .name { font-family: var(--serif); font-size: 28px; letter-spacing: 5px; text-transform: uppercase; color: var(--earth-800); }
+    .login-card .sub { font-size: 11px; color: var(--clay); letter-spacing: 3px; margin: 6px 0 28px; }
+    .login-card input {
+      width: 100%; font-family: var(--sans); font-size: 14px; padding: 12px 14px; margin: 7px 0;
+      border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--earth-900);
+    }
+    .login-card .primary { width: 100%; margin-top: 6px; padding: 13px; }
+    .err { color: #9b3b2f; font-size: 13px; min-height: 18px; margin-top: 8px; }
+    .demo-creds { font-size: 12px; color: var(--muted); margin-top: 22px; line-height: 1.7; }
+
+    .hidden { display: none; }
     .toast {
-      position: fixed; bottom: 24px; right: 24px; background: var(--earth-900);
-      color: var(--sand); padding: 12px 18px; border-radius: 8px; box-shadow: var(--shadow);
-      font-family: -apple-system, sans-serif; font-size: 14px; opacity: 0;
-      transform: translateY(10px); transition: all 0.25s; pointer-events: none;
+      position: fixed; bottom: 26px; right: 26px; background: var(--earth-900); color: var(--sand);
+      padding: 13px 20px; border-radius: 10px; box-shadow: var(--shadow); font-size: 14px;
+      opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
+    .empty { color: var(--muted); font-size: 14px; padding: 20px 0; }
   </style>
 </head>
 <body>
@@ -154,14 +208,15 @@
   <div id="login" class="login-wrap">
     <form class="login-card" id="loginForm">
       <div class="name">Vale Palheiro</div>
-      <div class="sub">Earth Resort · Terra concierge</div>
+      <div class="sub">EARTH RESORT · TERRA</div>
       <input id="username" placeholder="Staff username" autocomplete="username" />
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      <button class="primary" type="submit">Enter</button>
       <div class="err" id="loginErr"></div>
-      <button class="primary" style="width:100%" type="submit">Enter</button>
-      <p class="muted" style="font-size:12px;margin-top:18px">
-        Demo login — user <b>palheiro</b> / pass <b>costa-vicentina</b>
-      </p>
+      <div class="demo-creds">
+        Demo login<br />
+        user <b>palheiro</b> · pass <b>costa-vicentina</b>
+      </div>
     </form>
   </div>
 
@@ -172,63 +227,85 @@
         <span class="name">Vale Palheiro</span>
         <span class="sub">TERRA · GUEST MESSAGING</span>
       </div>
-      <button id="logoutBtn" class="sans">Sign out</button>
+      <button id="logoutBtn">Sign out</button>
     </header>
 
     <main>
-      <div class="controls">
-        <div class="field">
-          <label>Pre-stay (hours before arrival)</label>
-          <input id="preHours" type="number" min="0" step="1" />
-        </div>
-        <div class="field">
-          <label>Post-stay (hours after departure)</label>
-          <input id="postHours" type="number" min="0" step="1" />
-        </div>
-        <div class="field">
-          <label>Channels per guest</label>
-          <select id="channelStrategy">
-            <option value="preferred">Preferred only (recommended)</option>
-            <option value="all">All opted-in channels</option>
-          </select>
-        </div>
-        <button class="primary" id="applyConfig">Apply</button>
-        <div class="spacer"></div>
-        <div class="field">
-          <label>Simulate time passing</label>
-          <select id="simSelect">
-            <option value="0">Now</option>
-            <option value="3">+3 hours</option>
-            <option value="25">+25 hours</option>
-            <option value="168">+1 week</option>
-          </select>
-        </div>
-        <button class="ghost" id="simBtn">Run scheduler</button>
+      <div class="intro">
+        <h1>Guest messages</h1>
+        <p>
+          Terra prepares a warm, personal message for every guest before they arrive
+          and after they leave — in their own language, on their preferred channel.
+          Review the wording here, edit anything you like, and Terra sends each one at the right moment.
+        </p>
       </div>
 
-      <div style="margin-top:22px">
-        <button class="tabbtn active" data-tab="messages">Scheduled messages</button>
-        <button class="tabbtn" data-tab="log">Delivery log</button>
+      <div class="panels">
+        <!-- Timing panel -->
+        <div class="panel">
+          <h3>When messages are sent</h3>
+          <p class="hint">Set how far from a guest's stay each message goes out. This applies to everyone.</p>
+          <div class="timing-row">
+            <div class="timing-item">
+              <div class="lead">Welcome message</div>
+              <div class="explain">Sent shortly <b>before</b> the guest arrives.</div>
+              <div class="stepper">
+                <input id="preHours" type="number" min="0" step="1" />
+                <span class="unit">hours before arrival</span>
+              </div>
+            </div>
+            <div class="timing-item">
+              <div class="lead">Thank-you message</div>
+              <div class="explain">Sent a little <b>after</b> the guest checks out.</div>
+              <div class="stepper">
+                <input id="postHours" type="number" min="0" step="1" />
+                <span class="unit">hours after departure</span>
+              </div>
+            </div>
+          </div>
+          <div class="row-end">
+            <button class="primary" id="applyConfig">Save timing</button>
+          </div>
+        </div>
+
+        <!-- Demo panel -->
+        <div class="panel demo">
+          <h3>Demo tools <span class="demo-tag">demo only</span></h3>
+          <p class="hint">
+            In real life Terra sends automatically at the right time. Here you can
+            jump the clock forward to watch it happen now.
+          </p>
+          <div class="demo-controls">
+            <div class="field">
+              <label class="block">Pretend it is…</label>
+              <select id="simSelect">
+                <option value="0">Right now</option>
+                <option value="3">3 hours from now</option>
+                <option value="25">Tomorrow</option>
+                <option value="168">Next week</option>
+              </select>
+            </div>
+            <button class="ghost" id="simBtn">Send anything due</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tabbtn active" data-tab="messages">Messages <span class="tab-count" id="msgCount"></span></button>
+        <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
       </div>
 
       <section id="tab-messages">
-        <p class="section-note">
-          Every planned pre-stay and post-stay message. Preview, edit the wording,
-          or cancel before it goes out. Messages whose send time has passed are
-          delivered automatically when the scheduler runs.
-        </p>
         <div class="grid" id="messages"></div>
       </section>
 
       <section id="tab-log" class="hidden">
-        <p class="section-note">What has actually been delivered (mock senders in this demo).</p>
         <div id="log"></div>
       </section>
     </main>
   </div>
 
   <div class="toast" id="toast"></div>
-
   <script src="/app.js"></script>
 </body>
 </html>

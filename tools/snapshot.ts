@@ -41,7 +41,7 @@ function card(m: ScheduledMessage): string {
   <div class="card">
     <div class="head">
       <span class="who">${esc(g?.firstName)} ${esc(g?.lastName)}</span>
-      <span class="meta">${esc(r?.villa)} · ${esc(r?.reference)}</span>
+      <span class="meta">${esc(r?.accommodation)} · ${esc(r?.reference)}</span>
       <span class="pill ${m.kind === "pre_stay" ? "pre" : "post"}">${KIND[m.kind]}</span>
       <span class="pill ch">${m.channel}</span>
       <span class="pill lang">${m.language}</span>
@@ -95,7 +95,7 @@ All messages shown as delivered because time was fast-forwarded one week. This f
       (l) => `<div class="log"><div class="top">
       <span class="pill ch">${l.channel}</span>
       <b>${esc(l.guestName)}</b>
-      <span class="meta">${esc(l.villa)} · ${esc(l.to)}</span></div>
+      <span class="meta">${esc(l.accommodation)} · ${esc(l.to)}</span></div>
       ${l.subject ? `<div><b>${esc(l.subject)}</b></div>` : ""}
       <div class="text" style="font-size:13px">${esc(l.body)}</div></div>`,
     )

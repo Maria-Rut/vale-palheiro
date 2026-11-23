@@ -1,4 +1,4 @@
-import type { Language, TripPurpose } from "./types.ts";
+import type { Language, Motive } from "./types.ts";
 
 /**
  * Brand voice definition for Vale Palheiro — Earth Resort.
@@ -7,8 +7,9 @@ import type { Language, TripPurpose } from "./types.ts";
  * and to keep them *out* of "spam" territory: no exclamation-heavy hype, no
  * generic marketing lines, concrete references to the valley and the resort.
  *
- * This same object is also handed to the LLM generator as its system/style
- * guidance when a live model is available in production.
+ * All `facts` below are verified from Vale Palheiro's own site and press
+ * coverage — nothing invented. This same object is also handed to the LLM
+ * generator as its style guidance when a live model is available in production.
  */
 
 export const BRAND = {
@@ -18,12 +19,13 @@ export const BRAND = {
   /** One-line voice guide, reused for the LLM prompt. */
   voice:
     "Calm, warm and unhurried. Grounded in nature and the valley. Speaks like a thoughtful host, never like an advert. Short sentences. No hype, no exclamation marks stacked up, no pushy calls to action.",
-  /** Concrete, true details we can weave in so copy feels real, not generic. */
+  /** Verified, concrete details we can weave in so copy feels real, not generic. */
   facts: {
     location: "the Costa Vicentina, near Aljezur",
     setting: "a 280-acre protected valley beside the Aljezur river",
-    welcomeSpace: "Casa da Ribeira", // the welcome lounge
+    welcomeSpace: "Casa da Ribeira", // the welcome lounge where stays begin
     restaurant: "The Barn", // on-site restaurant
+    spa: "the spa", // spa / massages on site
     trail: "the Rota Vicentina", // nearby hiking trail
     material: "taipa", // compressed-earth walls
   },
@@ -44,46 +46,47 @@ export const SIGNOFF: Record<Language, string> = {
 };
 
 /**
- * A short, purpose-specific line that makes each message feel personal rather
- * than templated. Keyed by trip purpose and language.
+ * A short, motive-specific line that makes each message feel personal rather
+ * than templated — keyed by the guest's real booking "motive of stay" field,
+ * so we never guess intent we don't have. It references only verified
+ * facilities (The Barn, the spa, the Rota Vicentina, the valley).
  */
-export const PURPOSE_LINE: Record<
-  TripPurpose,
-  Record<Language, string>
-> = {
-  couple: {
-    en: "We've set aside a quiet corner of the valley for the two of you.",
-    pt: "Reservámos um recanto tranquilo do vale para os dois.",
-    fr: "Nous vous avons réservé un coin paisible de la vallée, rien que pour vous deux.",
+export const MOTIVE_LINE: Record<MessageKind_, Record<Motive, Record<Language, string>>> = {
+  pre_stay: {
+    business: {
+      en: "The valley makes for a clear head — a good place to work as well as to rest.",
+      pt: "O vale clareia as ideias — um bom lugar para trabalhar e também para descansar.",
+      fr: "La vallée éclaircit l'esprit — un bon endroit pour travailler autant que pour se reposer.",
+    },
+    leisure: {
+      en: "The valley is quiet and the pace is slow — exactly as it should be.",
+      pt: "O vale está tranquilo e o ritmo é calmo — tal como deve ser.",
+      fr: "La vallée est paisible et le rythme est lent — exactement comme il se doit.",
+    },
+    both: {
+      en: "Whether you're here to work or simply to slow down, the valley has room for both.",
+      pt: "Quer venha trabalhar ou apenas abrandar, o vale tem espaço para ambos.",
+      fr: "Que vous veniez travailler ou simplement ralentir, la vallée a de la place pour les deux.",
+    },
   },
-  family: {
-    en: "There's plenty of room for everyone to roam, and little hands are always welcome in the kitchen garden.",
-    pt: "Há muito espaço para todos explorarem, e as mãos pequeninas são sempre bem-vindas na horta.",
-    fr: "Il y a de la place pour que chacun s'évade, et les petites mains sont toujours bienvenues au potager.",
-  },
-  solo: {
-    en: "We'll keep things gentle and unintrusive, so you can simply be here.",
-    pt: "Manteremos tudo sereno e discreto, para que possa simplesmente estar aqui.",
-    fr: "Nous resterons discrets, pour que vous puissiez simplement être ici.",
-  },
-  friends: {
-    en: "The long table and the wine cellar are ready whenever you are.",
-    pt: "A mesa comprida e a garrafeira estão prontas quando quiserem.",
-    fr: "La grande table et la cave à vin vous attendent.",
-  },
-  hiking: {
-    en: "The Rota Vicentina starts almost at our doorstep — we'll have an early breakfast ready for you.",
-    pt: "A Rota Vicentina começa quase à nossa porta — teremos um pequeno-almoço cedo à sua espera.",
-    fr: "La Rota Vicentina commence presque à notre porte — un petit-déjeuner matinal vous attendra.",
-  },
-  celebration: {
-    en: "We'd love to help mark the occasion — let us know if there's anything we can quietly arrange.",
-    pt: "Gostaríamos de ajudar a celebrar a ocasião — diga-nos se houver algo que possamos preparar discretamente.",
-    fr: "Nous serions ravis de célébrer l'occasion — dites-nous si nous pouvons organiser quelque chose en toute discrétion.",
-  },
-  business: {
-    en: "The valley makes for a clear head — a good place to think as well as to rest.",
-    pt: "O vale clareia as ideias — um bom lugar para pensar e também para descansar.",
-    fr: "La vallée éclaircit l'esprit — un bon endroit pour réfléchir autant que pour se reposer.",
+  post_stay: {
+    business: {
+      en: "We hope the valley gave you some space to think.",
+      pt: "Esperamos que o vale lhe tenha dado algum espaço para pensar.",
+      fr: "Nous espérons que la vallée vous a offert un peu d'espace pour réfléchir.",
+    },
+    leisure: {
+      en: "We hope you took a little of its calm home with you.",
+      pt: "Esperamos que tenha levado consigo um pouco da calma daqui.",
+      fr: "Nous espérons que vous êtes reparti avec un peu du calme d'ici.",
+    },
+    both: {
+      en: "We hope you found both the quiet and the focus you came for.",
+      pt: "Esperamos que tenha encontrado o sossego e a concentração que procurava.",
+      fr: "Nous espérons que vous avez trouvé le calme et la concentration que vous cherchiez.",
+    },
   },
 };
+
+// Local alias to avoid importing MessageKind just for this map's key type.
+type MessageKind_ = "pre_stay" | "post_stay";
