@@ -327,7 +327,7 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 function inline(s: string): string {
-  return esc(s).replace(/https?:\/\/[^\s<]+[^\s<.,;:)]/g, (u) => `<a href="${u}" style="color:#7a5c3e">${u}</a>`);
+  return esc(s).replace(/https?:\/\/[^\s<]+[^\s<.,;:)]/g, (u) => `<a href="${u}" target="_blank" rel="noopener" style="color:#7a5c3e">${u}</a>`);
 }
 
 const C = { ink: "#2a241f", muted: "#7b7067", accent: "#7a5c3e", bg: "#f4efe6", card: "#fffdf8", line: "#e6ddcf" };
@@ -353,7 +353,7 @@ export function toEmailHtml(body: string): string {
       const btn = l.match(/^\[([^\]]+)\]\((\S+)\)$/);
       if (btn) {
         flush();
-        out.push(`<p style="margin:4px 0 20px"><a href="${esc(btn[2])}" style="display:inline-block;background:${C.accent};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600;font-size:15px">${esc(btn[1])}</a></p>`);
+        out.push(`<p style="margin:4px 0 20px"><a href="${esc(btn[2])}" target="_blank" rel="noopener" style="display:inline-block;background:${C.accent};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600;font-size:15px">${esc(btn[1])}</a></p>`);
       } else if (l.startsWith("## ")) {
         flush();
         out.push(`<h2 style="font-family:Georgia,serif;font-weight:normal;font-size:19px;margin:8px 0 8px;color:${C.ink}">${esc(l.slice(3))}</h2>`);

@@ -173,10 +173,16 @@ const STEPS: { key: TemplateKey; title: string; when: string }[] = [
 ];
 const LANGS: Language[] = ["en", "pt", "fr"];
 
+/** Kept for the whole run so answers on an example guest's page stick. */
+const exampleReservations = exampleGuests().map((e) => e.reservation);
+
 async function templatePreviews(key: TemplateKey, lang: Language | "own") {
   const kind = key === "arrival_text" ? "arrival_day" : key;
   const channel = key === "arrival_text" ? "whatsapp" : "email";
-  return Promise.all(exampleGuests().map(async (e) => {
+  return Promise.all(exampleGuests().map(async (e, i) => {
+    // Same booking (so the guest-page link and any answers stay put), dates kept fresh.
+    Object.assign(exampleReservations[i], { checkIn: e.reservation.checkIn, checkOut: e.reservation.checkOut });
+    e.reservation = exampleReservations[i];
     const l = lang === "own" ? e.reservation.guest.language : lang;
     const out = await scheduler.preview(e.reservation, kind, l, { returning: e.returning, channel });
     return {
@@ -251,7 +257,9 @@ const server = http.createServer(async (req, res) => {
     // token in the link is the only key, so guests never need to log in.
     const stayMatch = pathname.match(/^\/api\/stay\/([A-Za-z0-9_-]{16,64})$/);
     if (stayMatch && (method === "GET" || method === "POST")) {
-      const r = findByToken(scheduler.getReservations(), stayMatch[1]);
+      // Example guests from the Emails tab get a working page too, so the
+      // button in the template preview can be tried out.
+      const r = findByToken(scheduler.getReservations(), stayMatch[1]) ?? findByToken(exampleReservations, stayMatch[1]);
       if (!r) return sendJson(res, 404, { error: "not_found" });
       if (method === "GET") return sendJson(res, 200, guestView(r));
       if (!preferencesOpen(r)) return sendJson(res, 409, { error: "closed" });
