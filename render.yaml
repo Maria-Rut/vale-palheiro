@@ -1,0 +1,19 @@
+# Render deployment config for Terra.
+# One free web service that runs the Node server directly from source.
+# See https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: vale-palheiro
+    runtime: node
+    plan: free
+    # No external deps, so there is nothing to build — just ensure Node is present.
+    buildCommand: "echo no build needed"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_VERSION
+        value: "22.11.0"
+      # Change these in the Render dashboard to set your own staff login.
+      - key: TERRA_USER
+        value: "palheiro"
+      - key: TERRA_PASS
+        value: "costa-vicentina"

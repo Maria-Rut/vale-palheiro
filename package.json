@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Terra — guest messaging concierge for Vale Palheiro Earth Resort. Automates personalised pre-stay and post-stay messages across email, SMS and WhatsApp.",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "dev": "node --watch --experimental-strip-types src/server.ts",

@@ -25,6 +25,7 @@ declare module "node:http" {
     end(body?: unknown): void;
   }
   export interface Server {
+    listen(port: number, host?: string, cb?: () => void): this;
     listen(port: number, cb?: () => void): this;
   }
   export function createServer(

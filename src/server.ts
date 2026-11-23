@@ -208,7 +208,10 @@ const server = http.createServer(async (req, res) => {
 });
 
 const PORT = Number(process.env.PORT ?? 3000);
-server.listen(PORT, () => {
-  console.log(`Terra running at http://localhost:${PORT}`);
+// Bind to 0.0.0.0 so cloud hosts (Render, Railway, Fly, etc.) can route to it.
+// Locally this is still reachable at http://localhost:PORT.
+const HOST = process.env.HOST ?? "0.0.0.0";
+server.listen(PORT, HOST, () => {
+  console.log(`Terra running on ${HOST}:${PORT} (locally: http://localhost:${PORT})`);
   console.log(`Staff login — user: ${STAFF_USER}  pass: ${STAFF_PASS}`);
 });

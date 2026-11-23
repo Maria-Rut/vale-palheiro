@@ -100,7 +100,10 @@ public/
 
 This is the demo. To present it to Vale Palheiro as a hosted pilot:
 
-1. **Hosting** — deploy to any Node host; add real staff accounts.
+1. **Hosting** — a `render.yaml` is included for one-click deploy to
+   [Render](https://render.com) (free tier). Connect the repo and it goes live
+   at a public URL; set `TERRA_USER` / `TERRA_PASS` in the dashboard for real
+   staff accounts. Any other Node host works too.
 2. **Real sending** — add SendGrid (email) and Twilio (SMS + WhatsApp) keys.
    WhatsApp requires Meta-approved message templates for the pre-stay/post-stay
    moments.
