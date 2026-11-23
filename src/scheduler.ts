@@ -40,6 +40,15 @@ export interface SchedulerConfig {
    * every channel they opted into.
    */
   channelStrategy: "preferred" | "all";
+  /**
+   * Which messages must be approved by staff before Terra will send them.
+   *   - "uncertain" : hold only the less-predictable ones (experiences, which
+   *                   depend on the forecast; and anything staff edited). The
+   *                   rest send automatically. (default)
+   *   - "all"       : hold every message for approval.
+   *   - "none"      : send everything automatically (no approval step).
+   */
+  approvalPolicy: "uncertain" | "all" | "none";
 }
 
 export const DEFAULT_CONFIG: SchedulerConfig = {
@@ -48,7 +57,15 @@ export const DEFAULT_CONFIG: SchedulerConfig = {
   experiencesHoursAfter: 3,
   postStayHoursAfter: 24,
   channelStrategy: "preferred",
+  approvalPolicy: "uncertain",
 };
+
+/**
+ * Message kinds that are "uncertain" and so are held for approval under the
+ * default policy. Experiences emails depend on the (simulated) forecast and
+ * auto-selected activities, so a human should glance at them before they go.
+ */
+const UNCERTAIN_KINDS: ReadonlySet<MessageKind> = new Set(["experiences"]);
 
 const ALL_KINDS: MessageKind[] = ["preferences", "pre_stay", "experiences", "post_stay"];
 
@@ -158,6 +175,15 @@ export class Scheduler {
    * that config/preview/weather/preferences changes take effect without
    * re-sending.
    */
+  /** Initial status for a freshly planned message, given the approval policy. */
+  private initialStatus(kind: MessageKind): "needs_approval" | "scheduled" {
+    const policy = this.config.approvalPolicy;
+    if (policy === "none") return "scheduled";
+    if (policy === "all") return "needs_approval";
+    // "uncertain": hold only the less-predictable kinds.
+    return UNCERTAIN_KINDS.has(kind) ? "needs_approval" : "scheduled";
+  }
+
   async plan(): Promise<void> {
     for (const r of this.reservations) {
       for (const kind of ALL_KINDS) {
@@ -175,6 +201,8 @@ export class Scheduler {
           });
 
           if (existing) {
+            // Preserve staff decisions (approved/cancelled/edited); only refresh
+            // the copy and send time. A still-held message stays held.
             existing.sendAt = this.sendAtFor(r, kind);
             existing.subject = generated.subject;
             existing.body = generated.body;
@@ -187,7 +215,7 @@ export class Scheduler {
               channel,
               language: r.guest.language,
               sendAt: this.sendAtFor(r, kind),
-              status: "scheduled",
+              status: this.initialStatus(kind),
               subject: generated.subject,
               body: generated.body,
               generatedBy: generated.generatedBy,
@@ -216,18 +244,31 @@ export class Scheduler {
     return undefined;
   }
 
-  /** Lets staff edit the generated copy before it goes out. */
+  /**
+   * Lets staff edit the generated copy before it goes out. Editing makes the
+   * message "uncertain" again, so it returns to needs_approval (unless the
+   * policy is "none") and must be re-approved before sending.
+   */
   editMessage(id: string, patch: { subject?: string; body?: string }): boolean {
     const m = this.messages.get(id);
-    if (!m || m.status !== "scheduled") return false;
+    if (!m || (m.status !== "scheduled" && m.status !== "needs_approval")) return false;
     if (patch.subject !== undefined) m.subject = patch.subject;
     if (patch.body !== undefined) m.body = patch.body;
+    if (this.config.approvalPolicy !== "none") m.status = "needs_approval";
+    return true;
+  }
+
+  /** Staff approves a held message so Terra may send it at its send time. */
+  approveMessage(id: string): boolean {
+    const m = this.messages.get(id);
+    if (!m || m.status !== "needs_approval") return false;
+    m.status = "scheduled";
     return true;
   }
 
   cancelMessage(id: string): boolean {
     const m = this.messages.get(id);
-    if (!m || m.status !== "scheduled") return false;
+    if (!m || (m.status !== "scheduled" && m.status !== "needs_approval")) return false;
     m.status = "cancelled";
     return true;
   }

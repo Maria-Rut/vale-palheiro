@@ -79,17 +79,17 @@
     .demo-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .demo-controls .field { flex: 1; min-width: 150px; }
 
-    .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; flex-wrap: wrap; }
-    .tabbtn { background: transparent; border: none; border-bottom: 2px solid transparent; font-family: var(--serif); font-size: 19px; padding: 6px 4px 12px; margin-right: 22px; cursor: pointer; color: var(--muted); transition: color 0.2s; }
-    .tabbtn.active { color: var(--earth-900); border-bottom-color: var(--clay); }
-    .tab-count { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-left: 4px; }
+    /* main navigation: one tab per step */
+    .mainnav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 14px 28px; background: var(--paper-2); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+    .navbtn { background: transparent; border: 1px solid transparent; color: var(--earth-700); font-family: var(--sans); font-size: 14px; padding: 9px 16px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
+    .navbtn:hover { background: var(--sand); }
+    .navbtn.active { background: var(--earth-800); color: var(--sand); }
+    .nav-count { opacity: 0.65; margin-left: 4px; font-size: 12px; }
+    .nav-sep { flex: 1; }
+    @media (max-width: 760px) { .nav-sep { flex-basis: 100%; height: 0; } }
 
-    .subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-    .subtab { background: var(--white); border: 1px solid var(--line); color: var(--earth-700); font-family: var(--sans); font-size: 13px; padding: 8px 15px; border-radius: 999px; cursor: pointer; transition: all 0.2s; }
-    .subtab:hover { background: var(--sand); }
-    .subtab.active { background: var(--earth-800); color: var(--sand); border-color: var(--earth-800); }
-    .sub-count { opacity: 0.7; margin-left: 3px; }
-    .stage-desc { font-size: 13.5px; color: var(--muted); margin: 0 0 18px; }
+    .view-title { font-size: 28px; color: var(--earth-800); margin: 4px 0 4px; }
+    .view-desc { font-size: 14px; color: var(--muted); margin: 0 0 22px; max-width: 640px; }
 
     .grid { display: grid; gap: 16px; }
     .msg-card { background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow 0.2s; }
@@ -108,6 +108,7 @@
     .pill.whatsapp { background: #dcefe0; color: #2e7d4f; }
     .pill.lang { background: #ece6f0; color: #5a4a6a; text-transform: uppercase; }
     .pill.scheduled { background: #efe8d7; color: var(--earth-700); }
+    .pill.needs_approval { background: #f3e2c9; color: #9a6a1e; }
     .pill.sent { background: #d7e7d1; color: #3f6b36; }
     .pill.cancelled { background: #eee; color: #999; text-decoration: line-through; }
     .pill.weather { background: #eef1e8; color: #5a6a44; }
@@ -175,53 +176,74 @@
       <button id="logoutBtn">Sign out</button>
     </header>
 
+    <nav class="mainnav" id="mainnav">
+      <button class="navbtn active" data-tab="preferences">1 week before <span class="nav-count" id="cnt-preferences"></span></button>
+      <button class="navbtn" data-tab="pre_stay">2h before <span class="nav-count" id="cnt-pre_stay"></span></button>
+      <button class="navbtn" data-tab="experiences">After check-in <span class="nav-count" id="cnt-experiences"></span></button>
+      <button class="navbtn" data-tab="post_stay">Post-stay <span class="nav-count" id="cnt-post_stay"></span></button>
+      <button class="navbtn" data-tab="needs_approval">Needs approval <span class="nav-count" id="cnt-needs_approval"></span></button>
+      <button class="navbtn" data-tab="sent">Sent <span class="nav-count" id="cnt-sent"></span></button>
+      <span class="nav-sep"></span>
+      <button class="navbtn" data-tab="crm">Guests</button>
+      <button class="navbtn" data-tab="settings">Settings</button>
+    </nav>
+
     <main>
-      <div class="intro">
-        <h1>Guest journey</h1>
-        <p>
-          Terra looks after four warm, personal messages across each guest's stay — from a first
-          note asking their preferences, to a weather-based tip once they arrive. Review and edit
-          everything here. The CRM keeps each guest's preferences in one place.
-        </p>
-      </div>
+      <!-- MESSAGE STEP VIEWS (one per step) -->
+      <section id="view-messages">
+        <h2 class="view-title" id="viewTitle"></h2>
+        <p class="view-desc" id="viewDesc"></p>
+        <div class="grid" id="messages"></div>
+      </section>
 
-      <div class="journey">
-        <div class="stage"><div class="n">1 · BEFORE</div><div class="t">Preferences</div><div class="w">Asks the questionnaire, days ahead</div></div>
-        <div class="stage"><div class="n">2 · BEFORE</div><div class="t">Welcome</div><div class="w">Shortly before arrival</div></div>
-        <div class="stage"><div class="n">3 · DURING</div><div class="t">Experiences</div><div class="w">After check-in, by the weather</div></div>
-        <div class="stage"><div class="n">4 · AFTER</div><div class="t">Thank-you</div><div class="w">A day after checkout</div></div>
-      </div>
+      <!-- GUESTS / CRM -->
+      <section id="view-crm" class="hidden">
+        <h2 class="view-title">Guests &amp; preferences</h2>
+        <p class="view-desc">Each guest's booking, questionnaire answers, and the forecast that drives their After-check-in email.</p>
+        <div id="crm"></div>
+      </section>
 
-      <div class="panels">
-        <div class="panel">
+      <!-- SETTINGS -->
+      <section id="view-settings" class="hidden">
+        <h2 class="view-title">Settings</h2>
+        <div class="panel" style="max-width:620px">
           <h3>When each message is sent</h3>
-          <p class="hint">Set how far from the stay each message goes out. Applies to every guest.</p>
+          <p class="hint">How far from the stay each message goes out. Applies to every guest.</p>
           <div class="timing-grid">
             <div class="timing-item">
-              <div class="lead">1 · Preferences request</div>
-              <div class="explain">A questionnaire, sent well before arrival.</div>
+              <div class="lead">1 week before</div>
+              <div class="explain">The preferences questionnaire.</div>
               <div class="stepper"><input id="prefDays" type="number" min="0" step="1" /><span class="unit">days before arrival</span></div>
             </div>
             <div class="timing-item">
-              <div class="lead">2 · Welcome</div>
-              <div class="explain">"We're waiting for you", just before arrival.</div>
+              <div class="lead">2h before</div>
+              <div class="explain">The welcome message.</div>
               <div class="stepper"><input id="preHours" type="number" min="0" step="1" /><span class="unit">hours before arrival</span></div>
             </div>
             <div class="timing-item">
-              <div class="lead">3 · Experiences</div>
-              <div class="explain">Weather-based ideas, soon after check-in.</div>
+              <div class="lead">After check-in</div>
+              <div class="explain">Weather-based experience ideas.</div>
               <div class="stepper"><input id="expHours" type="number" min="0" step="1" /><span class="unit">hours after arrival</span></div>
             </div>
             <div class="timing-item">
-              <div class="lead">4 · Thank-you</div>
-              <div class="explain">Thanks and a note for feedback, after checkout.</div>
+              <div class="lead">Post-stay</div>
+              <div class="explain">Thanks and a note for feedback.</div>
               <div class="stepper"><input id="postHours" type="number" min="0" step="1" /><span class="unit">hours after departure</span></div>
             </div>
           </div>
-          <div class="row-end"><button class="primary" id="applyConfig">Save timing</button></div>
+          <div style="margin-top:18px">
+            <label class="block">Approval before sending</label>
+            <select id="approvalPolicy">
+              <option value="uncertain">Only uncertain messages (recommended)</option>
+              <option value="all">Every message needs approval</option>
+              <option value="none">Send everything automatically</option>
+            </select>
+            <p class="hint" style="margin-top:6px">"Uncertain" holds the After-check-in email (weather-based) and anything staff edit, until someone approves it.</p>
+          </div>
+          <div class="row-end"><button class="primary" id="applyConfig">Save settings</button></div>
         </div>
 
-        <div class="panel demo">
+        <div class="panel demo" style="max-width:620px;margin-top:18px">
           <h3>Demo tools <span class="demo-tag">demo only</span></h3>
           <p class="hint">In real life Terra sends automatically at the right time, using a live weather forecast. Here you can jump the clock forward to watch it happen.</p>
           <div class="demo-controls">
@@ -238,26 +260,7 @@
             <button class="ghost" id="simBtn">Send anything due</button>
           </div>
         </div>
-      </div>
-
-      <div class="tabs">
-        <button class="tabbtn active" data-tab="messages">Messages <span class="tab-count" id="msgCount"></span></button>
-        <button class="tabbtn" data-tab="crm">Guests &amp; preferences <span class="tab-count" id="crmCount"></span></button>
-        <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
-      </div>
-
-      <section id="tab-messages">
-        <div class="subtabs" id="stageTabs">
-          <button class="subtab active" data-stage="preferences">Preferences <span class="sub-count" id="cnt-preferences"></span></button>
-          <button class="subtab" data-stage="pre_stay">Welcome · 2h before <span class="sub-count" id="cnt-pre_stay"></span></button>
-          <button class="subtab" data-stage="experiences">After check-in <span class="sub-count" id="cnt-experiences"></span></button>
-          <button class="subtab" data-stage="post_stay">Post-stay <span class="sub-count" id="cnt-post_stay"></span></button>
-        </div>
-        <p class="stage-desc" id="stageDesc"></p>
-        <div class="grid" id="messages"></div>
       </section>
-      <section id="tab-crm" class="hidden"><div id="crm"></div></section>
-      <section id="tab-log" class="hidden"><div id="log"></div></section>
     </main>
   </div>
 

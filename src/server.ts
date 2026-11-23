@@ -193,6 +193,9 @@ const server = http.createServer(async (req, res) => {
       if (b.channelStrategy === "preferred" || b.channelStrategy === "all") {
         patch.channelStrategy = b.channelStrategy;
       }
+      if (["uncertain", "all", "none"].includes(b.approvalPolicy as string)) {
+        patch.approvalPolicy = b.approvalPolicy;
+      }
       scheduler.setConfig(patch);
       await scheduler.plan();
       return sendJson(res, 200, scheduler.getConfig());
@@ -251,6 +254,12 @@ const server = http.createServer(async (req, res) => {
         subject: typeof subject === "string" ? subject : undefined,
         body: typeof body === "string" ? body : undefined,
       });
+      return sendJson(res, ok ? 200 : 400, { ok });
+    }
+
+    const approveMatch = pathname.match(/^\/api\/messages\/([^/]+)\/approve$/);
+    if (approveMatch && method === "POST") {
+      const ok = scheduler.approveMessage(approveMatch[1]);
       return sendJson(res, ok ? 200 : 400, { ok });
     }
 

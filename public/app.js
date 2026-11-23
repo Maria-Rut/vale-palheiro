@@ -35,16 +35,21 @@ $("#loginForm").addEventListener("submit", async (e) => {
 });
 $("#logoutBtn").addEventListener("click", async () => { await api.post("/api/logout"); showLogin(); });
 
-document.querySelectorAll(".tabbtn").forEach((btn) => {
+// Which steps are "message" tabs (vs crm / settings).
+const MESSAGE_TABS = ["preferences", "pre_stay", "experiences", "post_stay", "needs_approval", "sent"];
+let activeTab = "preferences";
+
+document.querySelectorAll(".navbtn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".tabbtn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".navbtn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-    const tab = btn.dataset.tab;
-    $("#tab-messages").classList.toggle("hidden", tab !== "messages");
-    $("#tab-crm").classList.toggle("hidden", tab !== "crm");
-    $("#tab-log").classList.toggle("hidden", tab !== "log");
-    if (tab === "crm") renderCrm();
-    if (tab === "log") renderLog();
+    activeTab = btn.dataset.tab;
+    $("#view-messages").classList.toggle("hidden", !MESSAGE_TABS.includes(activeTab));
+    $("#view-crm").classList.toggle("hidden", activeTab !== "crm");
+    $("#view-settings").classList.toggle("hidden", activeTab !== "settings");
+    if (activeTab === "crm") renderCrm();
+    else if (activeTab === "settings") { /* static */ }
+    else renderMessages();
   });
 });
 
@@ -54,8 +59,9 @@ $("#applyConfig").addEventListener("click", async () => {
     preStayHoursBefore: Number($("#preHours").value),
     experiencesHoursAfter: Number($("#expHours").value),
     postStayHoursAfter: Number($("#postHours").value),
+    approvalPolicy: $("#approvalPolicy").value,
   });
-  toast("Message timing saved");
+  toast("Settings saved");
   renderMessages();
 });
 
@@ -63,7 +69,7 @@ $("#simBtn").addEventListener("click", async () => {
   const hrs = Number($("#simSelect").value);
   const res = await api.post("/api/simulate", { atHoursFromNow: hrs });
   toast(res.sentCount > 0 ? `${res.sentCount} message(s) sent` : "Nothing due to send yet");
-  renderMessages(); renderLog();
+  renderMessages();
 });
 
 function fmt(iso) {
@@ -92,41 +98,77 @@ const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
 const WEATHER_LABEL = { sunny: "☀ Sunny", cloudy: "⛅ Cloudy", rainy: "🌧 Rainy", windy: "💨 Windy" };
 const INTEREST_LABEL = { land_trails: "Land & trails", sea_coast: "Sea & coast", wellbeing: "Wellbeing", food_wine: "Food & wine", crafts: "Crafts" };
 const PACE_LABEL = { active: "Active", balanced: "Balanced", restful: "Restful" };
+const STATUS_LABEL = { needs_approval: "needs approval", scheduled: "scheduled", sent: "sent", cancelled: "cancelled" };
 
-function statusDotColor(s) { return s === "sent" ? "#4f8a3f" : s === "cancelled" ? "#bbb" : "#c3a079"; }
+function statusDotColor(s) {
+  return s === "sent" ? "#4f8a3f" : s === "cancelled" ? "#bbb" : s === "needs_approval" ? "#d79a2e" : "#c3a079";
+}
 
-let activeStage = "preferences";
-const STAGE_DESC = {
-  preferences: "The earliest email. Invites the guest to fill an easy questionnaire so the team has time to prepare.",
+/** Action buttons depend on status: held messages can be approved. */
+function actionsFor(m) {
+  if (m.status === "needs_approval") {
+    return `<div class="msg-actions">
+      <button class="primary" data-approve="${m.id}">Approve &amp; send</button>
+      <button class="ghost" data-edit="${m.id}">Edit wording</button>
+      <button class="ghost" data-cancel="${m.id}">Don't send</button>
+    </div>`;
+  }
+  if (m.status === "scheduled") {
+    return `<div class="msg-actions">
+      <button class="ghost" data-edit="${m.id}">Edit wording</button>
+      <button class="ghost" data-cancel="${m.id}">Don't send</button>
+    </div>`;
+  }
+  return "";
+}
+
+const TAB_TITLE = {
+  preferences: "1 week before · Preferences",
+  pre_stay: "2h before · Welcome",
+  experiences: "After check-in · Experiences",
+  post_stay: "Post-stay · Thank-you",
+  needs_approval: "Needs approval",
+  sent: "Sent",
+};
+const TAB_DESC = {
+  preferences: "The earliest email — invites the guest to fill an easy questionnaire so the team has time to prepare.",
   pre_stay: "The welcome message, sent shortly before the guest arrives.",
-  experiences: "Sent after check-in. Suggests activities matched to the day's weather and the guest's interests.",
+  experiences: "Sent after check-in — activities matched to the day's weather and the guest's interests. Held for approval by default.",
   post_stay: "Sent after checkout — thanks and a gentle invitation to share feedback.",
+  needs_approval: "Uncertain messages waiting for your approval. Terra won't send these until you approve them.",
+  sent: "Messages that have already been delivered.",
 };
 
-document.querySelectorAll(".subtab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".subtab").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    activeStage = btn.dataset.stage;
-    renderMessages();
-  });
-});
+// A message belongs to the active tab either by its stage (kind) or status.
+function matchesTab(m, tab) {
+  if (tab === "needs_approval") return m.status === "needs_approval";
+  if (tab === "sent") return m.status === "sent";
+  return m.kind === tab;
+}
 
 async function renderMessages() {
   const all = await api.get("/api/messages");
-  $("#msgCount").textContent = `(${all.length})`;
-  // Per-stage counts for the sub-tabs.
-  for (const stage of ["preferences", "pre_stay", "experiences", "post_stay"]) {
-    const n = all.filter((m) => m.kind === stage).length;
-    const badge = $(`#cnt-${stage}`);
-    if (badge) badge.textContent = `(${n})`;
+  // Counts on each nav tab.
+  const counts = {
+    preferences: all.filter((m) => m.kind === "preferences").length,
+    pre_stay: all.filter((m) => m.kind === "pre_stay").length,
+    experiences: all.filter((m) => m.kind === "experiences").length,
+    post_stay: all.filter((m) => m.kind === "post_stay").length,
+    needs_approval: all.filter((m) => m.status === "needs_approval").length,
+    sent: all.filter((m) => m.status === "sent").length,
+  };
+  for (const k of Object.keys(counts)) {
+    const badge = $(`#cnt-${k}`);
+    if (badge) badge.textContent = counts[k] ? `(${counts[k]})` : "";
   }
-  $("#stageDesc").textContent = STAGE_DESC[activeStage] || "";
 
-  const msgs = all.filter((m) => m.kind === activeStage);
+  $("#viewTitle").textContent = TAB_TITLE[activeTab] || "";
+  $("#viewDesc").textContent = TAB_DESC[activeTab] || "";
+
+  const msgs = all.filter((m) => matchesTab(m, activeTab));
   const el = $("#messages");
   el.innerHTML = "";
-  if (!msgs.length) { el.innerHTML = `<p class="empty">No messages in this stage.</p>`; return; }
+  if (!msgs.length) { el.innerHTML = `<p class="empty">Nothing here right now.</p>`; return; }
 
   for (const m of msgs) {
     const g = m.guest ?? {};
@@ -143,7 +185,7 @@ async function renderMessages() {
         ${weatherPill}
         <span class="pill ${m.channel}">${CHANNEL_LABEL[m.channel]}</span>
         <span class="pill lang">${LANG_LABEL[m.language]}</span>
-        <span class="pill ${m.status}"><span class="status-dot" style="background:${statusDotColor(m.status)}"></span>${m.status}</span>
+        <span class="pill ${m.status}"><span class="status-dot" style="background:${statusDotColor(m.status)}"></span>${STATUS_LABEL[m.status] || m.status}</span>
       </div>
       <div class="channel-note">${channelNote}</div>
       <div class="msg-body">
@@ -151,13 +193,16 @@ async function renderMessages() {
         <div class="msg-text">${esc(m.body)}</div>
       </div>
       <div class="msg-meta">
-        <span>${m.status === "sent" ? "Sent " + fmt(m.sentAt) : "Sends " + relative(m.sendAt) + " · " + fmt(m.sendAt)}</span>
+        <span>${m.status === "sent" ? "Sent " + fmt(m.sentAt) : (m.status === "cancelled" ? "Will not be sent" : "Sends " + relative(m.sendAt) + " · " + fmt(m.sendAt))}</span>
         <span>Written by ${m.generatedBy === "llm" ? "AI, from the Vale Palheiro voice" : "the Vale Palheiro template"}</span>
       </div>
-      ${m.status === "scheduled" ? `<div class="msg-actions"><button class="ghost" data-edit="${m.id}">Edit wording</button><button class="ghost" data-cancel="${m.id}">Don't send</button></div>` : ""}
+      ${actionsFor(m)}
     `;
     el.appendChild(card);
   }
+  el.querySelectorAll("[data-approve]").forEach((b) => b.addEventListener("click", async () => {
+    await api.post(`/api/messages/${b.dataset.approve}/approve`); toast("Approved — Terra will send it at the right time"); renderMessages();
+  }));
   el.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditor(b.dataset.edit, msgs)));
   el.querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", async () => {
     await api.post(`/api/messages/${b.dataset.cancel}/cancel`); toast("Message won't be sent"); renderMessages();
@@ -188,7 +233,6 @@ function openEditor(id, msgs) {
 
 async function renderCrm() {
   const rows = await api.get("/api/crm");
-  $("#crmCount").textContent = `(${rows.length})`;
   const el = $("#crm");
   el.innerHTML = "";
   for (const r of rows) {
@@ -247,36 +291,13 @@ async function renderCrm() {
   }));
 }
 
-async function renderLog() {
-  const log = await api.get("/api/sent-log");
-  $("#logCount").textContent = `(${log.length})`;
-  const el = $("#log");
-  if (!log.length) { el.innerHTML = `<p class="empty">Nothing sent yet. Use the demo tools to send what's due.</p>`; return; }
-  el.innerHTML = "";
-  for (const item of log) {
-    const d = document.createElement("div");
-    d.className = "crm-card";
-    d.style.padding = "14px 18px";
-    d.innerHTML = `
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-        <span class="pill ${item.channel}">${CHANNEL_LABEL[item.channel]}</span>
-        <b style="font-family:var(--serif);font-size:17px">${esc(item.guestName)}</b>
-        <span class="muted">${esc(item.accommodation)} · to ${esc(item.to)}</span>
-        <span class="spacer"></span>
-        <span class="muted" style="font-size:12px">${fmt(item.at)}</span>
-      </div>
-      ${item.subject ? `<div class="msg-subject" style="font-size:16px">${esc(item.subject)}</div>` : ""}
-      <div class="msg-text" style="font-size:13.5px">${esc(item.body)}</div>`;
-    el.appendChild(d);
-  }
-}
-
 async function loadConfig() {
   const cfg = await api.get("/api/config");
   $("#prefDays").value = cfg.preferencesDaysBefore;
   $("#preHours").value = cfg.preStayHoursBefore;
   $("#expHours").value = cfg.experiencesHoursAfter;
   $("#postHours").value = cfg.postStayHoursAfter;
+  if (cfg.approvalPolicy) $("#approvalPolicy").value = cfg.approvalPolicy;
 }
 function refreshAll() { loadConfig(); renderMessages(); }
 

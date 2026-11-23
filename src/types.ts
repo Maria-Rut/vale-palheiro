@@ -69,8 +69,16 @@ export interface GuestPreferences {
   submittedAt: string;
 }
 
-/** Lifecycle of a scheduled message. */
-export type MessageStatus = "scheduled" | "sent" | "cancelled";
+/**
+ * Lifecycle of a scheduled message.
+ *   - needs_approval : held because it's "uncertain" (e.g. weather-based, or a
+ *                      staff member edited it). Terra will NOT send it until a
+ *                      staff member approves it.
+ *   - scheduled      : approved / auto-approved; will send at its send time.
+ *   - sent           : delivered.
+ *   - cancelled      : staff chose not to send it.
+ */
+export type MessageStatus = "needs_approval" | "scheduled" | "sent" | "cancelled";
 
 export interface Guest {
   id: string;
