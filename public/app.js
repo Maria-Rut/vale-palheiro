@@ -41,43 +41,50 @@ $("#loginForm").addEventListener("submit", async (e) => {
 $("#logoutBtn").addEventListener("click", async () => { await api.post("/api/logout"); showLogin(); });
 
 // --- tabs ---
+const TABS = ["messages", "tasks", "events", "property", "settings", "log"];
+const RENDER = {
+  messages: renderMessages, tasks: renderTasks, events: renderEvents,
+  property: renderProperty, settings: loadConfig, log: renderLog,
+};
 document.querySelectorAll(".tabbtn").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tabbtn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     const tab = btn.dataset.tab;
-    $("#tab-messages").classList.toggle("hidden", tab !== "messages");
-    $("#tab-log").classList.toggle("hidden", tab !== "log");
-    if (tab === "log") renderLog();
+    for (const t of TABS) $(`#tab-${t}`).classList.toggle("hidden", t !== tab);
+    RENDER[tab]();
   });
 });
 
-// --- save timing ---
-$("#applyConfig").addEventListener("click", async () => {
-  await api.post("/api/config", {
-    preStayHoursBefore: Number($("#preHours").value),
-    postStayHoursAfter: Number($("#postHours").value),
-  });
-  toast("Message timing saved");
-  renderMessages();
-});
+// --- labels ---
+const KIND_LABEL = {
+  pre_arrival: "3 days before",
+  arrival_day: "Arrival day",
+  in_stay: "During the stay",
+  post_stay: "Thank you",
+  event_invite: "Event invite",
+};
+const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
+const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
+const STATUS_LABEL = {
+  scheduled: "scheduled", held: "needs approval", sent: "sent", cancelled: "not sending", skipped: "skipped",
+};
 
-// --- demo: simulate ---
-$("#simBtn").addEventListener("click", async () => {
-  const hrs = Number($("#simSelect").value);
-  const res = await api.post("/api/simulate", { atHoursFromNow: hrs });
-  toast(res.sentCount > 0
-    ? `${res.sentCount} message(s) sent`
-    : "Nothing due to send yet");
-  renderMessages();
-  renderLog();
-});
-
-// --- helpers ---
 function fmt(iso) {
   return new Date(iso).toLocaleString(undefined, {
     weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
   });
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}
+/** Event times are shown on the resort's clock, wherever the staff member is. */
+const RESORT_TZ = "Europe/Lisbon";
+function resortDate(iso) {
+  return new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: RESORT_TZ });
+}
+function resortTime(iso) {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: RESORT_TZ });
 }
 function relative(iso) {
   const diff = Date.parse(iso) - Date.now();
@@ -88,52 +95,92 @@ function relative(iso) {
   const d = Math.round(h / 24);
   return d > 0 ? `in ${d} days` : `${-d} days ago`;
 }
-const KIND_LABEL = { pre_stay: "Welcome", post_stay: "Thank-you" };
-const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
-const MOTIVE_LABEL = { business: "Business", leisure: "Leisure", both: "Business & leisure" };
-const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
+function esc(s) {
+  return String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+function escAttr(s) { return esc(s).replaceAll('"', "&quot;"); }
 
-function statusDotColor(status) {
-  return status === "sent" ? "#4f8a3f" : status === "cancelled" ? "#bbb" : "#c3a079";
+// --- overview ---
+async function renderOverview() {
+  const [o, cfg] = await Promise.all([api.get("/api/overview"), api.get("/api/config")]);
+  const stages = [
+    ["1", "We're getting ready", `${cfg.preArrivalDaysBefore} days before arrival`, ""],
+    ["2", "Arrival details", `${cfg.arrivalHoursBefore}h before arrival`, ""],
+    ["3", "Settling in", `${cfg.inStayHoursAfterCheckIn}h after check-in`, ""],
+    ["4", "Thank you + review", `${cfg.postStayHoursAfterCheckOut}h after check-out`, "post"],
+    ["5", "Event invites", "opted-in past guests", "evt"],
+  ];
+  $("#journey").innerHTML = stages.map(([n, t, w, c]) =>
+    `<div class="stage ${c}"><div class="dot">${n}</div><div class="t">${t}</div><div class="w">${w}</div></div>`).join("");
+  const stat = (n, l, warn) => `<div class="stat ${warn ? "warn" : ""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  $("#stats").innerHTML =
+    stat(o.scheduled, "scheduled") +
+    stat(o.held, "need your approval", o.held > 0) +
+    stat(o.sent, "sent") +
+    stat(o.tasksOpen, "team tasks open", o.tasksOpen > 0) +
+    stat(o.sampleFields, "property details to confirm", o.sampleFields > 0);
+  $("#taskCount").textContent = o.tasksOpen ? `(${o.tasksOpen})` : "";
+}
+
+// --- messages ---
+let filter = "all";
+const FILTERS = [
+  ["all", "All"], ["held", "Needs approval"], ["pre_arrival", "3 days before"], ["arrival_day", "Arrival day"],
+  ["in_stay", "During the stay"], ["post_stay", "Thank you"], ["event_invite", "Event invites"], ["sent", "Sent"],
+];
+function renderFilters() {
+  $("#filters").innerHTML = FILTERS.map(([k, l]) =>
+    `<button class="chip ${filter === k ? "on" : ""}" data-f="${k}">${l}</button>`).join("");
+  $("#filters").querySelectorAll("[data-f]").forEach((b) =>
+    b.addEventListener("click", () => { filter = b.dataset.f; renderMessages(); }));
 }
 
 async function renderMessages() {
-  const msgs = await api.get("/api/messages");
-  $("#msgCount").textContent = `(${msgs.length})`;
+  renderFilters();
+  const all = await api.get("/api/messages");
+  $("#msgCount").textContent = `(${all.length})`;
+  const msgs = all.filter((m) =>
+    filter === "all" ? true : filter === "held" || filter === "sent" ? m.status === filter : m.kind === filter);
   const el = $("#messages");
   el.innerHTML = "";
-  if (!msgs.length) { el.innerHTML = `<p class="empty">No messages planned.</p>`; return; }
+  if (!msgs.length) { el.innerHTML = `<p class="empty">Nothing here.</p>`; return; }
 
   for (const m of msgs) {
     const g = m.guest ?? {};
     const card = document.createElement("div");
     card.className = "msg-card";
-    const kindClass = m.kind === "pre_stay" ? "pre" : "post";
-    const channelNote = m.channel === "email"
-      ? "Sent by email"
-      : `Short message sent by ${CHANNEL_LABEL[m.channel]}`;
+    const editable = m.status === "scheduled" || m.status === "held";
+    const when = m.status === "sent"
+      ? `Sent ${fmt(m.sentAt)}`
+      : `${m.status === "skipped" || m.status === "cancelled" ? "Was due" : "Sends"} ${relative(m.sendAt)} · lands ${esc(m.localSendTime)} ${esc(m.timeZone)}`;
+    const stay = m.kind === "event_invite"
+      ? `About: ${esc(m.eventTitle)}`
+      : `${esc(m.place)} · ${fmtDate(m.checkIn)} → ${fmtDate(m.checkOut)} · ${esc(m.reference)}`;
 
     card.innerHTML = `
       <div class="msg-head">
         <span class="who">${esc(g.firstName)} ${esc(g.lastName)}</span>
-        <span class="book">${esc(m.accommodation)} · ${esc(MOTIVE_LABEL[m.motive] || "")} · ${esc(m.reference)}</span>
+        <span class="book">${stay}</span>
         <span class="spacer"></span>
-        <span class="pill ${kindClass}">${KIND_LABEL[m.kind]}</span>
+        <span class="pill ${m.kind}">${KIND_LABEL[m.kind]}</span>
         <span class="pill ${m.channel}">${CHANNEL_LABEL[m.channel]}</span>
         <span class="pill lang">${LANG_LABEL[m.language]}</span>
-        <span class="pill ${m.status}"><span class="status-dot" style="background:${statusDotColor(m.status)}"></span>${m.status}</span>
+        <span class="pill ${m.status}">${STATUS_LABEL[m.status]}</span>
       </div>
-      <div class="channel-note">${channelNote}</div>
+      ${m.status === "held" && m.statusNote ? `<div class="note">${esc(m.statusNote)}</div>` : ""}
+      ${m.status === "skipped" && m.statusNote ? `<div class="note info">${esc(m.statusNote)}</div>` : ""}
       <div class="msg-body">
         ${m.subject ? `<div class="msg-subject">${esc(m.subject)}</div>` : ""}
         <div class="msg-text">${esc(m.body)}</div>
       </div>
       <div class="msg-meta">
-        <span>${m.status === "sent" ? "Sent " + fmt(m.sentAt) : "Sends " + relative(m.sendAt) + " · " + fmt(m.sendAt)}</span>
-        <span>Written by ${m.generatedBy === "llm" ? "AI, from the Vale Palheiro voice" : "the Vale Palheiro template"}</span>
+        <span>${when}</span>
+        ${m.timingNote ? `<span>${esc(m.timingNote)}</span>` : ""}
+        <span>${m.edited ? "Edited by the team" : "Written from the Vale Palheiro template"}</span>
       </div>
-      ${m.status === "scheduled" ? `
+      ${editable ? `
       <div class="msg-actions">
+        ${m.status === "held" ? `<button class="primary" data-approve="${m.id}">Approve</button>` : ""}
         <button class="ghost" data-edit="${m.id}">Edit wording</button>
         <button class="ghost" data-cancel="${m.id}">Don't send</button>
       </div>` : ""}
@@ -142,44 +189,160 @@ async function renderMessages() {
   }
 
   el.querySelectorAll("[data-edit]").forEach((b) =>
-    b.addEventListener("click", () => openEditor(b.dataset.edit, msgs)));
+    b.addEventListener("click", () => openEditor(b, msgs.find((x) => x.id === b.dataset.edit))));
   el.querySelectorAll("[data-cancel]").forEach((b) =>
     b.addEventListener("click", async () => {
       await api.post(`/api/messages/${b.dataset.cancel}/cancel`);
       toast("Message won't be sent");
-      renderMessages();
+      refreshMessages();
+    }));
+  el.querySelectorAll("[data-approve]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api.post(`/api/messages/${b.dataset.approve}/approve`);
+      toast("Approved — it will go out on time");
+      refreshMessages();
     }));
 }
 
-function openEditor(id, msgs) {
-  const m = msgs.find((x) => x.id === id);
+function openEditor(btn, m) {
   if (!m) return;
-  const card = [...document.querySelectorAll(".msg-card")]
-    .find((c) => c.querySelector(`[data-edit="${id}"]`));
+  const card = btn.closest(".msg-card");
   const body = card.querySelector(".msg-body");
   const actions = card.querySelector(".msg-actions");
   if (actions) actions.style.display = "none";
   body.innerHTML = `
     <div class="edit-area">
-      ${m.subject !== undefined ? `<input id="editSubject" value="${escAttr(m.subject ?? "")}" placeholder="Subject" />` : ""}
-      <textarea id="editBody">${esc(m.body)}</textarea>
+      ${m.subject ? `<input class="editSubject" value="${escAttr(m.subject)}" placeholder="Subject" />` : ""}
+      <textarea class="editBody">${esc(m.body)}</textarea>
       <div style="display:flex;gap:10px">
-        <button class="primary" id="saveEdit">Save</button>
-        <button class="ghost" id="cancelEdit">Discard</button>
+        <button class="primary saveEdit">Save</button>
+        <button class="ghost cancelEdit">Discard</button>
       </div>
     </div>
   `;
-  body.querySelector("#saveEdit").addEventListener("click", async () => {
-    const patch = { body: body.querySelector("#editBody").value };
-    const subEl = body.querySelector("#editSubject");
+  body.querySelector(".saveEdit").addEventListener("click", async () => {
+    const patch = { body: body.querySelector(".editBody").value };
+    const subEl = body.querySelector(".editSubject");
     if (subEl) patch.subject = subEl.value;
-    await api.post(`/api/messages/${id}/edit`, patch);
+    await api.post(`/api/messages/${m.id}/edit`, patch);
     toast("Wording saved");
     renderMessages();
   });
-  body.querySelector("#cancelEdit").addEventListener("click", renderMessages);
+  body.querySelector(".cancelEdit").addEventListener("click", renderMessages);
 }
 
+function refreshMessages() { renderMessages(); renderOverview(); }
+
+// --- demo: simulate ---
+$("#simBtn").addEventListener("click", async () => {
+  const hrs = Number($("#simSelect").value);
+  const res = await api.post("/api/simulate", { atHoursFromNow: hrs });
+  toast(res.sentCount > 0 ? `${res.sentCount} message(s) sent` : "Nothing due to send yet");
+  refreshMessages();
+  renderLog();
+});
+
+// --- tasks ---
+async function renderTasks() {
+  const tasks = await api.get("/api/tasks");
+  const el = $("#tasks");
+  if (!tasks.length) { el.innerHTML = `<p class="empty">No tasks for upcoming arrivals.</p>`; return; }
+  el.innerHTML = tasks.map((t) => `
+    <label class="task ${t.done ? "done" : ""}">
+      <input type="checkbox" data-task="${escAttr(t.id)}" ${t.done ? "checked" : ""} />
+      <div><div class="txt">${esc(t.text)}</div><div class="due">Before arrival · ${fmt(t.dueBy)}</div></div>
+    </label>`).join("");
+  el.querySelectorAll("[data-task]").forEach((c) =>
+    c.addEventListener("change", async () => {
+      await api.post(`/api/tasks/${encodeURIComponent(c.dataset.task)}/toggle`);
+      renderTasks(); renderOverview();
+    }));
+}
+
+// --- events ---
+async function renderEvents() {
+  const { events, suppressions } = await api.get("/api/events");
+  $("#events").innerHTML = events.length ? events.map((e) => `
+    <div class="ev">
+      <div class="date">${resortDate(e.start)}<div class="muted" style="font-size:12px;font-family:var(--sans)">${resortTime(e.start)} resort time</div></div>
+      <div class="info"><b>${esc(e.title.en)}</b> · ${esc(e.place)}
+        <div>${e.audience === "everyone"
+          ? `Guests staying + opted-in past guests (invited ${e.inviteLeadDays} days before)`
+          : "Only guests staying at the time"}</div></div>
+      <button class="ghost" data-del="${e.id}">Remove</button>
+    </div>`).join("") : `<p class="empty">No upcoming events.</p>`;
+  $("#events").querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api.post(`/api/events/${b.dataset.del}/delete`);
+      toast("Event removed — its invites were withdrawn");
+      renderEvents(); renderOverview();
+    }));
+  $("#suppressions").innerHTML = suppressions.length
+    ? suppressions.map((s) => `<div class="supp"><b>${esc(s.guestName)}</b><span>${esc(s.eventTitle)}</span><span class="why">— ${esc(s.reason)}</span></div>`).join("")
+    : `<p class="empty">Everyone eligible is being invited.</p>`;
+}
+
+$("#eventForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const body = Object.fromEntries(f.entries());
+  body.inviteLeadDays = Number(body.inviteLeadDays);
+  const res = await api.post("/api/events", body);
+  if (!res.ok) { toast(res.error || "Couldn't add event"); return; }
+  e.target.reset();
+  toast("Event added — invites planned");
+  renderEvents(); renderOverview();
+});
+
+// --- property ---
+async function renderProperty() {
+  const info = await api.get("/api/property");
+  const long = new Set(["directions", "directionsPt", "directionsFr"]);
+  $("#propFields").innerHTML = Object.entries(info).map(([k, f]) => `
+    <div class="${long.has(k) ? "full" : ""}">
+      <div class="field-lbl">${esc(f.label)} ${f.sample ? `<span class="badge">sample</span>` : ""}</div>
+      ${long.has(k)
+        ? `<textarea name="${k}" rows="2" class="${f.sample ? "sample" : ""}">${esc(f.value)}</textarea>`
+        : `<input name="${k}" value="${escAttr(f.value)}" class="${f.sample ? "sample" : ""}" />`}
+      ${f.help ? `<div class="field-help">${esc(f.help)}</div>` : ""}
+    </div>`).join("");
+}
+
+$("#propForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const info = await api.get("/api/property");
+  const f = Object.fromEntries(new FormData(e.target).entries());
+  // Only send fields the user changed, or sample fields they've now confirmed by saving.
+  const patch = {};
+  for (const [k, v] of Object.entries(f)) if (v !== info[k].value || info[k].sample) patch[k] = v;
+  await api.post("/api/property", patch);
+  toast("Details saved — upcoming messages updated");
+  renderProperty(); renderOverview();
+});
+
+// --- settings ---
+const NUM_KEYS = [
+  "preArrivalDaysBefore", "arrivalHoursBefore", "inStayHoursAfterCheckIn", "postStayHoursAfterCheckOut",
+  "sendWindowStart", "sendWindowEnd", "inviteMinDaysBetween", "inviteQuietDaysAroundStay", "inviteMaxPerYear",
+];
+const BOOL_KEYS = ["arrivalTextReminder", "holdPersonalMoments"];
+
+async function loadConfig() {
+  const cfg = await api.get("/api/config");
+  for (const k of NUM_KEYS) $(`#c_${k}`).value = cfg[k];
+  for (const k of BOOL_KEYS) $(`#c_${k}`).checked = !!cfg[k];
+}
+
+$("#applyConfig").addEventListener("click", async () => {
+  const body = {};
+  for (const k of NUM_KEYS) body[k] = Number($(`#c_${k}`).value);
+  for (const k of BOOL_KEYS) body[k] = $(`#c_${k}`).checked;
+  await api.post("/api/config", body);
+  toast("Settings saved — schedule updated");
+  renderOverview();
+});
+
+// --- delivery log ---
 async function renderLog() {
   const log = await api.get("/api/sent-log");
   $("#logCount").textContent = `(${log.length})`;
@@ -207,18 +370,7 @@ async function renderLog() {
   }
 }
 
-async function loadConfig() {
-  const cfg = await api.get("/api/config");
-  $("#preHours").value = cfg.preStayHoursBefore;
-  $("#postHours").value = cfg.postStayHoursAfter;
-}
-
-function refreshAll() { loadConfig(); renderMessages(); }
-
-function esc(s) {
-  return String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-function escAttr(s) { return esc(s).replaceAll('"', "&quot;"); }
+function refreshAll() { renderOverview(); renderMessages(); renderLog(); }
 
 // --- boot ---
 (async () => {

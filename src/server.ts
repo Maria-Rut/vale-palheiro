@@ -2,15 +2,19 @@ import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
 import path from "node:path";
-import { reservations } from "./mockData.ts";
-import { Scheduler, DEFAULT_CONFIG } from "./scheduler.ts";
+import { Scheduler, DEFAULT_CONFIG, type SchedulerConfig } from "./scheduler.ts";
 import { getSentLog } from "./channels.ts";
+import { MockBookingSource, InMemoryEventSource } from "./sources.ts";
+import { getPropertyInfo, updatePropertyInfo, sampleFieldCount } from "./property.ts";
+import { placeLabel } from "./generator.ts";
+import type { Language, ResortEvent } from "./types.ts";
+import { RESORT_TZ, zonedTime } from "./timezone.ts";
 
 /**
  * HTTP layer for Terra. Serves the staff dashboard and a small JSON API.
  *
  * Built on Node's standard library only — no Express, no npm install — so the
- * prototype runs anywhere Node 18+ is present. Each real integration (LLM,
+ * prototype runs anywhere Node 22+ is present. Each real integration (LLM,
  * email/SMS/WhatsApp providers) is a pluggable adapter elsewhere; this file
  * only wires HTTP to the scheduler.
  *
@@ -25,13 +29,17 @@ const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const STAFF_USER = process.env.TERRA_USER ?? "palheiro";
 const STAFF_PASS = process.env.TERRA_PASS ?? "costa-vicentina";
 
-const scheduler = new Scheduler(reservations, { ...DEFAULT_CONFIG });
+const scheduler = new Scheduler(new MockBookingSource(), new InMemoryEventSource(), { ...DEFAULT_CONFIG });
 
-// Build the initial plan, then auto-send anything already due (e.g. the
-// imminent arrival and the recent checkout in the mock data) so the demo opens
-// with a realistic mix of "sent" and "scheduled".
+// Build the initial plan, then send anything already due so the demo opens
+// with a realistic mix of sent / scheduled / held / skipped.
 await scheduler.plan();
 await scheduler.runDue();
+
+// In real use Terra runs on its own: re-read bookings + events every 15 minutes
+// (new reservations, changed dates, new events) and send what's due every minute.
+setInterval(() => void scheduler.plan(), 15 * 60_000);
+setInterval(() => void scheduler.runDue(), 60_000);
 
 // --- tiny cookie-based session (no external deps) ---
 const sessions = new Set<string>();
@@ -110,20 +118,37 @@ function serveStatic(res: ServerResponse, urlPath: string): void {
 
 function withReservationContext() {
   const byId = Object.fromEntries(scheduler.getReservations().map((r) => [r.id, r]));
+  const evById = Object.fromEntries(scheduler.getEvents().map((e) => [e.id, e]));
   return scheduler.getMessages().map((m) => {
     const r = byId[m.reservationId];
     return {
       ...m,
       guest: r?.guest,
-      accommodation: r?.accommodation,
+      place: r ? placeLabel(r) : undefined,
       reference: r?.reference,
-      motive: r?.motive,
-      ratePlan: r?.ratePlan,
-      partySize: r?.partySize,
       checkIn: r?.checkIn,
       checkOut: r?.checkOut,
+      occasion: r?.occasion,
+      eventTitle: m.eventId ? evById[m.eventId]?.title.en : undefined,
     };
   });
+}
+
+const CONFIG_NUMBERS: (keyof SchedulerConfig)[] = [
+  "preArrivalDaysBefore", "arrivalHoursBefore", "inStayHoursAfterCheckIn",
+  "postStayHoursAfterCheckOut", "sendWindowStart", "sendWindowEnd",
+  "inviteMinDaysBetween", "inviteQuietDaysAroundStay", "inviteMaxPerYear",
+];
+const CONFIG_BOOLS: (keyof SchedulerConfig)[] = ["arrivalTextReminder", "holdPersonalMoments"];
+
+function str(v: unknown): string { return typeof v === "string" ? v.trim() : ""; }
+
+/** A "2026-12-05T20:30" form value means 20:30 on the resort's clock. */
+function resortTime(v: string): Date {
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!m) return new Date(v);
+  const [y, mo, d, h, mi] = m.slice(1).map(Number);
+  return zonedTime(y, mo, d, h, mi, RESORT_TZ);
 }
 
 // --- router ---
@@ -164,34 +189,100 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/messages" && method === "GET") {
       return sendJson(res, 200, withReservationContext());
     }
+    if (pathname === "/api/overview" && method === "GET") {
+      const msgs = scheduler.getMessages();
+      const count = (s: string) => msgs.filter((m) => m.status === s).length;
+      return sendJson(res, 200, {
+        scheduled: count("scheduled"), held: count("held"), sent: count("sent"),
+        skipped: count("skipped"), tasksOpen: scheduler.getTasks().filter((t) => !t.done).length,
+        sampleFields: sampleFieldCount(),
+      });
+    }
+
     if (pathname === "/api/config" && method === "GET") {
       return sendJson(res, 200, scheduler.getConfig());
     }
     if (pathname === "/api/config" && method === "POST") {
-      const { preStayHoursBefore, postStayHoursAfter, channelStrategy } = await readBody(req);
+      const body = await readBody(req);
       const patch: Record<string, unknown> = {};
-      if (typeof preStayHoursBefore === "number") patch.preStayHoursBefore = preStayHoursBefore;
-      if (typeof postStayHoursAfter === "number") patch.postStayHoursAfter = postStayHoursAfter;
-      if (channelStrategy === "preferred" || channelStrategy === "all") patch.channelStrategy = channelStrategy;
-      scheduler.setConfig(patch);
+      for (const k of CONFIG_NUMBERS) {
+        const v = body[k];
+        if (typeof v === "number" && Number.isFinite(v) && v >= 0) patch[k] = v;
+      }
+      for (const k of CONFIG_BOOLS) if (typeof body[k] === "boolean") patch[k] = body[k];
+      scheduler.setConfig(patch as Partial<SchedulerConfig>);
       await scheduler.plan();
       return sendJson(res, 200, scheduler.getConfig());
     }
 
-    const editMatch = pathname.match(/^\/api\/messages\/([^/]+)\/edit$/);
-    if (editMatch && method === "POST") {
-      const { subject, body } = await readBody(req);
-      const ok = scheduler.editMessage(editMatch[1], {
-        subject: typeof subject === "string" ? subject : undefined,
-        body: typeof body === "string" ? body : undefined,
-      });
+    const msgAction = pathname.match(/^\/api\/messages\/([^/]+)\/(edit|cancel|approve)$/);
+    if (msgAction && method === "POST") {
+      const [, id, action] = msgAction;
+      let ok = false;
+      if (action === "edit") {
+        const { subject, body } = await readBody(req);
+        ok = scheduler.editMessage(id, {
+          subject: typeof subject === "string" ? subject : undefined,
+          body: typeof body === "string" ? body : undefined,
+        });
+      } else if (action === "cancel") ok = scheduler.cancelMessage(id);
+      else ok = scheduler.approveMessage(id);
       return sendJson(res, ok ? 200 : 400, { ok });
     }
 
-    const cancelMatch = pathname.match(/^\/api\/messages\/([^/]+)\/cancel$/);
-    if (cancelMatch && method === "POST") {
-      const ok = scheduler.cancelMessage(cancelMatch[1]);
+    if (pathname === "/api/tasks" && method === "GET") {
+      return sendJson(res, 200, scheduler.getTasks());
+    }
+    const taskToggle = pathname.match(/^\/api\/tasks\/([^/]+)\/toggle$/);
+    if (taskToggle && method === "POST") {
+      const ok = scheduler.toggleTask(decodeURIComponent(taskToggle[1]));
       return sendJson(res, ok ? 200 : 400, { ok });
+    }
+
+    if (pathname === "/api/events" && method === "GET") {
+      return sendJson(res, 200, { events: scheduler.getEvents(), suppressions: scheduler.getSuppressions() });
+    }
+    if (pathname === "/api/events" && method === "POST") {
+      const b = await readBody(req);
+      const start = str(b.start);
+      const titleEn = str(b.titleEn);
+      if (!titleEn || !start || Number.isNaN(Date.parse(start))) {
+        return sendJson(res, 400, { ok: false, error: "Title and a valid date are required" });
+      }
+      const text = (prefix: string): Record<Language, string> => ({
+        en: str(b[`${prefix}En`]),
+        pt: str(b[`${prefix}Pt`]) || str(b[`${prefix}En`]),
+        fr: str(b[`${prefix}Fr`]) || str(b[`${prefix}En`]),
+      });
+      const event: Omit<ResortEvent, "id"> = {
+        title: text("title"),
+        description: text("desc"),
+        start: resortTime(start).toISOString(),
+        place: str(b.place) || "Vale Palheiro",
+        audience: b.audience === "in_house" ? "in_house" : "everyone",
+        inviteLeadDays: typeof b.inviteLeadDays === "number" ? b.inviteLeadDays : 14,
+      };
+      const created = await scheduler.getEventSource().addEvent(event);
+      await scheduler.plan();
+      return sendJson(res, 200, { ok: true, event: created });
+    }
+    const evDelete = pathname.match(/^\/api\/events\/([^/]+)\/delete$/);
+    if (evDelete && method === "POST") {
+      const ok = await scheduler.getEventSource().removeEvent(evDelete[1]);
+      await scheduler.plan();
+      return sendJson(res, ok ? 200 : 400, { ok });
+    }
+
+    if (pathname === "/api/property" && method === "GET") {
+      return sendJson(res, 200, getPropertyInfo());
+    }
+    if (pathname === "/api/property" && method === "POST") {
+      const b = await readBody(req);
+      const patch: Record<string, string> = {};
+      for (const [k, v] of Object.entries(b)) if (typeof v === "string") patch[k] = v;
+      updatePropertyInfo(patch);
+      await scheduler.plan(); // re-render unedited messages with the new details
+      return sendJson(res, 200, getPropertyInfo());
     }
 
     if (pathname === "/api/simulate" && method === "POST") {
@@ -200,7 +291,7 @@ const server = http.createServer(async (req, res) => {
         typeof atHoursFromNow === "number"
           ? new Date(Date.now() + atHoursFromNow * 3600_000)
           : new Date();
-      const sent = await scheduler.runDue(now);
+      const sent = await scheduler.runUntil(now);
       return sendJson(res, 200, { simulatedAt: now.toISOString(), sentCount: sent.length, sent });
     }
 

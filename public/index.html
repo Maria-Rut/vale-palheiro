@@ -201,6 +201,62 @@
     }
     .toast.show { opacity: 1; transform: translateY(0); }
     .empty { color: var(--muted); font-size: 14px; padding: 20px 0; }
+
+    /* ---------- v2: journey, stats, filters, forms ---------- */
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 22px; }
+    @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    .stat { background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow-sm); }
+    .stat .n { font-family: var(--serif); font-size: 28px; color: var(--earth-800); line-height: 1.1; }
+    .stat .l { font-size: 12px; color: var(--muted); }
+    .stat.warn { border-color: #e2c08d; background: #fbf3e4; }
+    .journey { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 0 0 26px; position: relative; }
+    @media (max-width: 760px) { .journey { grid-template-columns: 1fr 1fr; gap: 10px; } }
+    .stage { text-align: center; padding: 0 6px; position: relative; }
+    .stage .dot { width: 34px; height: 34px; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center;
+      font-family: var(--serif); font-size: 17px; color: var(--white); background: var(--clay); position: relative; z-index: 1; }
+    .stage.post .dot { background: var(--earth-500); } .stage.evt .dot { background: var(--sage-dark); }
+    .stage .t { font-size: 13.5px; font-weight: 600; color: var(--earth-800); }
+    .stage .w { font-size: 12px; color: var(--muted); }
+    @media (min-width: 761px) { .stage:not(:last-child)::after { content: ""; position: absolute; top: 17px; left: 50%; width: 100%; height: 1px; background: var(--line); } }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+    .chip { background: var(--white); border: 1px solid var(--line); color: var(--earth-700); padding: 6px 13px; border-radius: 999px; cursor: pointer; font-size: 12.5px; font-family: var(--sans); }
+    .chip.on { background: var(--earth-800); color: var(--sand); border-color: var(--earth-800); }
+    .pill.pre_arrival, .pill.arrival_day, .pill.in_stay { background: #e6ecd9; color: var(--sage-dark); }
+    .pill.post_stay { background: var(--sand); color: var(--earth-700); }
+    .pill.event_invite { background: #e3e9ee; color: #44607a; }
+    .pill.held { background: #fbe9c9; color: #8a5a12; }
+    .pill.pre_arrival, .pill.arrival_day, .pill.in_stay, .pill.post_stay, .pill.event_invite, .pill.held { text-transform: none; }
+    .pill.skipped { background: #eee; color: #888; }
+    .note { margin: 0 20px 6px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: #fbf3e4; color: #7a5420; }
+    .note.info { background: var(--paper-2); color: var(--earth-700); }
+    .task { display: flex; gap: 12px; align-items: flex-start; background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+    .task input { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--sage-dark); }
+    .task.done .txt { text-decoration: line-through; color: var(--muted); }
+    .task .due { font-size: 12px; color: var(--muted); }
+    .ev { display: flex; gap: 14px; align-items: center; background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ev .date { font-family: var(--serif); font-size: 18px; min-width: 120px; color: var(--earth-800); }
+    .ev .info { flex: 1; min-width: 200px; } .ev .info b { font-weight: 600; } .ev .info div { font-size: 12.5px; color: var(--muted); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+    @media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-grid .full { grid-column: 1 / -1; }
+    .field-lbl { font-size: 12.5px; font-weight: 600; color: var(--earth-800); margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+    .form-grid input, .form-grid textarea, .form-grid select { width: 100%; font-family: var(--sans); font-size: 14px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--earth-900); }
+    .form-grid input.sample, .form-grid textarea.sample { border-color: #e2c08d; background: #fffaf0; }
+    .badge { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; background: #fbe9c9; color: #8a5a12; font-weight: 600; }
+    .field-help { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+    .section-title { font-family: var(--serif); font-size: 22px; color: var(--earth-800); margin: 26px 0 10px; }
+    .supp { font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); display: flex; gap: 10px; flex-wrap: wrap; }
+    .supp .why { color: var(--muted); }
+    .check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--earth-800); }
+    .check input { margin-top: 3px; accent-color: var(--sage-dark); }
+    .tabs { overflow-x: auto; scrollbar-width: none; }
+    .tabbtn { white-space: nowrap; }
+    @media (max-width: 760px) {
+      main { padding: 24px 16px 60px; }
+      header.topbar { padding: 16px; }
+      .tabbtn { margin-right: 12px; font-size: 17px; }
+      .msg-head .book { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -234,69 +290,114 @@
       <div class="intro">
         <h1>Guest messages</h1>
         <p>
-          Terra prepares a warm, personal message for every guest before they arrive
-          and after they leave — in their own language, on their preferred channel.
-          Review the wording here, edit anything you like, and Terra sends each one at the right moment.
+          Terra writes to every guest at five moments — in English, Portuguese or French,
+          at a good hour in their own time zone. Review anything you like; the personal
+          touches stay with the team.
         </p>
       </div>
 
-      <div class="panels">
-        <!-- Timing panel -->
-        <div class="panel">
-          <h3>When messages are sent</h3>
-          <p class="hint">Set how far from a guest's stay each message goes out. This applies to everyone.</p>
-          <div class="timing-row">
-            <div class="timing-item">
-              <div class="lead">Welcome message</div>
-              <div class="explain">Sent shortly <b>before</b> the guest arrives.</div>
-              <div class="stepper">
-                <input id="preHours" type="number" min="0" step="1" />
-                <span class="unit">hours before arrival</span>
-              </div>
-            </div>
-            <div class="timing-item">
-              <div class="lead">Thank-you message</div>
-              <div class="explain">Sent a little <b>after</b> the guest checks out.</div>
-              <div class="stepper">
-                <input id="postHours" type="number" min="0" step="1" />
-                <span class="unit">hours after departure</span>
-              </div>
-            </div>
-          </div>
-          <div class="row-end">
-            <button class="primary" id="applyConfig">Save timing</button>
-          </div>
-        </div>
+      <div class="journey" id="journey"></div>
+      <div class="stats" id="stats"></div>
 
-        <!-- Demo panel -->
-        <div class="panel demo">
+      <div class="tabs">
+        <button class="tabbtn active" data-tab="messages">Messages <span class="tab-count" id="msgCount"></span></button>
+        <button class="tabbtn" data-tab="tasks">Team tasks <span class="tab-count" id="taskCount"></span></button>
+        <button class="tabbtn" data-tab="events">Events</button>
+        <button class="tabbtn" data-tab="property">Property info</button>
+        <button class="tabbtn" data-tab="settings">Settings</button>
+        <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
+      </div>
+
+      <section id="tab-messages">
+        <div class="panel demo" style="margin-bottom:18px">
           <h3>Demo tools <span class="demo-tag">demo only</span></h3>
-          <p class="hint">
-            In real life Terra sends automatically at the right time. Here you can
-            jump the clock forward to watch it happen now.
-          </p>
+          <p class="hint" style="margin-bottom:10px">Terra sends on its own at the right time. Jump the clock forward to watch it happen.</p>
           <div class="demo-controls">
             <div class="field">
               <label class="block">Pretend it is…</label>
               <select id="simSelect">
                 <option value="0">Right now</option>
-                <option value="3">3 hours from now</option>
-                <option value="25">Tomorrow</option>
+                <option value="6">6 hours from now</option>
+                <option value="24">Tomorrow</option>
+                <option value="72">In 3 days</option>
                 <option value="168">Next week</option>
+                <option value="720">In a month</option>
               </select>
             </div>
             <button class="ghost" id="simBtn">Send anything due</button>
           </div>
         </div>
-      </div>
-
-      <div class="tabs">
-        <button class="tabbtn active" data-tab="messages">Messages <span class="tab-count" id="msgCount"></span></button>
-        <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
-      </div>
-
-      <section id="tab-messages">
+        <div class="toolbar" id="filters"></div>
         <div class="grid" id="messages"></div>
+      </section>
+
+      <section id="tab-tasks" class="hidden">
+        <p class="hint muted" style="margin-top:0">Things Terra can't (and shouldn't) do on its own — a gift for a returning guest, a handwritten note, someone waiting for a late arrival.</p>
+        <div id="tasks"></div>
+      </section>
+
+      <section id="tab-events" class="hidden">
+        <p class="hint muted" style="margin-top:0">
+          The resort calendar. Guests staying during an event see it in their messages (with priority booking).
+          Events open to <b>everyone</b> also go to past guests who opted in — never more than the limits in Settings.
+        </p>
+        <div id="events"></div>
+        <div class="section-title">Who won't be invited, and why</div>
+        <div id="suppressions"></div>
+        <div class="section-title">Add an event</div>
+        <form class="panel" id="eventForm">
+          <div class="form-grid">
+            <div><div class="field-lbl">Title (English)</div><input name="titleEn" required placeholder="Fado night at The Barn" /></div>
+            <div><div class="field-lbl">Date &amp; time (resort time)</div><input name="start" type="datetime-local" required /></div>
+            <div><div class="field-lbl">Title (Portuguese)</div><input name="titlePt" placeholder="Noite de Fado no The Barn" /></div>
+            <div><div class="field-lbl">Title (French)</div><input name="titleFr" placeholder="Soirée Fado à The Barn" /></div>
+            <div class="full"><div class="field-lbl">Description (English)</div><input name="descEn" placeholder="One sentence is enough." /></div>
+            <div><div class="field-lbl">Description (Portuguese)</div><input name="descPt" /></div>
+            <div><div class="field-lbl">Description (French)</div><input name="descFr" /></div>
+            <div><div class="field-lbl">Place</div><input name="place" value="The Barn" /></div>
+            <div><div class="field-lbl">Who hears about it</div>
+              <select name="audience"><option value="everyone">Guests staying + opted-in past guests</option><option value="in_house">Only guests staying at the time</option></select>
+            </div>
+            <div><div class="field-lbl">Invite past guests … days before</div><input name="inviteLeadDays" type="number" min="1" value="14" /></div>
+          </div>
+          <div class="row-end"><button class="primary" type="submit">Add event</button></div>
+        </form>
+      </section>
+
+      <section id="tab-property" class="hidden">
+        <p class="hint muted" style="margin-top:0">These details go straight into guest messages. Fields marked <span class="badge">sample</span> are placeholders — confirm or replace them before going live.</p>
+        <form class="panel" id="propForm"><div class="form-grid" id="propFields"></div>
+          <div class="row-end"><button class="primary" type="submit">Save details</button></div>
+        </form>
+      </section>
+
+      <section id="tab-settings" class="hidden">
+        <div class="panels">
+          <div class="panel">
+            <h3>When each message goes out</h3>
+            <p class="hint">Applies to every guest. Times are adjusted to each guest's own time zone.</p>
+            <div class="form-grid">
+              <div><div class="field-lbl">"We're getting ready"</div><div class="stepper"><input id="c_preArrivalDaysBefore" type="number" min="1" /><span class="unit">days before arrival</span></div></div>
+              <div><div class="field-lbl">Arrival details</div><div class="stepper"><input id="c_arrivalHoursBefore" type="number" min="1" /><span class="unit">hours before arrival</span></div></div>
+              <div><div class="field-lbl">Settling-in info</div><div class="stepper"><input id="c_inStayHoursAfterCheckIn" type="number" min="0" /><span class="unit">hours after check-in</span></div></div>
+              <div><div class="field-lbl">Thank-you &amp; review</div><div class="stepper"><input id="c_postStayHoursAfterCheckOut" type="number" min="0" /><span class="unit">hours after check-out</span></div></div>
+              <div class="full"><div class="field-lbl">Good hours to receive a message (guest's local time)</div>
+                <div class="stepper"><input id="c_sendWindowStart" type="number" min="0" max="23" /><span class="unit">to</span><input id="c_sendWindowEnd" type="number" min="1" max="24" /><span class="unit">h — anything outside moves into this window</span></div></div>
+              <label class="check full"><input type="checkbox" id="c_arrivalTextReminder" /> Also send a short WhatsApp / SMS on arrival day, if the guest opted in</label>
+              <label class="check full"><input type="checkbox" id="c_holdPersonalMoments" /> Hold messages about a birthday or anniversary until someone on the team approves them</label>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Keeping it personal, not spam</h3>
+            <p class="hint">Rules for event invites to past guests. Guests who didn't opt in never get them.</p>
+            <div class="form-grid">
+              <div class="full"><div class="field-lbl">At most one invite every</div><div class="stepper"><input id="c_inviteMinDaysBetween" type="number" min="1" /><span class="unit">days per guest</span></div></div>
+              <div class="full"><div class="field-lbl">No invite within</div><div class="stepper"><input id="c_inviteQuietDaysAroundStay" type="number" min="0" /><span class="unit">days of a stay message</span></div></div>
+              <div class="full"><div class="field-lbl">At most</div><div class="stepper"><input id="c_inviteMaxPerYear" type="number" min="0" /><span class="unit">invites per guest per year</span></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="row-end"><button class="primary" id="applyConfig">Save settings</button></div>
       </section>
 
       <section id="tab-log" class="hidden">

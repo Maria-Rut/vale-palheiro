@@ -7,17 +7,18 @@
  *
  * This exists so the output can be reviewed without running the live app.
  */
-import { reservations } from "../src/mockData.ts";
 import { Scheduler, DEFAULT_CONFIG } from "../src/scheduler.ts";
+import { MockBookingSource, InMemoryEventSource } from "../src/sources.ts";
+import { placeLabel } from "../src/generator.ts";
 import { getSentLog } from "../src/channels.ts";
 import type { ScheduledMessage } from "../src/types.ts";
 
-const scheduler = new Scheduler(reservations, { ...DEFAULT_CONFIG });
+const scheduler = new Scheduler(new MockBookingSource(), new InMemoryEventSource(), { ...DEFAULT_CONFIG });
 await scheduler.plan();
 // Fast-forward a week so every scheduled message is delivered.
-await scheduler.runDue(new Date(Date.now() + 168 * 3600_000));
+await scheduler.runUntil(new Date(Date.now() + 168 * 3600_000));
 
-const byId = Object.fromEntries(reservations.map((r) => [r.id, r]));
+const byId = Object.fromEntries(scheduler.getReservations().map((r) => [r.id, r]));
 const messages = scheduler.getMessages();
 const log = getSentLog();
 
@@ -32,7 +33,10 @@ function fmt(iso: string): string {
   return new Date(iso).toUTCString().replace("GMT", "UTC");
 }
 
-const KIND: Record<string, string> = { pre_stay: "Pre-stay", post_stay: "Post-stay" };
+const KIND: Record<string, string> = {
+  pre_arrival: "3 days before", arrival_day: "Arrival day", in_stay: "During the stay",
+  post_stay: "Thank you", event_invite: "Event invite",
+};
 
 function card(m: ScheduledMessage): string {
   const r = byId[m.reservationId];
@@ -41,8 +45,8 @@ function card(m: ScheduledMessage): string {
   <div class="card">
     <div class="head">
       <span class="who">${esc(g?.firstName)} ${esc(g?.lastName)}</span>
-      <span class="meta">${esc(r?.accommodation)} · ${esc(r?.reference)}</span>
-      <span class="pill ${m.kind === "pre_stay" ? "pre" : "post"}">${KIND[m.kind]}</span>
+      <span class="meta">${esc(r ? placeLabel(r) : "")} · ${esc(r?.reference)}</span>
+      <span class="pill ${m.kind === "post_stay" || m.kind === "event_invite" ? "post" : "pre"}">${KIND[m.kind]}</span>
       <span class="pill ch">${m.channel}</span>
       <span class="pill lang">${m.language}</span>
       <span class="spacer"></span>
@@ -51,7 +55,7 @@ function card(m: ScheduledMessage): string {
     <div class="body">
       ${m.subject ? `<div class="subject">${esc(m.subject)}</div>` : ""}
       <div class="text">${esc(m.body)}</div>
-      <div class="foot">Send time: ${fmt(m.sendAt)} · Copy by: ${m.generatedBy === "llm" ? "AI model" : "brand template"}</div>
+      <div class="foot">Send time: ${fmt(m.sendAt)} (guest-local ${esc(m.localSendTime)}, ${esc(m.timeZone)}) · Copy by: ${m.generatedBy === "llm" ? "AI model" : "brand template"}</div>
     </div>
   </div>`;
 }
@@ -84,7 +88,7 @@ const html = `<!DOCTYPE html>
 </style></head>
 <body>
 <header><div class="name">Vale Palheiro</div><div class="sub">TERRA · GUEST MESSAGING — OUTPUT SNAPSHOT</div></header>
-<div class="note">A frozen snapshot of what the system produces for the ${reservations.length} demo reservations.
+<div class="note">A frozen snapshot of what the system produces for the ${scheduler.getReservations().length} demo reservations.
 All messages shown as delivered because time was fast-forwarded one week. This file is static — it needs no server.</div>
 <main>
   <h2>Scheduled &amp; delivered messages (${messages.length})</h2>

@@ -1,13 +1,11 @@
 /**
  * Core domain types for Terra — the guest messaging concierge.
  *
- * These describe reservations and the messages the system schedules and sends.
- * They are intentionally simple so the prototype can later map onto a real
- * PMS / booking system (Cloudbeds, Mews, Booking.com, etc.) without reshaping
- * the rest of the app.
- *
- * Fields mirror what Vale Palheiro's real booking flow captures (motive of
- * stay, rate plan, breakfast, currency) so nothing here is invented.
+ * These describe guests, reservations, the resort's event calendar and the
+ * messages Terra schedules. They are shaped so the prototype can later map onto
+ * Vale Palheiro's real systems — Host (the PMS, which the team treats as the
+ * single source of truth) and the events calendar — without reshaping the rest
+ * of the app. See `sources.ts` for the connector seams.
  */
 
 /** Languages the resort serves (site is published in EN / PT / FR). */
@@ -17,17 +15,39 @@ export type Language = "en" | "pt" | "fr";
 export type Channel = "email" | "sms" | "whatsapp";
 
 /**
- * Motive of stay — this is Vale Palheiro's actual booking-form field
- * ("Business" / "Leisure" / "A little of both"). It gently shapes tone and the
- * single experience we might mention, without inventing guest intent.
+ * Motive of stay — Vale Palheiro's actual booking-form field
+ * ("Business" / "Leisure" / "A little of both").
  */
 export type Motive = "business" | "leisure" | "both";
 
-/** The two automated moments in the guest journey. */
-export type MessageKind = "pre_stay" | "post_stay";
+/** A celebration the front office noted for the stay. */
+export type Occasion = "birthday" | "anniversary" | "honeymoon" | "celebration";
 
-/** Lifecycle of a scheduled message. */
-export type MessageStatus = "scheduled" | "sent" | "cancelled";
+/**
+ * The moments in the guest journey Terra writes for.
+ *   pre_arrival  — 3 days before: "your villa is being prepared, we can't wait"
+ *   arrival_day  — 3 hours before: where to go, where we'll meet you, your villa
+ *   in_stay      — after check-in: Wi-Fi, contacts, activities, events this stay
+ *   post_stay    — after check-out: thank you + a quick review
+ *   event_invite — to opted-in past guests, about an upcoming resort event
+ */
+export type MessageKind =
+  | "pre_arrival"
+  | "arrival_day"
+  | "in_stay"
+  | "post_stay"
+  | "event_invite";
+
+/**
+ * Lifecycle of a scheduled message.
+ *   scheduled — will send at sendAt
+ *   held      — waiting for a staff member to approve (personal moments)
+ *   sent      — delivered
+ *   cancelled — staff chose not to send
+ *   skipped   — its moment passed before it could go (e.g. a last-minute
+ *               booking), so Terra deliberately didn't send a stale message
+ */
+export type MessageStatus = "scheduled" | "held" | "sent" | "cancelled" | "skipped";
 
 export interface Guest {
   id: string;
@@ -36,8 +56,17 @@ export interface Guest {
   email: string;
   phone: string; // E.164, used for SMS + WhatsApp
   language: Language;
+  /** ISO 3166 country code from the booking (e.g. "DE"). */
+  country: string;
+  /** IANA time zone of where the guest lives, e.g. "Europe/Berlin". */
+  timeZone: string;
   /** Channels this guest has opted into, in order of preference. */
   preferredChannels: Channel[];
+  /**
+   * Whether the guest agreed to hear about events and news after their stay.
+   * Without it Terra never sends them event invites — only stay messages.
+   */
+  marketingConsent: boolean;
 }
 
 export interface Reservation {
@@ -45,48 +74,92 @@ export interface Reservation {
   /** Human-friendly booking reference shown to staff. */
   reference: string;
   guest: Guest;
-  /**
-   * Accommodation booked. Vale Palheiro's collection is 13 villas, suites and
-   * casitas; confirmed real names are used where known (Casa Atlantica, Casa
-   * Lyra), otherwise a generic room type (Suite, Casita) — nothing invented.
-   */
+  /** Accommodation booked, e.g. "Casa Lyra" or "Suite". */
   accommodation: string;
-  /** ISO datetime of arrival (check-in). */
+  /** Unit / room number allocated in Host. Optional until allocated. */
+  unit?: string;
+  /** ISO datetime of expected arrival (check-in). */
   checkIn: string;
   /** ISO datetime of departure (check-out). */
   checkOut: string;
-  /** Number of guests, matching the booking ("1 Room, 2 Adults"). */
-  partySize: number;
-  /** Real booking field: motive of stay. */
+  adults: number;
+  children: number;
   motive: Motive;
-  /** Rate plan as shown at booking, e.g. "Early Booking Rate". */
   ratePlan: string;
-  /** Whether breakfast is included (true on breakfast-inclusive rates). */
   breakfastIncluded: boolean;
-  /** Optional free-text the staff noted, woven into personalisation. */
+  /** A celebration the team should know about. */
+  occasion?: Occasion;
+  /** Booking channel, for context only (direct, Booking.com, Expedia…). */
+  source: string;
+  /** Optional free-text the staff noted. */
   notes?: string;
+  /** Cancelled bookings are kept for history but never messaged. */
+  cancelled?: boolean;
+}
+
+/** An event in Vale Palheiro's calendar (Fado night, guest chef, yoga…). */
+export interface ResortEvent {
+  id: string;
+  /** Title per language. */
+  title: Record<Language, string>;
+  /** One or two sentences per language. */
+  description: Record<Language, string>;
+  /** ISO datetime the event starts. */
+  start: string;
+  /** Where on the property, e.g. "The Barn". */
+  place: string;
+  /**
+   * Who should hear about it:
+   *   in_house — only guests staying at the time (mentioned in their messages)
+   *   everyone — also invite opted-in past guests
+   */
+  audience: "in_house" | "everyone";
+  /** Days before the event to send past-guest invites. */
+  inviteLeadDays: number;
+}
+
+/** Something the team should do by hand — Terra prompts, people deliver. */
+export interface StaffTask {
+  id: string;
+  reservationId: string;
+  kind: "welcome_back_package" | "occasion" | "late_arrival";
+  /** When it should be done by (ISO). */
+  dueBy: string;
+  text: string;
+  done: boolean;
 }
 
 /**
- * A single message the scheduler has planned or sent, for one reservation,
- * one moment (pre/post), and one channel.
+ * A single message the scheduler has planned or sent, for one guest, one
+ * moment and one channel.
  */
 export interface ScheduledMessage {
   id: string;
+  /** Reservation the message belongs to (for event invites: the guest's latest stay). */
   reservationId: string;
+  guestId: string;
   kind: MessageKind;
+  /** For event invites: which event. */
+  eventId?: string;
   channel: Channel;
   language: Language;
   /** ISO datetime the message should go out. */
   sendAt: string;
+  /** The time zone sendAt was chosen in, and the guest-local time it lands at. */
+  timeZone: string;
+  localSendTime: string;
+  /** Why the send time moved, if it did (quiet hours etc.). */
+  timingNote?: string;
+  /** After this moment the message is stale and is skipped instead of sent. */
+  expiresAt: string;
   status: MessageStatus;
-  /** Rendered subject (email only). */
+  /** Why it is held / skipped, shown to staff. */
+  statusNote?: string;
   subject?: string;
-  /** Rendered body. */
   body: string;
-  /** Set once delivered. */
+  /** Staff edited the wording — never overwrite it on re-plan. */
+  edited?: boolean;
   sentAt?: string;
-  /** Which generator produced the copy, for transparency in the UI. */
   generatedBy: "template" | "llm";
 }
 
