@@ -79,14 +79,23 @@
     .demo-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .demo-controls .field { flex: 1; min-width: 150px; }
 
-    /* main navigation: one tab per step */
-    .mainnav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 14px 28px; background: var(--paper-2); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
-    .navbtn { background: transparent; border: 1px solid transparent; color: var(--earth-700); font-family: var(--sans); font-size: 14px; padding: 9px 16px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
-    .navbtn:hover { background: var(--sand); }
-    .navbtn.active { background: var(--earth-800); color: var(--sand); }
-    .nav-count { opacity: 0.65; margin-left: 4px; font-size: 12px; }
-    .nav-sep { flex: 1; }
-    @media (max-width: 760px) { .nav-sep { flex-basis: 100%; height: 0; } }
+    /* PRIMARY: four big step tabs, equal width, one per email time */
+    .steptabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 22px 28px 0; background: var(--paper); }
+    @media (max-width: 680px) { .steptabs { grid-template-columns: 1fr 1fr; } }
+    .steptab { display: flex; flex-direction: column; gap: 3px; text-align: left; background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; cursor: pointer; transition: all 0.15s; }
+    .steptab:hover { border-color: var(--clay-soft); }
+    .steptab.active { background: var(--earth-800); border-color: var(--earth-800); box-shadow: var(--shadow); }
+    .step-when { font-family: var(--sans); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--clay); }
+    .steptab.active .step-when { color: var(--clay-soft); }
+    .step-name { font-family: var(--serif); font-size: 21px; color: var(--earth-800); }
+    .steptab.active .step-name { color: var(--sand); }
+    .nav-count { opacity: 0.7; font-size: 13px; font-family: var(--sans); margin-left: 2px; }
+
+    /* SECONDARY: small utility tabs */
+    .utilnav { display: flex; gap: 6px; flex-wrap: wrap; padding: 16px 28px 0; background: var(--paper); }
+    .utilbtn { background: transparent; border: 1px solid var(--line); color: var(--earth-700); font-family: var(--sans); font-size: 13px; padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
+    .utilbtn:hover { background: var(--sand); }
+    .utilbtn.active { background: var(--earth-700); color: var(--sand); border-color: var(--earth-700); }
 
     .view-title { font-size: 28px; color: var(--earth-800); margin: 4px 0 4px; }
     .view-desc { font-size: 14px; color: var(--muted); margin: 0 0 22px; max-width: 640px; }
@@ -176,16 +185,32 @@
       <button id="logoutBtn">Sign out</button>
     </header>
 
-    <nav class="mainnav" id="mainnav">
-      <button class="navbtn active" data-tab="preferences">1 week before <span class="nav-count" id="cnt-preferences"></span></button>
-      <button class="navbtn" data-tab="pre_stay">2h before <span class="nav-count" id="cnt-pre_stay"></span></button>
-      <button class="navbtn" data-tab="experiences">After check-in <span class="nav-count" id="cnt-experiences"></span></button>
-      <button class="navbtn" data-tab="post_stay">Post-stay <span class="nav-count" id="cnt-post_stay"></span></button>
-      <button class="navbtn" data-tab="needs_approval">Needs approval <span class="nav-count" id="cnt-needs_approval"></span></button>
-      <button class="navbtn" data-tab="sent">Sent <span class="nav-count" id="cnt-sent"></span></button>
-      <span class="nav-sep"></span>
-      <button class="navbtn" data-tab="crm">Guests</button>
-      <button class="navbtn" data-tab="settings">Settings</button>
+    <!-- PRIMARY: the four email times, one tab each -->
+    <nav class="steptabs" id="steptabs">
+      <button class="steptab active" data-tab="preferences">
+        <span class="step-when">1 week before</span>
+        <span class="step-name">Preferences <span class="nav-count" id="cnt-preferences"></span></span>
+      </button>
+      <button class="steptab" data-tab="pre_stay">
+        <span class="step-when">2 hours before</span>
+        <span class="step-name">Welcome <span class="nav-count" id="cnt-pre_stay"></span></span>
+      </button>
+      <button class="steptab" data-tab="experiences">
+        <span class="step-when">After check-in</span>
+        <span class="step-name">Experiences <span class="nav-count" id="cnt-experiences"></span></span>
+      </button>
+      <button class="steptab" data-tab="post_stay">
+        <span class="step-when">After checkout</span>
+        <span class="step-name">Thank-you <span class="nav-count" id="cnt-post_stay"></span></span>
+      </button>
+    </nav>
+
+    <!-- SECONDARY: utility views, kept out of the way -->
+    <nav class="utilnav" id="utilnav">
+      <button class="utilbtn" data-tab="needs_approval">Needs approval <span class="nav-count" id="cnt-needs_approval"></span></button>
+      <button class="utilbtn" data-tab="sent">Sent <span class="nav-count" id="cnt-sent"></span></button>
+      <button class="utilbtn" data-tab="crm">Guests</button>
+      <button class="utilbtn" data-tab="settings">Settings</button>
     </nav>
 
     <main>

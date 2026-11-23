@@ -39,9 +39,10 @@ $("#logoutBtn").addEventListener("click", async () => { await api.post("/api/log
 const MESSAGE_TABS = ["preferences", "pre_stay", "experiences", "post_stay", "needs_approval", "sent"];
 let activeTab = "preferences";
 
-document.querySelectorAll(".navbtn").forEach((btn) => {
+const ALL_NAV = ".steptab, .utilbtn";
+document.querySelectorAll(ALL_NAV).forEach((btn) => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".navbtn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(ALL_NAV).forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     activeTab = btn.dataset.tab;
     $("#view-messages").classList.toggle("hidden", !MESSAGE_TABS.includes(activeTab));
