@@ -1,4 +1,5 @@
 import type { Language, Reservation } from "./types.ts";
+import { getPreferences } from "./preferences.ts";
 import { getActivities, priceLabel, type Activity, type Condition } from "./activities.ts";
 import { resortDate, type DayForecast, type Forecast } from "./weather.ts";
 import { LOCALE } from "./brand.ts";
@@ -68,7 +69,14 @@ export function conditionsFor(f: DayForecast): Condition[] {
 
 // ------------------------------------------------------------ scoring
 
+/** "Prepare your stay" page choices → catalogue ids. */
+const EXPERIENCE_TO_ACTIVITY: Record<string, string[]> = {
+  trail: ["trail", "guided_walk"], wine_tasting: ["wine"], yoga: ["yoga", "pilates"], barn: [],
+};
+
 interface Context {
+  /** Catalogue ids the guest said they'd like on their "prepare your stay" page. */
+  wanted: string[];
   kids: boolean;
   couple: boolean;
   business: boolean;
@@ -83,6 +91,7 @@ function score(a: Activity, conds: Condition[], hasForecast: boolean, isLast: bo
   if (ctx.kids && a.family === false) return { s: -Infinity, why: ["not for children"] };
 
   let s = 0;
+  if (ctx.wanted.includes(a.id)) { s += 3; why.push("they asked about it"); }
   if (hasForecast) {
     const hits = a.goodIn.filter((c) => conds.includes(c));
     s += hits.length * 2;
@@ -119,6 +128,7 @@ export function recommend(r: Reservation, sendAt: Date, forecast: Forecast | und
   if (dates.length === 0) return undefined;
 
   const ctx: Context = {
+    wanted: (getPreferences(r.id)?.experiences ?? []).flatMap((e) => EXPERIENCE_TO_ACTIVITY[e] ?? [e]),
     kids: r.children > 0,
     couple: r.adults === 2 && r.children === 0,
     business: r.motive === "business",

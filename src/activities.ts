@@ -238,6 +238,16 @@ const A: Activity[] = [
     },
     price: { onRequest: true }, goodIn: ["rainy", "showers"], notIn: [],
   },
+  {
+    id: "perfume", category: "craft", source: "brochure", enabled: true, indoor: true,
+    name: { en: "Perfume workshop", pt: "Workshop de perfumes", fr: "Atelier de parfum" },
+    pitch: {
+      en: "a perfume workshop to create your own fragrance with a specialist — a scent to take the place home with you",
+      pt: "um workshop de perfumes para criar a sua própria fragrância com um especialista — um aroma para levar este lugar consigo",
+      fr: "un atelier de parfum pour créer votre propre fragrance avec un spécialiste — une façon d'emporter le lieu avec vous",
+    },
+    price: { onRequest: true }, goodIn: ["rainy", "showers"], notIn: [], // menu price is for groups of 10
+  },
 ];
 
 let catalogue: Activity[] = structuredClone(A);

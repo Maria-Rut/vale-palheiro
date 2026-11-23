@@ -11,6 +11,7 @@ import { Scheduler, DEFAULT_CONFIG } from "../src/scheduler.ts";
 import { MockBookingSource, InMemoryEventSource } from "../src/sources.ts";
 import { placeLabel } from "../src/generator.ts";
 import { getSentLog } from "../src/channels.ts";
+import { toEmailHtml } from "../src/templates.ts";
 import type { ScheduledMessage } from "../src/types.ts";
 
 const scheduler = new Scheduler(new MockBookingSource(), new InMemoryEventSource(), { ...DEFAULT_CONFIG });
@@ -54,7 +55,7 @@ function card(m: ScheduledMessage): string {
     </div>
     <div class="body">
       ${m.subject ? `<div class="subject">${esc(m.subject)}</div>` : ""}
-      <div class="text">${esc(m.body)}</div>
+      ${m.channel === "email" ? toEmailHtml(m.body) : `<div class="text">${esc(m.body)}</div>`}
       <div class="foot">Send time: ${fmt(m.sendAt)} (guest-local ${esc(m.localSendTime)}, ${esc(m.timeZone)}) · Copy by: ${m.generatedBy === "llm" ? "AI model" : "brand template"}</div>
     </div>
   </div>`;

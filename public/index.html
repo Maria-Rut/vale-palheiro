@@ -140,8 +140,59 @@
     .ppill.call { background: #f3e1d3; color: #8a4b2b; }
     .ppill.past { background: #eee; color: #888; }
 
+    /* ---------- emails tab ---------- */
+    .steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
+    .step-btn {
+      display: flex; align-items: center; gap: 8px; background: var(--white); border: 1px solid var(--line);
+      color: var(--earth-700); padding: 7px 14px 7px 8px; border-radius: 999px; cursor: pointer; font: 13.5px var(--sans);
+    }
+    .step-btn .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--clay); color: var(--white); font: 13px var(--serif); }
+    .step-btn.on { background: var(--earth-800); border-color: var(--earth-800); color: var(--sand); }
+    .step-btn.on .n { background: var(--sand); color: var(--earth-800); }
+    .step-head h2 { margin: 0; font-size: 26px; color: var(--earth-800); }
+    .step-head p { margin: 2px 0 18px; color: var(--earth-700); font-size: 14px; }
+    .tpl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+    @media (max-width: 860px) { .tpl-grid { grid-template-columns: minmax(0, 1fr); } }
+    .tpl-edit label { display: block; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+    .tpl-edit input, .tpl-edit textarea {
+      width: 100%; font: 14px/1.55 var(--sans); padding: 10px 12px; border: 1px solid var(--line);
+      border-radius: 10px; background: var(--white); color: var(--earth-900); margin-bottom: 12px;
+    }
+    .tpl-edit textarea { min-height: 360px; resize: vertical; }
+    .tpl-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .tpl-actions .state { font-size: 12.5px; color: var(--muted); }
+    .fields { margin-top: 16px; font-size: 12.5px; color: var(--earth-700); }
+    .fields .how { margin: 0 0 8px; color: var(--muted); }
+    .field-chip {
+      display: inline-block; margin: 0 6px 6px 0; padding: 3px 9px; border-radius: 6px; cursor: pointer;
+      background: var(--paper-2); border: 1px solid var(--line-soft); font: 12px ui-monospace, Menlo, monospace; color: var(--earth-800);
+    }
+    .field-chip.smart { background: #eef2e6; border-color: #d5dfc6; }
+    .field-chip:hover { border-color: var(--clay); }
+    .preview-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+    .guest-line { font-size: 13.5px; color: var(--earth-700); margin: 0 0 8px; }
+    .guest-line b { color: var(--earth-900); }
+    .inbox { border: 1px solid var(--line-soft); border-radius: 14px; background: var(--white); box-shadow: var(--shadow-sm); overflow: hidden; }
+    .inbox-head { padding: 12px 16px; border-bottom: 1px solid var(--line-soft); font-size: 13px; color: var(--earth-700); }
+    .inbox-head .subj { font-size: 15.5px; color: var(--earth-900); font-weight: 600; margin-top: 2px; }
+    .inbox-body > div { padding: 0 !important; }
+    .inbox-body > div > div { border: 0 !important; border-radius: 0 !important; max-width: none !important; }
+    .bubble { background: #dcf8c6; color: #1f2d1b; padding: 12px 14px; border-radius: 12px 12px 12px 2px; margin: 16px; max-width: 420px; font-size: 14px; white-space: pre-wrap; }
+    .more-btn {
+      display: block; width: 100%; margin: 14px 0 0; padding: 11px; border-radius: 12px; cursor: pointer;
+      background: var(--paper-2); border: 1px dashed var(--line); color: var(--earth-800); font: 14px var(--sans);
+    }
+    .more-btn:hover { background: var(--sand); }
+    .more-list > div { margin-top: 18px; }
+    .lang-block { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 6px; }
+    .lang-block h3 { font-size: 21px; margin: 16px 0 10px; color: var(--earth-800); }
+    .orig-toggle { margin: 0 20px 14px; font-size: 13px; }
+    .orig-toggle summary { cursor: pointer; color: var(--earth-700); }
+    .msg-email { padding: 0 20px 6px; }
+
     /* ---------- tabs ---------- */
-    .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+    .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+    .tabbtn { white-space: nowrap; flex: none; }
     .tabbtn {
       background: transparent; border: none; border-bottom: 2px solid transparent;
       font-family: var(--serif); font-size: 19px; padding: 6px 4px 12px; margin-right: 22px;
@@ -245,7 +296,8 @@
     .stat.warn { border-color: #e2c08d; background: #fbf3e4; }
     .journey { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 0 0 26px; position: relative; }
     @media (max-width: 760px) { .journey { grid-template-columns: 1fr 1fr; gap: 10px; } }
-    .stage { text-align: center; padding: 0 6px; position: relative; }
+    .stage { text-align: center; padding: 0 6px; position: relative; background: none; border: 0; font: inherit; color: inherit; cursor: pointer; }
+    .stage:hover .t { color: var(--clay); }
     .stage .dot { width: 34px; height: 34px; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center;
       font-family: var(--serif); font-size: 17px; color: var(--white); background: var(--clay); position: relative; z-index: 1; }
     .stage.post .dot { background: var(--earth-500); } .stage.evt .dot { background: var(--sage-dark); }
@@ -339,11 +391,10 @@
 
     <main>
       <div class="intro">
-        <h1>Guest messages</h1>
+        <h1>Guest emails</h1>
         <p>
-          Terra writes to every guest at five moments — in English, Portuguese or French,
-          at a good hour in their own time zone. Review anything you like; the personal
-          touches stay with the team.
+          Terra emails every guest at the right moments of their stay, in their own language
+          and at a good hour where they live. Click a step to read and edit its email.
         </p>
       </div>
 
@@ -351,17 +402,23 @@
       <div class="stats" id="stats"></div>
 
       <div class="tabs">
-        <button class="tabbtn active" data-tab="messages">Messages <span class="tab-count" id="msgCount"></span></button>
+        <button class="tabbtn active" data-tab="emails">Email templates</button>
+        <button class="tabbtn" data-tab="messages">Outbox <span class="tab-count" id="msgCount"></span></button>
+        <button class="tabbtn" data-tab="prefs">Guests <span class="tab-count" id="prefCount"></span></button>
         <button class="tabbtn" data-tab="tasks">Team tasks <span class="tab-count" id="taskCount"></span></button>
-        <button class="tabbtn" data-tab="prefs">Guest preferences <span class="tab-count" id="prefCount"></span></button>
         <button class="tabbtn" data-tab="events">Events</button>
         <button class="tabbtn" data-tab="weather">Weather &amp; activities</button>
-        <button class="tabbtn" data-tab="property">Property info</button>
+        <button class="tabbtn" data-tab="property">Resort details</button>
         <button class="tabbtn" data-tab="settings">Settings</button>
-        <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
       </div>
 
-      <section id="tab-messages">
+      <section id="tab-emails">
+        <div class="steps" id="steps"></div>
+        <div id="stepView"></div>
+      </section>
+
+      <section id="tab-messages" class="hidden">
+        <p class="hint muted" style="margin-top:0">Every email Terra has planned for real bookings, and what it already sent. Shown in English; open "what the guest receives" to see their language.</p>
         <div class="panel demo" style="margin-bottom:18px">
           <h3>Demo tools <span class="demo-tag">demo only</span></h3>
           <p class="hint" style="margin-bottom:10px">Terra sends on its own at the right time. Jump the clock forward to watch it happen.</p>
@@ -391,9 +448,9 @@
 
       <section id="tab-prefs" class="hidden">
         <p class="prefs-intro">
-          The 3-days-before email links each guest to a personal page where their stay is already set up
-          the way most guests like it. Whatever they change shows up here as a prep sheet, and anything
-          that needs a person (extra bed, drinks to stock, experiences to arrange) becomes a team task.
+          Everyone arriving soon, staying now or just left. The 3-days-before email has a button to the guest's
+          own "prepare your stay" page; what they choose shows up here, and anything that needs a person
+          (extra bed, drinks, experiences) becomes a team task.
         </p>
         <div id="prefs"></div>
       </section>
@@ -458,7 +515,13 @@
               <div class="full"><div class="field-lbl">Good hours to receive a message (guest's local time)</div>
                 <div class="stepper"><input id="c_sendWindowStart" type="number" min="0" max="23" /><span class="unit">to</span><input id="c_sendWindowEnd" type="number" min="1" max="24" /><span class="unit">h — anything outside moves into this window</span></div></div>
               <label class="check full"><input type="checkbox" id="c_arrivalTextReminder" /> Also send a short WhatsApp / SMS on arrival day, if the guest opted in</label>
-              <label class="check full"><input type="checkbox" id="c_holdPersonalMoments" /> Hold messages about a birthday or anniversary until someone on the team approves them</label>
+              <div class="full"><div class="field-lbl">Which emails wait for someone on the team to approve them</div>
+                <select id="c_approvalPolicy">
+                  <option value="personal">Only personal ones (birthday, anniversary…)</option>
+                  <option value="personal_and_suggestions">Personal ones and the welcome email with suggestions</option>
+                  <option value="all">Every email</option>
+                  <option value="none">None — everything goes out on time</option>
+                </select></div>
             </div>
           </div>
           <div class="panel">
@@ -474,9 +537,7 @@
         <div class="row-end"><button class="primary" id="applyConfig">Save settings</button></div>
       </section>
 
-      <section id="tab-log" class="hidden">
-        <div id="log"></div>
-      </section>
+
     </main>
   </div>
 

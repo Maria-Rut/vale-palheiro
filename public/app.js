@@ -41,31 +41,29 @@ $("#loginForm").addEventListener("submit", async (e) => {
 $("#logoutBtn").addEventListener("click", async () => { await api.post("/api/logout"); showLogin(); });
 
 // --- tabs ---
-const TABS = ["messages", "tasks", "prefs", "events", "weather", "property", "settings", "log"];
+const TABS = ["emails", "messages", "prefs", "tasks", "events", "weather", "property", "settings"];
 const RENDER = {
-  messages: renderMessages, tasks: renderTasks, prefs: renderPrefs, events: renderEvents, weather: renderWeather,
-  property: renderProperty, settings: loadConfig, log: renderLog,
+  emails: renderEmails, messages: renderMessages, tasks: renderTasks, prefs: renderPrefs, events: renderEvents,
+  weather: renderWeather, property: renderProperty, settings: loadConfig,
 };
-document.querySelectorAll(".tabbtn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tabbtn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    const tab = btn.dataset.tab;
-    for (const t of TABS) $(`#tab-${t}`).classList.toggle("hidden", t !== tab);
-    RENDER[tab]();
-  });
-});
+function openTab(tab) {
+  document.querySelectorAll(".tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  for (const t of TABS) $(`#tab-${t}`).classList.toggle("hidden", t !== tab);
+  RENDER[tab]();
+}
+document.querySelectorAll(".tabbtn").forEach((btn) => btn.addEventListener("click", () => openTab(btn.dataset.tab)));
 
 // --- labels ---
 const KIND_LABEL = {
   pre_arrival: "3 days before",
-  arrival_day: "Arrival day",
-  in_stay: "During the stay",
+  arrival_day: "3 hours before",
+  in_stay: "Welcome",
   post_stay: "Thank you",
   event_invite: "Event invite",
 };
 const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
+const LANG_NAME = { en: "English", pt: "Portuguese", fr: "French" };
 const STATUS_LABEL = {
   scheduled: "scheduled", held: "needs approval", sent: "sent", cancelled: "not sending", skipped: "skipped",
 };
@@ -104,14 +102,19 @@ function escAttr(s) { return esc(s).replaceAll('"', "&quot;"); }
 async function renderOverview() {
   const [o, cfg] = await Promise.all([api.get("/api/overview"), api.get("/api/config")]);
   const stages = [
-    ["1", "We're getting ready", `${cfg.preArrivalDaysBefore} days before arrival`, ""],
-    ["2", "Arrival details", `${cfg.arrivalHoursBefore}h before arrival`, ""],
-    ["3", "Settling in", `${cfg.inStayHoursAfterCheckIn}h after check-in`, ""],
-    ["4", "Thank you + review", `${cfg.postStayHoursAfterCheckOut}h after check-out`, "post"],
-    ["5", "Event invites", "opted-in past guests", "evt"],
+    ["1", "We're getting ready", `${cfg.preArrivalDaysBefore} days before arrival`, "", "pre_arrival"],
+    ["2", "Arrival details", `${cfg.arrivalHoursBefore}h before arrival`, "", "arrival_day"],
+    ["3", "Welcome + suggestions", `${cfg.inStayHoursAfterCheckIn}h after check-in`, "", "in_stay"],
+    ["4", "Thank you + review", `${cfg.postStayHoursAfterCheckOut}h after check-out`, "post", "post_stay"],
+    ["5", "Event invites", "opted-in past guests", "evt", "event_invite"],
   ];
-  $("#journey").innerHTML = stages.map(([n, t, w, c]) =>
-    `<div class="stage ${c}"><div class="dot">${n}</div><div class="t">${t}</div><div class="w">${w}</div></div>`).join("");
+  $("#journey").innerHTML = stages.map(([n, t, w, c, k]) =>
+    `<button class="stage ${c}" data-step="${k}" title="Read this email"><div class="dot">${n}</div><div class="t">${t}</div><div class="w">${w}</div></button>`).join("");
+  $("#journey").querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
+    currentStep = b.dataset.step;
+    openTab("emails");
+    $("#tab-emails").scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
   const stat = (n, l, warn) => `<div class="stat ${warn ? "warn" : ""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   $("#stats").innerHTML =
     stat(o.scheduled, "scheduled") +
@@ -170,10 +173,7 @@ async function renderMessages() {
       ${m.status === "held" && m.statusNote ? `<div class="note">${esc(m.statusNote)}</div>` : ""}
       ${m.status === "skipped" && m.statusNote ? `<div class="note info">${esc(m.statusNote)}</div>` : ""}
       ${m.suggestions?.length ? `<div class="picks"><b>Recommendation agent</b>${m.suggestions.map((x) => `<div>${esc(resortDate(x.date + "T12:00:00Z"))}: ${esc(x.reason)}</div>`).join("")}</div>` : ""}
-      <div class="msg-body">
-        ${m.subject ? `<div class="msg-subject">${esc(m.subject)}</div>` : ""}
-        <div class="msg-text">${esc(m.body)}</div>
-      </div>
+      <div class="msg-body">${messageView(m)}</div>
       <div class="msg-meta">
         <span>${when}</span>
         ${m.timingNote ? `<span>${esc(m.timingNote)}</span>` : ""}
@@ -205,6 +205,30 @@ async function renderMessages() {
     }));
 }
 
+/** The email as the guest sees it — in English for the team, with the guest's own version one click away. */
+function messageView(m) {
+  const lang = LANG_NAME[m.language];
+  if (m.channel !== "email") {
+    return `<div class="bubble">${esc(m.body)}</div>`;
+  }
+  const en = m.english ?? { subject: m.subject, body: m.body };
+  const enHtml = m.englishHtml ?? m.html;
+  return `
+    <div class="msg-email">
+      <div class="inbox">
+        <div class="inbox-head">To ${esc(m.guest?.email)}${m.english ? ` · <i>English copy for the team</i>` : ""}<div class="subj">${esc(en.subject)}</div></div>
+        <div class="inbox-body">${enHtml}</div>
+      </div>
+    </div>
+    ${m.english ? `
+    <details class="orig-toggle"><summary>Show what the guest receives (${lang})</summary>
+      <div class="inbox" style="margin-top:10px">
+        <div class="inbox-head">To ${esc(m.guest?.email)}<div class="subj">${esc(m.subject)}</div></div>
+        <div class="inbox-body">${m.html}</div>
+      </div>
+    </details>` : ""}`;
+}
+
 function openEditor(btn, m) {
   if (!m) return;
   const card = btn.closest(".msg-card");
@@ -213,6 +237,7 @@ function openEditor(btn, m) {
   if (actions) actions.style.display = "none";
   body.innerHTML = `
     <div class="edit-area">
+      ${m.language !== "en" ? `<p class="hint muted" style="margin:0 0 8px">You're editing the ${LANG_NAME[m.language]} text this guest receives.</p>` : ""}
       ${m.subject ? `<input class="editSubject" value="${escAttr(m.subject)}" placeholder="Subject" />` : ""}
       <textarea class="editBody">${esc(m.body)}</textarea>
       <div style="display:flex;gap:10px">
@@ -240,8 +265,145 @@ $("#simBtn").addEventListener("click", async () => {
   const res = await api.post("/api/simulate", { atHoursFromNow: hrs });
   toast(res.sentCount > 0 ? `${res.sentCount} message(s) sent` : "Nothing due to send yet");
   refreshMessages();
-  renderLog();
 });
+
+// --- email templates ---
+let currentStep = "pre_arrival";
+let templatesCache = null;
+
+const STEP_SHORT = {
+  pre_arrival: "3 days before", arrival_day: "3 hours before", arrival_text: "Arrival text",
+  in_stay: "Welcome", post_stay: "Thank you", event_invite: "Event invite",
+};
+
+function inboxCard(ex, kind) {
+  const who = `<p class="guest-line"><b>${esc(ex.name)}</b> — ${esc(ex.about)}</p>`;
+  if (kind === "arrival_text") return `${who}<div class="inbox"><div class="inbox-head">WhatsApp to ${esc(ex.name)}</div><div class="bubble">${esc(ex.text)}</div></div>`;
+  return `${who}<div class="inbox">
+      <div class="inbox-head">From Vale Palheiro · to ${esc(ex.email)}<div class="subj">${esc(ex.subject)}</div></div>
+      <div class="inbox-body">${ex.html}</div>
+    </div>`;
+}
+
+function editorHtml(step, lang) {
+  const t = step.templates[lang];
+  const isText = step.key === "arrival_text";
+  return `
+    <div class="tpl-edit" data-lang="${lang}">
+      ${isText ? "" : `<label>Subject</label><input class="tSubject" value="${escAttr(t.subject)}" />`}
+      <label>${isText ? "Message" : "Email"}</label>
+      <textarea class="tBody" ${isText ? 'style="min-height:140px"' : ""}>${esc(t.body)}</textarea>
+      <div class="tpl-actions">
+        <button class="primary tSave">Save changes</button>
+        ${t.edited ? `<button class="ghost tReset">Go back to the original</button>` : ""}
+        <span class="state">${t.edited ? "Edited by the team" : "Original wording"}</span>
+      </div>
+    </div>`;
+}
+
+function fieldsHtml(step) {
+  const simple = step.fields.filter((f) => !f.smart), smart = step.fields.filter((f) => f.smart);
+  const chip = (f) => `<span class="field-chip ${f.smart ? "smart" : ""}" data-token="{{${f.token}}}" title="${escAttr(f.help)}">{{${f.token}}}</span>`;
+  return `<div class="fields">
+    <p class="how">Words in <code>{{double brackets}}</code> are filled in for each guest. Click one to add it where your cursor is; hover to see what it becomes.
+    ${step.key === "arrival_text" ? "" : "A line like <code>[Button text](link)</code> becomes a button."}</p>
+    <div>${simple.map(chip).join("")}</div>
+    ${smart.length ? `<p class="how" style="margin-top:8px">Green ones are written by Terra and only appear when they apply (a returning guest, a birthday, events that week, the weather plan…):</p><div>${smart.map(chip).join("")}</div>` : ""}
+  </div>`;
+}
+
+async function renderEmails() {
+  templatesCache = await api.get("/api/templates");
+  $("#steps").innerHTML = templatesCache.map((s, i) =>
+    `<button class="step-btn ${s.key === currentStep ? "on" : ""}" data-key="${s.key}"><span class="n">${i + 1}</span>${STEP_SHORT[s.key]}</button>`).join("");
+  $("#steps").querySelectorAll("[data-key]").forEach((b) => b.addEventListener("click", () => { currentStep = b.dataset.key; renderEmails(); }));
+  await renderStep();
+}
+
+async function renderStep() {
+  const step = templatesCache.find((s) => s.key === currentStep);
+  const view = $("#stepView");
+  const previews = await api.get(`/api/templates/${step.key}/preview?lang=en`);
+  const [first, ...rest] = previews;
+  view.innerHTML = `
+    <div class="step-head"><h2>${esc(step.title)}</h2><p>${esc(step.when)}</p></div>
+    <div class="tpl-grid">
+      <div>
+        <p class="preview-label">Template · English</p>
+        ${editorHtml(step, "en")}
+        ${fieldsHtml(step)}
+      </div>
+      <div>
+        <p class="preview-label">How the guest sees it</p>
+        <div id="pv-first">${inboxCard(first, step.key)}</div>
+        <button class="more-btn" id="moreBtn">Show ${rest.length} more example guests ▾</button>
+        <div class="more-list hidden" id="moreList">${rest.map((ex) => `<div>${inboxCard(ex, step.key)}</div>`).join("")}</div>
+      </div>
+    </div>
+    <button class="more-btn" id="langBtn" style="margin-top:26px">Show the Portuguese and French versions ▾</button>
+    <div class="hidden" id="langList">
+      ${["pt", "fr"].map((l) => `
+        <div class="lang-block">
+          <h3>${LANG_NAME[l]}</h3>
+          <div class="tpl-grid">
+            <div>${editorHtml(step, l)}</div>
+            <div><p class="preview-label">How a ${LANG_NAME[l]}-speaking guest sees it</p><div class="pv-lang" data-lang="${l}"><p class="muted">Loading…</p></div></div>
+          </div>
+        </div>`).join("")}
+    </div>`;
+
+  $("#moreBtn").addEventListener("click", () => {
+    const open = $("#moreList").classList.toggle("hidden");
+    $("#moreBtn").textContent = open ? `Show ${rest.length} more example guests ▾` : "Hide the other guests ▴";
+  });
+  $("#langBtn").addEventListener("click", async () => {
+    const hidden = $("#langList").classList.toggle("hidden");
+    $("#langBtn").textContent = hidden ? "Show the Portuguese and French versions ▾" : "Hide the Portuguese and French versions ▴";
+    if (!hidden) loadLangPreviews(step);
+  });
+
+  // Field chips insert at the cursor of the English body.
+  let lastField = view.querySelector('.tpl-edit[data-lang="en"] .tBody');
+  view.querySelectorAll(".tBody, .tSubject").forEach((el) => el.addEventListener("focus", () => { lastField = el; }));
+  view.querySelectorAll("[data-token]").forEach((c) => c.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const el = lastField, tok = c.dataset.token;
+    const a = el.selectionStart ?? el.value.length, b = el.selectionEnd ?? a;
+    el.value = el.value.slice(0, a) + tok + el.value.slice(b);
+    el.focus(); el.selectionStart = el.selectionEnd = a + tok.length;
+  }));
+
+  view.querySelectorAll(".tpl-edit").forEach((box) => {
+    const lang = box.dataset.lang;
+    box.querySelector(".tSave").addEventListener("click", async () => {
+      const body = { body: box.querySelector(".tBody").value };
+      const subj = box.querySelector(".tSubject");
+      if (subj) body.subject = subj.value;
+      await api.post(`/api/templates/${step.key}/${lang}`, body);
+      toast(`${LANG_NAME[lang]} template saved — upcoming emails updated`);
+      const langOpen = !$("#langList").classList.contains("hidden");
+      await renderEmails();
+      if (langOpen) $("#langBtn").click();
+      renderOverview();
+    });
+    box.querySelector(".tReset")?.addEventListener("click", async () => {
+      await api.post(`/api/templates/${step.key}/${lang}`, { reset: true });
+      toast("Back to the original wording");
+      const langOpen = !$("#langList").classList.contains("hidden");
+      await renderEmails();
+      if (langOpen) $("#langBtn").click();
+    });
+  });
+}
+
+async function loadLangPreviews(step) {
+  for (const l of ["pt", "fr"]) {
+    const box = document.querySelector(`.pv-lang[data-lang="${l}"]`);
+    if (!box) continue;
+    const [ex] = await api.get(`/api/templates/${step.key}/preview?lang=${l}`);
+    box.innerHTML = inboxCard(ex, step.key);
+  }
+}
 
 // --- tasks ---
 async function renderTasks() {
@@ -446,52 +608,31 @@ const NUM_KEYS = [
   "preArrivalDaysBefore", "arrivalHoursBefore", "inStayHoursAfterCheckIn", "postStayHoursAfterCheckOut",
   "sendWindowStart", "sendWindowEnd", "inviteMinDaysBetween", "inviteQuietDaysAroundStay", "inviteMaxPerYear",
 ];
-const BOOL_KEYS = ["arrivalTextReminder", "holdPersonalMoments"];
+const BOOL_KEYS = ["arrivalTextReminder"];
 
 async function loadConfig() {
   const cfg = await api.get("/api/config");
   for (const k of NUM_KEYS) $(`#c_${k}`).value = cfg[k];
   for (const k of BOOL_KEYS) $(`#c_${k}`).checked = !!cfg[k];
+  $("#c_approvalPolicy").value = cfg.approvalPolicy;
 }
 
 $("#applyConfig").addEventListener("click", async () => {
   const body = {};
   for (const k of NUM_KEYS) body[k] = Number($(`#c_${k}`).value);
   for (const k of BOOL_KEYS) body[k] = $(`#c_${k}`).checked;
+  body.approvalPolicy = $("#c_approvalPolicy").value;
   await api.post("/api/config", body);
   toast("Settings saved — schedule updated");
   renderOverview();
 });
 
-// --- delivery log ---
-async function renderLog() {
-  const log = await api.get("/api/sent-log");
-  $("#logCount").textContent = `(${log.length})`;
-  const el = $("#log");
-  if (!log.length) {
-    el.innerHTML = `<p class="empty">Nothing sent yet. Use the demo tools to send what's due.</p>`;
-    return;
-  }
-  el.innerHTML = "";
-  for (const item of log) {
-    const d = document.createElement("div");
-    d.className = "log-item";
-    d.innerHTML = `
-      <div class="top">
-        <span class="pill ${item.channel}">${CHANNEL_LABEL[item.channel]}</span>
-        <b>${esc(item.guestName)}</b>
-        <span class="muted">${esc(item.accommodation)} · to ${esc(item.to)}</span>
-        <span class="spacer"></span>
-        <span class="muted" style="font-size:12px">${fmt(item.at)}</span>
-      </div>
-      ${item.subject ? `<div class="msg-subject" style="font-size:16px">${esc(item.subject)}</div>` : ""}
-      <div class="msg-text" style="font-size:13.5px">${esc(item.body)}</div>
-    `;
-    el.appendChild(d);
-  }
+function refreshAll() {
+  renderOverview(); renderPrefs(); renderTasks();
+  const active = document.querySelector(".tabbtn.active")?.dataset.tab ?? "emails";
+  if (active === "emails") renderEmails(); else { renderEmails(); RENDER[active](); }
+  api.get("/api/messages").then((all) => { $("#msgCount").textContent = `(${all.length})`; });
 }
-
-function refreshAll() { renderOverview(); renderMessages(); renderLog(); renderPrefs(); renderTasks(); }
 
 // --- boot ---
 (async () => {

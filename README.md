@@ -20,13 +20,38 @@ resort's real systems.
 
 | # | Moment | Default timing | What it says |
 |---|--------|----------------|--------------|
-| 1 | **We're getting ready** | 3 days before arrival, 10:00 guest time | Your villa is being prepared, we can't wait; stay summary; events during the stay (with priority booking); asks for arrival time. Returning guests hear about a welcome-back gift. |
+| 1 | **We're getting ready** | 3 days before arrival, 10:00 guest time | Your villa is being prepared, we can't wait; stay summary; events during the stay (with priority booking); a **"Click here to personalise your stay" button** to the guest's own page (below). Returning guests hear about a welcome-back gift. |
 | 2 | **Arrival details** | 3 hours before arrival | Villa / unit, where we'll meet you (Casa da Ribeira), directions + map, reception hours, late-arrival number. Plus a short WhatsApp/SMS if the guest opted in. |
-| 3 | **Welcome & settling in** | 2 hours after check-in | Wi-Fi, breakfast and dinner hours, reception, email and out-of-hours numbers, check-out time, what's on, additional services — and **our suggestions for your stay**, day by day, based on the weather and sea forecast (see below). |
-| 4 | **Thank you + review** | 24 hours after check-out, guest time | Thank-you, one personal line, a review link. |
+| 3 | **Welcome & settling in** | 2 hours after check-in | A line about their journey from their home town, Wi-Fi, breakfast and dinner hours, reception, email and out-of-hours numbers, check-out time, what's on, additional services — and **our suggestions for your stay**, day by day, based on the weather and sea forecast (see below). |
+| 4 | **Thank you + review** | 24 hours after check-out, guest time | Thank-you, one personal line, a **Leave a review** button. |
 | 5 | **Event invites** | N days before each event, 10:00 guest time | To opted-in past guests only, with a welcome-back gift if they come to stay. |
 
 All timings, quiet hours and anti-spam limits are editable in **Settings**.
+
+## Email templates (the first tab)
+
+The dashboard opens on **Email templates**: one step at a time, in journey
+order, **in English first**.
+
+- **Left: the template.** Plain wording you can edit, with fields in
+  `{{double brackets}}` that Terra fills in for each guest (`{{first_name}}`,
+  `{{villa}}`, `{{wifi_password}}`…). Click a field to insert it. Green fields
+  are written by Terra and only appear when they apply: a returning guest, a
+  birthday, events that week, the weather-based suggestions. A line like
+  `[Click here to personalise your stay]({{personalise_link}})` becomes a
+  button.
+- **Right: how the guest sees it.** The real email for an example guest, a couple
+  from Amsterdam. **Show 4 more example guests** adds a returning family from
+  Bristol, an anniversary couple from Lyon, a business traveller from São Paulo
+  and three friends from Zurich, one of them with a birthday. All five stay the
+  same week, so the weather suggestions come from the same forecast, adapted
+  to each party.
+- **Show the Portuguese and French versions** opens the other two templates,
+  each with its own preview.
+
+Saving a template updates every upcoming email that hasn't been edited by
+hand. The **Outbox** shows every real email in English too, with *Show what
+the guest receives* for the Portuguese or French original.
 
 ## The recommendation agent (weather → experiences)
 
@@ -90,8 +115,10 @@ the dashboard shows the guest-local time it lands, and why it moved if it did.
 
 ## Human in the loop
 
-- **Personal moments are held for approval.** A message mentioning a birthday
-  or anniversary waits for someone to add a personal line and press *Approve*.
+- **Approval policy** (Settings): hold only personal emails (default), also the
+  welcome email with suggestions, every email, or none. A message mentioning a
+  birthday or anniversary waits for someone to add a personal line and press
+  *Approve*.
 - **Team tasks**: Terra prompts, people deliver. Welcome-back gift for a
   returning guest, a handwritten note for a celebration, someone to meet a
   guest arriving after reception closes (20:00).
@@ -116,20 +143,21 @@ so a happy guest just taps *Looks perfect*, and nobody faces a questionnaire.
 - **"Remember my preferences for future stays."**
 - **Allergies need an explicit consent box** and are **deleted automatically
   after check-out**.
-- Wi-Fi and contact details come from **Property info**.
+- Wi-Fi and contact details come from **Resort details**.
 - EN / PT / FR. The page closes 24 hours before arrival; bookings made later
   than that get the usual personal call.
 
-Their answers become a **prep sheet** (dashboard → *Guest preferences*),
+Their answers become a **prep sheet** (dashboard → *Guests*),
 **team tasks** (wine to stock, extra bed to check, experiences to arrange),
+**priority in the welcome email's suggestions** for experiences they ticked,
 a line in the **arrival-day email** ("we've prepared everything the way you
 asked…"), and a line in the **thank-you** if they asked us to remember them.
 Sophie's answers are pre-filled in the demo.
 
-## Property info
+## Resort details
 
 Wi-Fi, phone numbers, directions (EN/PT/FR), meal hours, check-out time and the
-review link are edited in the **Property info** tab and flow straight into
+review link are edited in the **Resort details** tab and flow straight into
 upcoming messages. Placeholder values are marked **sample** and counted on the
 dashboard, so nothing made-up reaches a real guest unnoticed.
 
@@ -154,20 +182,20 @@ Open <http://localhost:3000> and log in:
 
 ### Demo script (≈3 minutes)
 
-1. Log in → the journey strip and counters show what's scheduled, what needs
-   approval, open team tasks and property details still to confirm.
-2. Filter **Needs approval** → Sophie's anniversary email (French). Add a line,
-   **Approve**.
-3. Compare a **3 days before** email for a returning guest with a first-timer,
-   and an **Arrival day** email in Portuguese.
+1. Log in → **Email templates**, step 1 (3 days before): the English template
+   beside Emma's email with its *personalise your stay* button. Change a
+   sentence, **Save**, and watch the preview change.
+2. Step 4, **Welcome** → **Show 4 more example guests**: same week, same
+   weather, different people. Then **Show the Portuguese and French versions**.
+3. **Outbox** → Sophie's anniversary email (French, shown in English). Open
+   *Show what the guest receives*, add a line, **Approve**.
 4. **Team tasks** → the welcome-back gift and the late-arrival pickup.
 5. **Events** → add an event; watch invites appear for past guests, and see
    who is held back by the anti-spam rules and why.
 6. **Weather & activities** → the 7-day forecast and what the agent sees;
-   switch off "Massage" and watch Miguel's rainy-day suggestion change. Filter
-   **During the stay** to read the welcome emails with their day-by-day plan.
-7. **Property info** → change the Wi-Fi password; every unsent message updates.
-8. **Demo tools → In 3 days → Send anything due**, then open the **Delivery log**.
+   switch off "Massage" and watch the welcome emails' suggestions change.
+7. **Resort details** → change the Wi-Fi password; every unsent message updates.
+8. **Outbox → Demo tools → In 3 days → Send anything due**.
 
 `public/snapshot.html` is a static export of the output (regenerate with
 `node --experimental-strip-types tools/snapshot.ts > public/snapshot.html`).
@@ -188,7 +216,9 @@ src/
   recommender.ts The agent: forecast → conditions → one experience per day
   preferences.ts  "Prepare your stay" answers: defaults, validation, links, tasks, email lines
   brand.ts      Vale Palheiro voice + localised phrasing
-  generator.ts  The five message templates in EN / PT / FR (+ LLM seam)
+  templates.ts  The editable email templates (EN / PT / FR), fields, buttons, HTML email
+  examples.ts   Five made-up guests for the template previews
+  generator.ts  Fills the templates for each guest (+ LLM seam)
   channels.ts   Email / SMS / WhatsApp adapters behind one interface
   scheduler.ts  Who gets what, when; anti-spam; tasks; send-if-due
   server.ts     Zero-dependency HTTP server + JSON API
@@ -212,11 +242,14 @@ public/
    closed dates.
 3. **Sending** — swap the mock adapters for an email provider (and Twilio for
    SMS / WhatsApp; WhatsApp needs Meta-approved templates).
-4. **Property info** — confirm every field marked *sample*.
+4. **Resort details** — confirm every field marked *sample*.
 5. **Weather** — `WEATHER_SOURCE=open-meteo` + `OPEN_METEO_API_KEY`.
 6. **Hosting** — `render.yaml` deploys to Render. State is in memory today; a
    pilot needs a small database so approvals, edits and sent history survive a
    restart.
 7. **Consent** — honour opt-ins and unsubscribe replies (GDPR).
+
+The approval policy and perfume workshop come from Maria's `terra-crm-weather`
+branch; the "prepare your stay" page from Arantxa's work.
 
 > All guest data in this prototype is fictional.

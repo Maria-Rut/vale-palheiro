@@ -5,9 +5,10 @@ import type {
   Reservation,
   ResortEvent,
 } from "./types.ts";
-import { GREETING, LOCALE, OCCASION, POST_STAY_LINE, SIGNOFF } from "./brand.ts";
+import { LOCALE, OCCASION, POST_STAY_LINE } from "./brand.ts";
 import { prop } from "./property.ts";
-import { postStayPreferencesLine, preferencesInviteLine, welcomePreferencesLine } from "./preferences.ts";
+import { getPreferences, postStayPreferencesLine, preferencesOpen, preferencesUrl, welcomePreferencesLine } from "./preferences.ts";
+import { fill, getTemplate, toPlainText, type TemplateKey } from "./templates.ts";
 import { RESORT_TZ } from "./timezone.ts";
 import { renderStayPlan, type StayPlan } from "./recommender.ts";
 
@@ -104,325 +105,115 @@ function eventLine(e: ResortEvent, lang: Language): string {
   return `• ${e.title[lang]} — ${shortDay(e.start, lang)}, ${time(e.start)} · ${e.place}`;
 }
 
-const lines = (...parts: (string | false | undefined)[]) =>
-  parts.filter((p) => p !== false && p !== undefined).join("\n");
 
 // ---------------------------------------------------------------- templates
+
+const CITY: Record<string, Partial<Record<Language, string>>> = {
+  London: { pt: "Londres", fr: "Londres" }, Lisbon: { pt: "Lisboa", fr: "Lisbonne" },
+  Geneva: { pt: "Genebra", fr: "Genève" }, Munich: { pt: "Munique" },
+  Edinburgh: { pt: "Edimburgo", fr: "Édimbourg" }, "Kraków": { pt: "Cracóvia", fr: "Cracovie" },
+  Amsterdam: { pt: "Amesterdão" }, Zurich: { pt: "Zurique", fr: "Zurich" },
+};
+
+/** The values for every {{field}} a template can use, in the guest's language. */
+function fieldValues(input: GenerationInput): Record<string, string> {
+  const { reservation: r, language: l, returning, eventsDuringStay, stayPlan, event } = input;
+  const p = prop();
+  const place = placeLabel(r);
+  const prefs = getPreferences(r.id);
+  const occ = r.occasion ? OCCASION[r.occasion][l] : undefined;
+  const ev = eventsDuringStay.map((e) => eventLine(e, l));
+  const city = r.guest.city ? (CITY[r.guest.city]?.[l] ?? r.guest.city) : undefined;
+  const pick = <T,>(o: Record<Language, T>) => o[l];
+
+  const v: Record<string, string> = {
+    first_name: r.guest.firstName,
+    villa: place,
+    stay_dates: `${shortDay(r.checkIn, l)} – ${shortDay(r.checkOut, l)}`,
+    party: party(r, l),
+    for_party: headcountPhrase(r, l),
+    breakfast_note: r.breakfastIncluded ? pick({ en: " · breakfast included", pt: " · pequeno-almoço incluído", fr: " · petit-déjeuner inclus" }) : "",
+    arrival_time: time(r.checkIn),
+    checkout: `${p.checkOutTime}, ${shortDay(r.checkOut, l)}`,
+    reception_hours: p.receptionHours,
+    reception_phone: p.receptionPhone,
+    out_of_hours_phone: p.emergencyPhone,
+    whatsapp: p.whatsappNumber,
+    email: p.email,
+    wifi_network: p.wifiNetwork,
+    wifi_password: p.wifiPassword,
+    meeting_point: p.meetingPoint,
+    directions: pick({ en: p.directions, pt: p.directionsPt, fr: p.directionsFr }),
+    map_link: p.mapsLink,
+    breakfast_line: r.breakfastIncluded
+      ? `${p.breakfastHours} ${pick({ en: "(included)", pt: "(incluído)", fr: "(inclus)" })}`
+      : `${p.breakfastHours} — ${pick({ en: "you can add it any time", pt: "pode acrescentá-lo a qualquer momento", fr: "vous pouvez l'ajouter à tout moment" })}`,
+    dinner_hours: p.restaurantHours,
+    review_link: p.reviewLink,
+
+    personalise_link: preferencesOpen(r) ? preferencesUrl(r) : "",
+    personalise_intro: !preferencesOpen(r) ? "" : prefs
+      ? pick({
+          en: "Thank you for telling us how you like things — it's all noted. You can still change anything:",
+          pt: "Obrigado por nos dizer como gosta das coisas — já está tudo anotado. Ainda pode mudar o que quiser:",
+          fr: "Merci de nous avoir dit comment vous aimez les choses — tout est noté. Vous pouvez encore tout modifier :",
+        })
+      : pick({
+          en: "We've already set things up the way most guests love them: the fireplace laid and ready to light, and fresh water in the fridge. Fancy a bottle of regional wine, an extra bed or a sunset horse ride? Tell us your arrival time and adjust anything you like — it takes 30 seconds.",
+          pt: "Já deixámos tudo como a maioria dos hóspedes gosta: a lareira pronta a acender e água fresca no frigorífico. Apetece-lhe uma garrafa de vinho da região, uma cama extra ou um passeio a cavalo ao pôr do sol? Diga-nos a hora de chegada e ajuste o que quiser — demora 30 segundos.",
+          fr: "Tout est déjà réglé comme la plupart de nos hôtes l'aiment : la cheminée prête à être allumée et de l'eau fraîche au réfrigérateur. Envie d'une bouteille de vin de la région, d'un lit supplémentaire ou d'une balade à cheval au coucher du soleil ? Indiquez votre heure d'arrivée et ajustez ce que vous voulez — cela prend 30 secondes.",
+        }),
+    returning_line: !returning ? "" : pick({
+      en: "It's lovely to have you back. As a thank-you for returning, a small welcome-back gift will be waiting for you.",
+      pt: "É uma alegria tê-lo de volta. Como agradecimento por regressar, terá um pequeno presente de boas-vindas à sua espera.",
+      fr: "Quel plaisir de vous revoir. Pour vous remercier de revenir, un petit cadeau de bienvenue vous attendra.",
+    }),
+    occasion_line: !occ ? "" : pick({
+      en: `We know this stay marks ${occ} — we'd love to help make it special. If there's anything you have in mind, just tell us.`,
+      pt: `Sabemos que esta estadia assinala ${occ} — gostaríamos muito de ajudar a torná-la especial. Se tiver alguma ideia, diga-nos.`,
+      fr: `Nous savons que ce séjour marque ${occ} — nous aimerions beaucoup contribuer à le rendre spécial. Si vous avez une idée en tête, dites-le-nous.`,
+    }),
+    events_block: ev.length === 0 ? "" : input.kind === "pre_arrival"
+      ? [pick({ en: "While you're here:", pt: "Durante a sua estadia:", fr: "Pendant votre séjour :" }), ...ev,
+         pick({ en: "Guests staying with us have priority — reply and we'll keep you a place.", pt: "Os nossos hóspedes têm prioridade — responda e guardamos-lhe lugar.", fr: "Nos hôtes sont prioritaires — répondez-nous et nous vous réservons une place." })].join("\n")
+      : [pick({ en: "What's on while you're here:", pt: "Durante a sua estadia:", fr: "Pendant votre séjour :" }), ...ev].join("\n"),
+    prepared_line: welcomePreferencesLine(r, l),
+    journey_line: !city ? "" : pick({
+      en: `We hope the journey from ${city} was an easy one.`,
+      pt: `Esperamos que a viagem desde ${city} tenha corrido bem.`,
+      fr: `Nous espérons que le voyage depuis ${city} s'est bien passé.`,
+    }),
+    suggestions: stayPlan && stayPlan.days.length > 0
+      ? "## " + renderStayPlan(stayPlan, l, p.receptionPhone)
+      : pick({
+          en: "We can arrange a massage in your villa, a guided walk or a wine tasting — just ask.",
+          pt: "Podemos marcar uma massagem na sua casa, uma caminhada guiada ou uma prova de vinhos — é só pedir.",
+          fr: "Nous pouvons organiser un massage dans votre villa, une randonnée guidée ou une dégustation de vins — il suffit de demander.",
+        }),
+    returning_thanks: !returning ? "" : pick({ en: " — and for coming back", pt: " — e por ter voltado", fr: " — et d'être revenu" }),
+    motive_line: POST_STAY_LINE[r.motive][l],
+    remember_line: postStayPreferencesLine(r, l),
+  };
+  if (event) {
+    v.event_title = event.title[l];
+    v.event_when = `${cap(day(event.start, l))}, ${time(event.start)}`;
+    v.event_date_short = shortDay(event.start, l);
+    v.event_place = event.place;
+    v.event_description = event.description[l];
+  }
+  return v;
+}
 
 export class TemplateGenerator implements Generator {
   async generate(input: GenerationInput): Promise<GeneratedMessage> {
     const short = input.channel !== "email";
-    const out = (() => {
-      switch (input.kind) {
-        case "pre_arrival": return preArrival(input);
-        case "arrival_day": return short ? arrivalDayShort(input) : arrivalDay(input);
-        case "in_stay": return inStay(input);
-        case "post_stay": return postStay(input);
-        case "event_invite": return eventInvite(input);
-      }
-    })();
-    return { ...out, subject: short ? undefined : out.subject, generatedBy: "template" };
+    const key: TemplateKey = input.kind === "arrival_day" && short ? "arrival_text" : input.kind;
+    if (input.kind === "event_invite" && !input.event) throw new Error("event_invite needs an event");
+    const out = fill(getTemplate(key, input.language), fieldValues(input));
+    return short
+      ? { body: toPlainText(out.body), generatedBy: "template" }
+      : { subject: out.subject, body: out.body, generatedBy: "template" };
   }
-}
-
-type Copy = { subject: string; body: string };
-
-/** 3 days before: the room is being prepared, we can't wait. */
-function preArrival({ reservation: r, language: l, returning, eventsDuringStay }: GenerationInput): Copy {
-  const p = prop();
-  const place = placeLabel(r);
-  const name = r.guest.firstName;
-  const occ = r.occasion ? OCCASION[r.occasion][l] : undefined;
-  const ev = eventsDuringStay.map((e) => eventLine(e, l));
-  const stay = `${shortDay(r.checkIn, l)} – ${shortDay(r.checkOut, l)}`;
-
-  if (l === "pt") {
-    return {
-      subject: returning ? `Bem-vindo de volta, ${name}` : "Faltam três dias — estamos a preparar tudo",
-      body: lines(
-        GREETING.pt(name), "",
-        `Daqui a três dias recebemo-lo no vale. ${place} está a ser preparada ${headcountPhrase(r, l)} e estamos muito contentes por o ter connosco.`,
-        returning && "\nÉ uma alegria tê-lo de volta. Como agradecimento por regressar, terá um pequeno presente de boas-vindas à sua espera.",
-        occ && `\nSabemos que esta estadia assinala ${occ} — gostaríamos muito de ajudar a torná-la especial. Se tiver alguma ideia, diga-nos.`,
-        ev.length > 0 && `\nDurante a sua estadia:\n${ev.join("\n")}\nOs nossos hóspedes têm prioridade — responda e guardamos-lhe lugar.`,
-        "",
-        `A sua estadia: ${stay} · ${place} · ${party(r, l)}${r.breakfastIncluded ? " · pequeno-almoço incluído" : ""}`,
-        "",
-        preferencesInviteLine(r, l), "",
-        `A receção está aberta (${p.receptionHours}); se chegar mais tarde, avise-nos e alguém estará à sua espera.`,
-        "", SIGNOFF.pt,
-      ),
-    };
-  }
-  if (l === "fr") {
-    return {
-      subject: returning ? `Bon retour parmi nous, ${name}` : "Plus que trois jours — nous préparons tout",
-      body: lines(
-        GREETING.fr(name), "",
-        `Dans trois jours, nous vous accueillerons dans la vallée. ${place} est en cours de préparation ${headcountPhrase(r, l)}, et nous avons hâte de vous recevoir.`,
-        returning && "\nQuel plaisir de vous revoir. Pour vous remercier de revenir, un petit cadeau de bienvenue vous attendra.",
-        occ && `\nNous savons que ce séjour marque ${occ} — nous aimerions beaucoup contribuer à le rendre spécial. Si vous avez une idée en tête, dites-le-nous.`,
-        ev.length > 0 && `\nPendant votre séjour :\n${ev.join("\n")}\nNos hôtes sont prioritaires — répondez-nous et nous vous réservons une place.`,
-        "",
-        `Votre séjour : ${stay} · ${place} · ${party(r, l)}${r.breakfastIncluded ? " · petit-déjeuner inclus" : ""}`,
-        "",
-        preferencesInviteLine(r, l), "",
-        `La réception est ouverte (${p.receptionHours}) ; si vous arrivez plus tard, prévenez-nous et quelqu'un vous attendra.`,
-        "", SIGNOFF.fr,
-      ),
-    };
-  }
-  return {
-    subject: returning ? `Welcome back, ${name}` : "Three days to go — we're getting ready for you",
-    body: lines(
-      GREETING.en(name), "",
-      `In three days we'll welcome you to the valley. ${place} is being prepared ${headcountPhrase(r, l)}, and we're really looking forward to having you here.`,
-      returning && "\nIt's lovely to have you back. As a thank-you for returning, a small welcome-back gift will be waiting for you.",
-      occ && `\nWe know this stay marks ${occ} — we'd love to help make it special. If there's anything you have in mind, just tell us.`,
-      ev.length > 0 && `\nWhile you're here:\n${ev.join("\n")}\nGuests staying with us have priority — reply and we'll keep you a place.`,
-      "",
-      `Your stay: ${stay} · ${place} · ${party(r, l)}${r.breakfastIncluded ? " · breakfast included" : ""}`,
-      "",
-      preferencesInviteLine(r, l), "",
-      `Reception is open ${p.receptionHours}; if you'll arrive later, let us know and someone will be there for you.`,
-      "", SIGNOFF.en,
-    ),
-  };
-}
-
-/** ~3 hours before arrival: the practical details. */
-function arrivalDay({ reservation: r, language: l }: GenerationInput): Copy {
-  const p = prop();
-  const place = placeLabel(r);
-  const name = r.guest.firstName;
-  const arrive = time(r.checkIn);
-
-  if (l === "pt") {
-    return {
-      subject: "Hoje: tudo para a sua chegada",
-      body: lines(
-        GREETING.pt(name), "",
-        "Até daqui a pouco. Aqui fica tudo o que precisa para hoje:", "",
-        `• O seu alojamento: ${place}`,
-        `• Onde o esperamos: ${p.meetingPoint}, o nosso espaço de boas-vindas — daí acompanhamo-lo até à ${place}`,
-        `• Como chegar: ${p.directionsPt}`,
-        `• Mapa: ${p.mapsLink}`,
-        `• Receção: ${p.receptionHours}. Se chegar depois, ligue para ${p.emergencyPhone} e estaremos lá.`,
-        `• Alguma dúvida pelo caminho: ${p.whatsappNumber} (WhatsApp) ou ${p.receptionPhone}`,
-        welcomePreferencesLine(r, l) ? `\n${welcomePreferencesLine(r, l)}` : undefined,
-        "", `Contamos consigo por volta das ${arrive}. Boa viagem.`,
-        "", SIGNOFF.pt,
-      ),
-    };
-  }
-  if (l === "fr") {
-    return {
-      subject: `Aujourd'hui : tout pour votre arrivée à ${place}`,
-      body: lines(
-        GREETING.fr(name), "",
-        "À tout à l'heure. Voici l'essentiel pour aujourd'hui :", "",
-        `• Votre hébergement : ${place}`,
-        `• Où nous vous attendons : ${p.meetingPoint}, notre espace d'accueil — nous vous accompagnerons ensuite jusqu'à ${place}`,
-        `• Pour venir : ${p.directionsFr}`,
-        `• Plan : ${p.mapsLink}`,
-        `• Réception : ${p.receptionHours}. Si vous arrivez plus tard, appelez le ${p.emergencyPhone} et nous serons là.`,
-        `• Une question en route : ${p.whatsappNumber} (WhatsApp) ou ${p.receptionPhone}`,
-        welcomePreferencesLine(r, l) ? `\n${welcomePreferencesLine(r, l)}` : undefined,
-        "", `Nous vous attendons vers ${arrive}. Bonne route.`,
-        "", SIGNOFF.fr,
-      ),
-    };
-  }
-  return {
-    subject: `Today: everything for your arrival at ${place}`,
-    body: lines(
-      GREETING.en(name), "",
-      "See you in a few hours. Here's everything you need for today:", "",
-      `• Your accommodation: ${place}`,
-      `• Where we'll meet you: ${p.meetingPoint}, our welcome lounge — we'll walk you to ${place} from there`,
-      `• Getting here: ${p.directions}`,
-      `• Map: ${p.mapsLink}`,
-      `• Reception: ${p.receptionHours}. Arriving later? Call ${p.emergencyPhone} and we'll be there.`,
-      `• Questions on the way: ${p.whatsappNumber} (WhatsApp) or ${p.receptionPhone}`,
-      welcomePreferencesLine(r, l) ? `\n${welcomePreferencesLine(r, l)}` : undefined,
-      "", `We're expecting you around ${arrive}. Travel safely.`,
-      "", SIGNOFF.en,
-    ),
-  };
-}
-
-function arrivalDayShort({ reservation: r, language: l }: GenerationInput): Copy {
-  const p = prop();
-  const place = placeLabel(r);
-  const name = r.guest.firstName;
-  const body =
-    l === "pt"
-      ? `Olá ${name}, até já. Esperamo-lo na ${p.meetingPoint} e acompanhamo-lo até à ${place}. Mapa: ${p.mapsLink} · Dúvidas: ${p.whatsappNumber} — Vale Palheiro`
-      : l === "fr"
-        ? `Bonjour ${name}, à tout à l'heure. Nous vous attendons à ${p.meetingPoint} et vous accompagnerons jusqu'à ${place}. Plan : ${p.mapsLink} · Questions : ${p.whatsappNumber} — Vale Palheiro`
-        : `Hi ${name}, see you soon. We'll meet you at ${p.meetingPoint} and walk you to ${place}. Map: ${p.mapsLink} · Questions: ${p.whatsappNumber} — Vale Palheiro`;
-  return { subject: "", body };
-}
-
-/** After check-in: the things to keep handy, what's on, and our weather-based suggestions. */
-function inStay({ reservation: r, language: l, eventsDuringStay, stayPlan }: GenerationInput): Copy {
-  const p = prop();
-  const place = placeLabel(r);
-  const name = r.guest.firstName;
-  const ev = eventsDuringStay.map((e) => eventLine(e, l));
-  const out = shortDay(r.checkOut, l);
-  const suggestions = stayPlan && stayPlan.days.length > 0 ? renderStayPlan(stayPlan, l, p.receptionPhone) : undefined;
-
-  const T = {
-    en: {
-      subject: "Welcome — good to have to hand during your stay",
-      intro: `Welcome — we hope ${place} already feels like home. A few things to keep handy:`,
-      wifi: `Wi-Fi: ${p.wifiNetwork} · password ${p.wifiPassword}`,
-      bfast: r.breakfastIncluded ? `Breakfast: ${p.breakfastHours} (included)` : `Breakfast: ${p.breakfastHours} — you can add it any time`,
-      dinner: `The Barn (dinner): ${p.restaurantHours} — reply to book a table`,
-      reception: `Reception: ${p.receptionPhone} (${p.receptionHours}) · Out of hours: ${p.emergencyPhone}`,
-      email: `Email: ${p.email}`,
-      checkout: `Check-out: ${p.checkOutTime}, ${out}`,
-      events: "What's on while you're here:",
-      fallback: "We can arrange a massage in your villa, a guided walk or a wine tasting — just ask.",
-      services: "We can also organise airport transfers and private transport, restaurant reservations and babysitting.",
-    },
-    pt: {
-      subject: "Bem-vindo — para ter à mão durante a estadia",
-      intro: `Bem-vindo — esperamos que já se sinta em casa na ${place}. Algumas coisas para ter à mão:`,
-      wifi: `Wi-Fi: ${p.wifiNetwork} · palavra-passe ${p.wifiPassword}`,
-      bfast: r.breakfastIncluded ? `Pequeno-almoço: ${p.breakfastHours} (incluído)` : `Pequeno-almoço: ${p.breakfastHours} — pode acrescentá-lo a qualquer momento`,
-      dinner: `The Barn (jantar): ${p.restaurantHours} — responda para reservar mesa`,
-      reception: `Receção: ${p.receptionPhone} (${p.receptionHours}) · Fora de horas: ${p.emergencyPhone}`,
-      email: `Email: ${p.email}`,
-      checkout: `Check-out: ${p.checkOutTime}, ${out}`,
-      events: "Durante a sua estadia:",
-      fallback: "Podemos marcar uma massagem na sua casa, uma caminhada guiada ou uma prova de vinhos — é só pedir.",
-      services: "Também tratamos de transferes do aeroporto e transporte privado, reservas de restaurante e babysitting.",
-    },
-    fr: {
-      subject: "Bienvenue — à garder sous la main pendant votre séjour",
-      intro: `Bienvenue — nous espérons que vous vous sentez déjà chez vous à ${place}. Quelques informations utiles :`,
-      wifi: `Wi-Fi : ${p.wifiNetwork} · mot de passe ${p.wifiPassword}`,
-      bfast: r.breakfastIncluded ? `Petit-déjeuner : ${p.breakfastHours} (inclus)` : `Petit-déjeuner : ${p.breakfastHours} — vous pouvez l'ajouter à tout moment`,
-      dinner: `The Barn (dîner) : ${p.restaurantHours} — répondez-nous pour réserver une table`,
-      reception: `Réception : ${p.receptionPhone} (${p.receptionHours}) · En dehors des horaires : ${p.emergencyPhone}`,
-      email: `E-mail : ${p.email}`,
-      checkout: `Départ : ${p.checkOutTime}, ${out}`,
-      events: "Pendant votre séjour :",
-      fallback: "Nous pouvons organiser un massage dans votre villa, une randonnée guidée ou une dégustation de vins — il suffit de demander.",
-      services: "Nous organisons aussi transferts aéroport et transport privé, réservations de restaurant et baby-sitting.",
-    },
-  }[l];
-
-  return {
-    subject: T.subject,
-    body: lines(
-      GREETING[l](name), "",
-      T.intro, "",
-      T.wifi, T.bfast, T.dinner, T.reception, T.email, T.checkout,
-      ev.length > 0 && `\n${T.events}\n${ev.join("\n")}`,
-      "",
-      suggestions ?? T.fallback,
-      "",
-      T.services,
-      "", SIGNOFF[l],
-    ),
-  };
-}
-
-/** After check-out: thank you + a quick review. */
-function postStay({ reservation: r, language: l, returning }: GenerationInput): Copy {
-  const p = prop();
-  const place = placeLabel(r);
-  const name = r.guest.firstName;
-  const motive = POST_STAY_LINE[r.motive][l];
-
-  if (l === "pt") {
-    return {
-      subject: `Obrigado, ${name}`,
-      body: lines(
-        GREETING.pt(name), "",
-        `Obrigado por ter ficado connosco na ${place}${returning ? " — e por ter voltado" : ""}. ${motive}`, "",
-        "Se tiver um minuto, uma breve avaliação significa muito para um lugar pequeno e independente como o nosso:",
-        p.reviewLink, "",
-        "Quando quiser voltar, o vale estará aqui — e nós também.",
-        postStayPreferencesLine(r, l) || undefined,
-        "", SIGNOFF.pt,
-      ),
-    };
-  }
-  if (l === "fr") {
-    return {
-      subject: `Merci, ${name}`,
-      body: lines(
-        GREETING.fr(name), "",
-        `Merci d'avoir séjourné à ${place}${returning ? " — et d'être revenu" : ""}. ${motive}`, "",
-        "Si vous avez une minute, un court avis compte beaucoup pour une petite maison indépendante comme la nôtre :",
-        p.reviewLink, "",
-        "Quand vous voudrez revenir, la vallée sera là — et nous aussi.",
-        postStayPreferencesLine(r, l) || undefined,
-        "", SIGNOFF.fr,
-      ),
-    };
-  }
-  return {
-    subject: `Thank you, ${name}`,
-    body: lines(
-      GREETING.en(name), "",
-      `Thank you for staying with us in ${place}${returning ? " — and for coming back" : ""}. ${motive}`, "",
-      "If you have a minute, a short review means a great deal to a small, independent place like ours:",
-      p.reviewLink, "",
-      "Whenever you'd like to return, the valley will be here — and so will we.",
-      postStayPreferencesLine(r, l) || undefined,
-      "", SIGNOFF.en,
-    ),
-  };
-}
-
-/** To opted-in past guests: an upcoming event, and a welcome-back gift if they come. */
-function eventInvite({ reservation: r, language: l, event }: GenerationInput): Copy {
-  if (!event) throw new Error("event_invite needs an event");
-  const name = r.guest.firstName;
-  const when = `${cap(day(event.start, l))}, ${time(event.start)}`;
-
-  if (l === "pt") {
-    return {
-      subject: `${event.title.pt} — ${shortDay(event.start, l)}`,
-      body: lines(
-        GREETING.pt(name), "",
-        "Esperamos que esteja bem desde a sua estadia connosco.", "",
-        `${when}: ${event.title.pt}, no ${event.place}. ${event.description.pt}`, "",
-        "Se quiser juntar-se a nós, responda e guardamos-lhe lugar. E se quiser ficar uns dias, como hóspede que regressa terá um presente de boas-vindas à sua espera.",
-        "", SIGNOFF.pt, "",
-        "Recebe esta mensagem porque aceitou ter notícias nossas. Responda \"cancelar\" e deixamos de escrever.",
-      ),
-    };
-  }
-  if (l === "fr") {
-    return {
-      subject: `${event.title.fr} — ${shortDay(event.start, l)}`,
-      body: lines(
-        GREETING.fr(name), "",
-        "Nous espérons que vous allez bien depuis votre séjour parmi nous.", "",
-        `${when} : ${event.title.fr}, à ${event.place}. ${event.description.fr}`, "",
-        "Si vous souhaitez vous joindre à nous, répondez-nous et nous vous gardons une place. Et si vous restez quelques jours, un cadeau de bienvenue vous attendra pour vous remercier de revenir.",
-        "", SIGNOFF.fr, "",
-        "Vous recevez ce message car vous avez accepté d'avoir de nos nouvelles. Répondez « désinscrire » et nous ne vous écrirons plus.",
-      ),
-    };
-  }
-  return {
-    subject: `${event.title.en} — ${shortDay(event.start, l)}`,
-    body: lines(
-      GREETING.en(name), "",
-      "We hope you've been well since your stay with us.", "",
-      `${when}: ${event.title.en}, at ${event.place}. ${event.description.en}`, "",
-      "If you'd like to join us, reply and we'll keep you a place. And if you'd like to stay a few nights, a welcome-back gift will be waiting for you as a thank-you for returning.",
-      "", SIGNOFF.en, "",
-      "You're receiving this because you agreed to hear from us. Reply \"unsubscribe\" and we won't write again.",
-    ),
-  };
 }
 
 // ---------------------------------------------------------------- LLM seam

@@ -1,6 +1,7 @@
 import type {
   Channel,
   Guest,
+  Language,
   MessageKind,
   Reservation,
   ResortEvent,
@@ -42,6 +43,15 @@ import { recommend } from "./recommender.ts";
  *   - at most `inviteMaxPerYear` per guest per year.
  */
 
+/**
+ * Which messages wait for a person before they go:
+ *   personal                 — birthday / anniversary messages (default)
+ *   personal_and_suggestions — also welcome emails with weather-based picks
+ *   all                      — every message
+ *   none                     — nothing; everything sends on time
+ */
+export type ApprovalPolicy = "personal" | "personal_and_suggestions" | "all" | "none";
+
 export interface SchedulerConfig {
   preArrivalDaysBefore: number;
   arrivalHoursBefore: number;
@@ -52,8 +62,7 @@ export interface SchedulerConfig {
   sendWindowEnd: number;
   /** Also send a short WhatsApp/SMS on arrival day if the guest opted in. */
   arrivalTextReminder: boolean;
-  /** Hold messages about a celebration until a team member approves them. */
-  holdPersonalMoments: boolean;
+  approvalPolicy: ApprovalPolicy;
   inviteMinDaysBetween: number;
   inviteQuietDaysAroundStay: number;
   inviteMaxPerYear: number;
@@ -67,7 +76,7 @@ export const DEFAULT_CONFIG: SchedulerConfig = {
   sendWindowStart: 9,
   sendWindowEnd: 20,
   arrivalTextReminder: true,
-  holdPersonalMoments: true,
+  approvalPolicy: "personal",
   inviteMinDaysBetween: 30,
   inviteQuietDaysAroundStay: 7,
   inviteMaxPerYear: 6,
@@ -192,7 +201,7 @@ export class Scheduler {
     {
       const day = new Date(checkIn.getTime() - c.preArrivalDaysBefore * DAY);
       const sendAt = atLocalTime(day, g.timeZone, 10);
-      const hold = r.occasion && c.holdPersonalMoments
+      const hold = r.occasion && c.approvalPolicy !== "none"
         ? `Mentions ${staffOccasion(r)} — add a personal line, then approve.`
         : undefined;
       plans.push({
@@ -412,9 +421,23 @@ export class Scheduler {
         stayPlan,
       });
 
+      // Staff read everything in English: keep an English copy of messages
+      // that go out in Portuguese or French.
+      const english = p.guest.language === "en" ? undefined : await this.generator.generate({
+        reservation: p.reservation, kind: p.kind, channel: p.channel, language: "en",
+        returning: this.isReturning(p.reservation), eventsDuringStay: this.eventsDuring(p.reservation),
+        event: p.event, stayPlan,
+      });
+
+      const policy = this.config.approvalPolicy;
+      const hold = policy === "none" ? undefined
+        : policy === "all" ? (p.hold ?? "Every message needs approval (see Settings).")
+        : p.hold ?? (policy === "personal_and_suggestions" && stayPlan?.days.length
+          ? "Weather-based suggestions — check the picks, then approve."
+          : undefined);
       const status = existing?.status === "scheduled" && existing.statusNote === "Approved"
         ? "scheduled"
-        : p.hold ? "held" : "scheduled";
+        : hold ? "held" : "scheduled";
 
       const msg = {
         id: existing?.id ?? newId("msg"),
@@ -427,10 +450,11 @@ export class Scheduler {
         language: p.guest.language,
         ...timing,
         status,
-        statusNote: status === "held" ? p.hold : existing?.statusNote,
+        statusNote: status === "held" ? hold : existing?.statusNote,
         subject: generated.subject,
         body: generated.body,
         generatedBy: generated.generatedBy,
+        english: english ? { subject: english.subject, body: english.body } : undefined,
         suggestions: stayPlan?.days.map((d) => ({ date: d.date, activity: d.activity.name.en, reason: d.reason })),
       } as ScheduledMessage & { key: string };
       this.messages.set(msg.id, msg);
@@ -443,6 +467,23 @@ export class Scheduler {
     }
 
     this.planTasks(now);
+  }
+
+  /**
+   * Write one message for any reservation (real or an example guest) without
+   * scheduling it — used by the Emails tab to show how a template reads.
+   */
+  async preview(r: Reservation, kind: MessageKind, language: Language, opts: { returning?: boolean; channel?: Channel; event?: ResortEvent } = {}) {
+    const sendAt = kind === "in_stay" ? new Date(Date.parse(r.checkIn) + this.config.inStayHoursAfterCheckIn * HOUR) : new Date();
+    const stayPlan = kind === "in_stay" ? recommend(r, sendAt, this.forecast) : undefined;
+    const a = Date.parse(r.checkIn), b = Date.parse(r.checkOut);
+    return this.generator.generate({
+      reservation: r, kind, channel: opts.channel ?? "email", language,
+      returning: opts.returning ?? false,
+      eventsDuringStay: this.events.filter((e) => { const t = Date.parse(e.start); return t >= a && t < b; }),
+      event: opts.event ?? (kind === "event_invite" ? this.events.find((e) => e.audience === "everyone") : undefined),
+      stayPlan,
+    });
   }
 
   // ------------------------------------------------------------ staff actions
