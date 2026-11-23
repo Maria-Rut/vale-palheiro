@@ -41,9 +41,9 @@ $("#loginForm").addEventListener("submit", async (e) => {
 $("#logoutBtn").addEventListener("click", async () => { await api.post("/api/logout"); showLogin(); });
 
 // --- tabs ---
-const TABS = ["messages", "tasks", "events", "property", "settings", "log"];
+const TABS = ["messages", "tasks", "events", "weather", "property", "settings", "log"];
 const RENDER = {
-  messages: renderMessages, tasks: renderTasks, events: renderEvents,
+  messages: renderMessages, tasks: renderTasks, events: renderEvents, weather: renderWeather,
   property: renderProperty, settings: loadConfig, log: renderLog,
 };
 document.querySelectorAll(".tabbtn").forEach((btn) => {
@@ -169,6 +169,7 @@ async function renderMessages() {
       </div>
       ${m.status === "held" && m.statusNote ? `<div class="note">${esc(m.statusNote)}</div>` : ""}
       ${m.status === "skipped" && m.statusNote ? `<div class="note info">${esc(m.statusNote)}</div>` : ""}
+      ${m.suggestions?.length ? `<div class="picks"><b>Recommendation agent</b>${m.suggestions.map((x) => `<div>${esc(resortDate(x.date + "T12:00:00Z"))}: ${esc(x.reason)}</div>`).join("")}</div>` : ""}
       <div class="msg-body">
         ${m.subject ? `<div class="msg-subject">${esc(m.subject)}</div>` : ""}
         <div class="msg-text">${esc(m.body)}</div>
@@ -293,6 +294,42 @@ $("#eventForm").addEventListener("submit", async (e) => {
   toast("Event added — invites planned");
   renderEvents(); renderOverview();
 });
+
+// --- weather & activities ---
+const COND_LABEL = {
+  sunny: "sunny", cloudy: "cloudy", showers: "showers", rainy: "rain", windy: "windy", calm: "calm",
+  big_sea: "big swell", surf_sea: "surfable", flat_sea: "flat sea", warm: "warm",
+};
+async function renderWeather() {
+  const [wx, acts] = await Promise.all([api.get("/api/weather"), api.get("/api/activities")]);
+  const live = wx.source === "open-meteo";
+  $("#wxSource").innerHTML = `<div class="src-banner">${live
+    ? `<b>Live forecast</b> from Open-Meteo (land + marine)`
+    : `<b>Simulated forecast</b> for the demo. Set <code>WEATHER_SOURCE=open-meteo</code> to use the live Open-Meteo forecast and sea state.`}
+    ${wx.fetchedAt ? ` · updated ${fmt(wx.fetchedAt)}` : ""}${wx.error ? ` · <span style="color:#9b3b2f">last refresh failed: ${esc(wx.error)}</span>` : ""}</div>`;
+  $("#forecast").innerHTML = wx.days.length ? wx.days.map((d) => `
+    <div class="wx">
+      <div class="d">${esc(resortDate(d.date + "T12:00:00Z"))}</div>
+      <div class="t">${Math.round(d.tempMax)}° <span class="muted" style="font-size:13px">${Math.round(d.tempMin)}°</span></div>
+      <div>Rain ${Math.round(d.rainChance)}% · gusts ${Math.round(d.gustMaxKmh)} km/h</div>
+      <div>Waves ${d.waveHeightM.toFixed(1)} m</div>
+      <div class="chips">${d.conditions.map((c) => `<span class="cond ${c}">${COND_LABEL[c] ?? c}</span>`).join("")}</div>
+    </div>`).join("") : `<p class="empty">No forecast available — welcome emails will suggest activities without weather wording.</p>`;
+  const price = (a) => a.price.free ? "free" : a.price.onRequest ? "price on request" : `from €${a.price.from}`;
+  $("#activities").innerHTML = acts.map((a) => `
+    <div class="act ${a.enabled ? "" : "off"}">
+      <div class="info"><b>${esc(a.name.en)}</b> · ${price(a)}${a.source === "team idea" ? ` · <i>team idea</i>` : ""}
+        <div>Best in: ${a.goodIn.map((c) => COND_LABEL[c] ?? c).join(", ") || "any weather"}${a.notIn.length ? ` · not in: ${a.notIn.map((c) => COND_LABEL[c] ?? c).join(", ")}` : ""}${a.needs?.length ? ` · needs: ${a.needs.map((c) => COND_LABEL[c] ?? c).join(", ")}` : ""}${a.finale ? " · good last-day ending" : ""}</div>
+      </div>
+      <button class="ghost" data-act="${a.id}">${a.enabled ? "Switch off" : "Switch on"}</button>
+    </div>`).join("");
+  $("#activities").querySelectorAll("[data-act]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api.post(`/api/activities/${b.dataset.act}/toggle`);
+      toast("Suggestions in upcoming welcome emails updated");
+      renderWeather();
+    }));
+}
 
 // --- property ---
 async function renderProperty() {

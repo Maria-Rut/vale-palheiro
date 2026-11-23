@@ -22,11 +22,50 @@ resort's real systems.
 |---|--------|----------------|--------------|
 | 1 | **We're getting ready** | 3 days before arrival, 10:00 guest time | Your villa is being prepared, we can't wait; stay summary; events during the stay (with priority booking); asks for arrival time. Returning guests hear about a welcome-back gift. |
 | 2 | **Arrival details** | 3 hours before arrival | Villa / unit, where we'll meet you (Casa da Ribeira), directions + map, reception hours, late-arrival number. Plus a short WhatsApp/SMS if the guest opted in. |
-| 3 | **Settling in** | 2 hours after check-in | Wi-Fi, breakfast and dinner hours, reception + out-of-hours numbers, check-out time, what's on during the stay, spa / Rota Vicentina. |
+| 3 | **Welcome & settling in** | 2 hours after check-in | Wi-Fi, breakfast and dinner hours, reception, email and out-of-hours numbers, check-out time, what's on, additional services — and **our suggestions for your stay**, day by day, based on the weather and sea forecast (see below). |
 | 4 | **Thank you + review** | 24 hours after check-out, guest time | Thank-you, one personal line, a review link. |
 | 5 | **Event invites** | N days before each event, 10:00 guest time | To opted-in past guests only, with a welcome-back gift if they come to stay. |
 
 All timings, quiet hours and anti-spam limits are editable in **Settings**.
+
+## The recommendation agent (weather → experiences)
+
+The welcome email carries a short, day-by-day plan:
+
+> • Tomorrow, Tue 24 Nov — rain expected, 15°C and windy: a day to slow down: a massage in the privacy of your villa (price on request).
+> • Wed 25 Nov — sunny, 19°C: a boat trip from Lagos to see the cliffs, caves and coves from the water (from €22.50).
+> • Your last full day, Thu 26 Nov — sunny, 17°C and a big Atlantic swell (around 4 m): head to the cliffs at Monte Clérigo or Arrifana and watch the power of the sea… To end your stay, a sunset jeep tour… (from €55).
+
+How it works:
+
+1. **Forecast** (`src/weather.ts`) — daily sky, rain, wind, temperature for the
+   estate, plus **wave height** off Monte Clérigo. Live source:
+   [Open-Meteo](https://open-meteo.com) forecast + Marine APIs (official
+   ECMWF / Météo-France / DWD models, no key needed to test). The demo uses a
+   simulated, repeatable forecast.
+2. **Conditions** (`src/recommender.ts`) — each day becomes plain tags: sunny,
+   rain, windy, calm, big swell (≥ 3.5 m), surfable, flat sea, warm.
+3. **Catalogue** (`src/activities.ts`) — every experience from the Experiences
+   Menu (trail, picnic, jeep, horses, balloon, surf, boats and kayaks from
+   Lagos, yoga / Pilates / barre, in-villa massage, wine tasting, cooking and
+   creative workshops, private dinner) with the weather it suits, the weather
+   that rules it out, and whether it makes a good last-day ending. Prices and
+   wording come from the brochure. "Watching the Atlantic from the cliffs" is
+   a team idea, triggered only by a big swell.
+4. **Pick** — one experience per day, no repeats, a closing touch on the last
+   day, adjusted for children, couples, business guests and celebrations.
+   Rule-based on purpose: the same forecast always gives the same, explainable
+   answer, and it can only suggest what the resort actually offers.
+
+Staff see each pick and the reason on the message card, see the 7-day forecast
+in **Weather & activities**, and can switch an experience off for the season.
+The forecast refreshes hourly and unsent welcome emails are re-written with it,
+so the plan is as fresh as possible when it goes out. If the forecast can't be
+fetched, the email still suggests activities — just without weather wording.
+
+To go live: set `WEATHER_SOURCE=open-meteo`. A hotel is commercial use, so get
+an Open-Meteo API key and set `OPEN_METEO_API_KEY` (switches to their
+commercial endpoints automatically).
 
 ## What makes it not spam
 
@@ -96,8 +135,11 @@ Open <http://localhost:3000> and log in:
 4. **Team tasks** → the welcome-back gift and the late-arrival pickup.
 5. **Events** → add an event; watch invites appear for past guests, and see
    who is held back by the anti-spam rules and why.
-6. **Property info** → change the Wi-Fi password; every unsent message updates.
-7. **Demo tools → In 3 days → Send anything due**, then open the **Delivery log**.
+6. **Weather & activities** → the 7-day forecast and what the agent sees;
+   switch off "Massage" and watch Miguel's rainy-day suggestion change. Filter
+   **During the stay** to read the welcome emails with their day-by-day plan.
+7. **Property info** → change the Wi-Fi password; every unsent message updates.
+8. **Demo tools → In 3 days → Send anything due**, then open the **Delivery log**.
 
 `public/snapshot.html` is a static export of the output (regenerate with
 `node --experimental-strip-types tools/snapshot.ts > public/snapshot.html`).
@@ -113,6 +155,9 @@ src/
   mockData.ts   Fictional guests, stays and events (dates relative to "now")
   property.ts   Wi-Fi, phones, directions… edited by staff, flagged until confirmed
   timezone.ts   Guest-local timing and quiet hours (Intl, no dependencies)
+  weather.ts    Forecast + sea state: simulated, or live Open-Meteo
+  activities.ts Experiences catalogue with weather rules (from the brochure)
+  recommender.ts The agent: forecast → conditions → one experience per day
   brand.ts      Vale Palheiro voice + localised phrasing
   generator.ts  The five message templates in EN / PT / FR (+ LLM seam)
   channels.ts   Email / SMS / WhatsApp adapters behind one interface
@@ -137,9 +182,10 @@ public/
 3. **Sending** — swap the mock adapters for an email provider (and Twilio for
    SMS / WhatsApp; WhatsApp needs Meta-approved templates).
 4. **Property info** — confirm every field marked *sample*.
-5. **Hosting** — `render.yaml` deploys to Render. State is in memory today; a
+5. **Weather** — `WEATHER_SOURCE=open-meteo` + `OPEN_METEO_API_KEY`.
+6. **Hosting** — `render.yaml` deploys to Render. State is in memory today; a
    pilot needs a small database so approvals, edits and sent history survive a
    restart.
-6. **Consent** — honour opt-ins and unsubscribe replies (GDPR).
+7. **Consent** — honour opt-ins and unsubscribe replies (GDPR).
 
 > All guest data in this prototype is fictional.

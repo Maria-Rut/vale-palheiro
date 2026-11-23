@@ -8,6 +8,7 @@ import type {
 import { GREETING, LOCALE, OCCASION, POST_STAY_LINE, SIGNOFF } from "./brand.ts";
 import { prop } from "./property.ts";
 import { RESORT_TZ } from "./timezone.ts";
+import { renderStayPlan, type StayPlan } from "./recommender.ts";
 
 /**
  * Message generation.
@@ -40,6 +41,8 @@ export interface GenerationInput {
   eventsDuringStay: ResortEvent[];
   /** For event invites. */
   event?: ResortEvent;
+  /** For the welcome (in-stay) email: the recommendation agent's picks. */
+  stayPlan?: StayPlan;
 }
 
 export interface Generator {
@@ -254,71 +257,70 @@ function arrivalDayShort({ reservation: r, language: l }: GenerationInput): Copy
   return { subject: "", body };
 }
 
-/** After check-in: the things to keep handy, and what's on. */
-function inStay({ reservation: r, language: l, eventsDuringStay }: GenerationInput): Copy {
+/** After check-in: the things to keep handy, what's on, and our weather-based suggestions. */
+function inStay({ reservation: r, language: l, eventsDuringStay, stayPlan }: GenerationInput): Copy {
   const p = prop();
   const place = placeLabel(r);
   const name = r.guest.firstName;
   const ev = eventsDuringStay.map((e) => eventLine(e, l));
   const out = shortDay(r.checkOut, l);
+  const suggestions = stayPlan && stayPlan.days.length > 0 ? renderStayPlan(stayPlan, l, p.receptionPhone) : undefined;
 
-  if (l === "pt") {
-    return {
-      subject: "Para ter à mão durante a estadia",
-      body: lines(
-        GREETING.pt(name), "",
-        `Bem-vindo — esperamos que já se sinta em casa na ${place}. Algumas coisas para ter à mão:`, "",
-        `Wi-Fi: ${p.wifiNetwork} · palavra-passe ${p.wifiPassword}`,
-        r.breakfastIncluded
-          ? `Pequeno-almoço: ${p.breakfastHours} (incluído)`
-          : `Pequeno-almoço: ${p.breakfastHours} — pode acrescentá-lo a qualquer momento`,
-        `The Barn (jantar): ${p.restaurantHours} — responda para reservar mesa`,
-        `Receção: ${p.receptionPhone} (${p.receptionHours}) · Fora de horas: ${p.emergencyPhone}`,
-        `Check-out: ${p.checkOutTime}, ${out}`,
-        "",
-        ev.length > 0 ? `Durante a sua estadia:\n${ev.join("\n")}` : "",
-        "Também podemos marcar uma massagem no spa ou sugerir um troço da Rota Vicentina — é só pedir.",
-        "", SIGNOFF.pt,
-      ).replace(/\n\n\n/g, "\n\n"),
-    };
-  }
-  if (l === "fr") {
-    return {
-      subject: "À garder sous la main pendant votre séjour",
-      body: lines(
-        GREETING.fr(name), "",
-        `Bienvenue — nous espérons que vous vous sentez déjà chez vous à ${place}. Quelques informations utiles :`, "",
-        `Wi-Fi : ${p.wifiNetwork} · mot de passe ${p.wifiPassword}`,
-        r.breakfastIncluded
-          ? `Petit-déjeuner : ${p.breakfastHours} (inclus)`
-          : `Petit-déjeuner : ${p.breakfastHours} — vous pouvez l'ajouter à tout moment`,
-        `The Barn (dîner) : ${p.restaurantHours} — répondez-nous pour réserver une table`,
-        `Réception : ${p.receptionPhone} (${p.receptionHours}) · En dehors des horaires : ${p.emergencyPhone}`,
-        `Départ : ${p.checkOutTime}, ${out}`,
-        "",
-        ev.length > 0 ? `Pendant votre séjour :\n${ev.join("\n")}` : "",
-        "Nous pouvons aussi réserver un massage au spa ou vous conseiller une étape de la Rota Vicentina — il suffit de demander.",
-        "", SIGNOFF.fr,
-      ).replace(/\n\n\n/g, "\n\n"),
-    };
-  }
+  const T = {
+    en: {
+      subject: "Welcome — good to have to hand during your stay",
+      intro: `Welcome — we hope ${place} already feels like home. A few things to keep handy:`,
+      wifi: `Wi-Fi: ${p.wifiNetwork} · password ${p.wifiPassword}`,
+      bfast: r.breakfastIncluded ? `Breakfast: ${p.breakfastHours} (included)` : `Breakfast: ${p.breakfastHours} — you can add it any time`,
+      dinner: `The Barn (dinner): ${p.restaurantHours} — reply to book a table`,
+      reception: `Reception: ${p.receptionPhone} (${p.receptionHours}) · Out of hours: ${p.emergencyPhone}`,
+      email: `Email: ${p.email}`,
+      checkout: `Check-out: ${p.checkOutTime}, ${out}`,
+      events: "What's on while you're here:",
+      fallback: "We can arrange a massage in your villa, a guided walk or a wine tasting — just ask.",
+      services: "We can also organise airport transfers and private transport, restaurant reservations and babysitting.",
+    },
+    pt: {
+      subject: "Bem-vindo — para ter à mão durante a estadia",
+      intro: `Bem-vindo — esperamos que já se sinta em casa na ${place}. Algumas coisas para ter à mão:`,
+      wifi: `Wi-Fi: ${p.wifiNetwork} · palavra-passe ${p.wifiPassword}`,
+      bfast: r.breakfastIncluded ? `Pequeno-almoço: ${p.breakfastHours} (incluído)` : `Pequeno-almoço: ${p.breakfastHours} — pode acrescentá-lo a qualquer momento`,
+      dinner: `The Barn (jantar): ${p.restaurantHours} — responda para reservar mesa`,
+      reception: `Receção: ${p.receptionPhone} (${p.receptionHours}) · Fora de horas: ${p.emergencyPhone}`,
+      email: `Email: ${p.email}`,
+      checkout: `Check-out: ${p.checkOutTime}, ${out}`,
+      events: "Durante a sua estadia:",
+      fallback: "Podemos marcar uma massagem na sua casa, uma caminhada guiada ou uma prova de vinhos — é só pedir.",
+      services: "Também tratamos de transferes do aeroporto e transporte privado, reservas de restaurante e babysitting.",
+    },
+    fr: {
+      subject: "Bienvenue — à garder sous la main pendant votre séjour",
+      intro: `Bienvenue — nous espérons que vous vous sentez déjà chez vous à ${place}. Quelques informations utiles :`,
+      wifi: `Wi-Fi : ${p.wifiNetwork} · mot de passe ${p.wifiPassword}`,
+      bfast: r.breakfastIncluded ? `Petit-déjeuner : ${p.breakfastHours} (inclus)` : `Petit-déjeuner : ${p.breakfastHours} — vous pouvez l'ajouter à tout moment`,
+      dinner: `The Barn (dîner) : ${p.restaurantHours} — répondez-nous pour réserver une table`,
+      reception: `Réception : ${p.receptionPhone} (${p.receptionHours}) · En dehors des horaires : ${p.emergencyPhone}`,
+      email: `E-mail : ${p.email}`,
+      checkout: `Départ : ${p.checkOutTime}, ${out}`,
+      events: "Pendant votre séjour :",
+      fallback: "Nous pouvons organiser un massage dans votre villa, une randonnée guidée ou une dégustation de vins — il suffit de demander.",
+      services: "Nous organisons aussi transferts aéroport et transport privé, réservations de restaurant et baby-sitting.",
+    },
+  }[l];
+
   return {
-    subject: "Good to have to hand during your stay",
+    subject: T.subject,
     body: lines(
-      GREETING.en(name), "",
-      `Welcome — we hope ${place} already feels like home. A few things to keep handy:`, "",
-      `Wi-Fi: ${p.wifiNetwork} · password ${p.wifiPassword}`,
-      r.breakfastIncluded
-        ? `Breakfast: ${p.breakfastHours} (included)`
-        : `Breakfast: ${p.breakfastHours} — you can add it any time`,
-      `The Barn (dinner): ${p.restaurantHours} — reply to book a table`,
-      `Reception: ${p.receptionPhone} (${p.receptionHours}) · Out of hours: ${p.emergencyPhone}`,
-      `Check-out: ${p.checkOutTime}, ${out}`,
+      GREETING[l](name), "",
+      T.intro, "",
+      T.wifi, T.bfast, T.dinner, T.reception, T.email, T.checkout,
+      ev.length > 0 && `\n${T.events}\n${ev.join("\n")}`,
       "",
-      ev.length > 0 ? `While you're here:\n${ev.join("\n")}` : "",
-      "We can also book a massage at the spa or suggest a stretch of the Rota Vicentina — just ask.",
-      "", SIGNOFF.en,
-    ).replace(/\n\n\n/g, "\n\n"),
+      suggestions ?? T.fallback,
+      "",
+      T.services,
+      "", SIGNOFF[l],
+    ),
   };
 }
 

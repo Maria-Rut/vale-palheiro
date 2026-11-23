@@ -19,6 +19,8 @@ import {
   type Window,
 } from "./timezone.ts";
 import { OCCASION } from "./brand.ts";
+import { createWeather, type CachedWeather, type Forecast } from "./weather.ts";
+import { recommend } from "./recommender.ts";
 
 /**
  * The scheduler is Terra's brain. For every reservation and every event it:
@@ -114,15 +116,19 @@ export class Scheduler {
   private generator: Generator;
   private bookings: BookingSource;
   private calendar: EventSource;
+  private weather: CachedWeather;
+  private forecast?: Forecast;
 
   constructor(
     bookings: BookingSource,
     calendar: EventSource,
     config: SchedulerConfig = DEFAULT_CONFIG,
     generator: Generator = createGenerator(),
+    weather: CachedWeather = createWeather(),
   ) {
     this.bookings = bookings;
     this.calendar = calendar;
+    this.weather = weather;
     this.config = { ...config };
     this.generator = generator;
   }
@@ -136,6 +142,8 @@ export class Scheduler {
   getEvents(): ResortEvent[] { return this.events; }
   getSuppressions(): Suppression[] { return this.suppressions; }
   getEventSource(): EventSource { return this.calendar; }
+  getForecast(): Forecast | undefined { return this.forecast; }
+  getWeatherStatus() { return { source: this.weather.sourceName, error: this.weather.error }; }
 
   getMessages(): ScheduledMessage[] {
     return [...this.messages.values()]
@@ -355,6 +363,7 @@ export class Scheduler {
   async plan(now: Date = new Date()): Promise<void> {
     this.reservations = await this.bookings.listReservations();
     this.events = await this.calendar.listEvents();
+    this.forecast = await this.weather.get();
 
     // Stays that ended over a week ago are history: they inform "welcome back"
     // and invites, but get no stay messages.
@@ -385,6 +394,7 @@ export class Scheduler {
         continue;
       }
 
+      const stayPlan = p.kind === "in_stay" ? recommend(p.reservation, p.sendAt, this.forecast) : undefined;
       const generated = await this.generator.generate({
         reservation: p.reservation,
         kind: p.kind,
@@ -393,6 +403,7 @@ export class Scheduler {
         returning: this.isReturning(p.reservation),
         eventsDuringStay: this.eventsDuring(p.reservation),
         event: p.event,
+        stayPlan,
       });
 
       const status = existing?.status === "scheduled" && existing.statusNote === "Approved"
@@ -414,6 +425,7 @@ export class Scheduler {
         subject: generated.subject,
         body: generated.body,
         generatedBy: generated.generatedBy,
+        suggestions: stayPlan?.days.map((d) => ({ date: d.date, activity: d.activity.name.en, reason: d.reason })),
       } as ScheduledMessage & { key: string };
       this.messages.set(msg.id, msg);
     }
