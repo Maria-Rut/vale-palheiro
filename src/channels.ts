@@ -50,7 +50,7 @@ function record(
     subject: message.subject,
     body: message.body,
     guestName: `${reservation.guest.firstName} ${reservation.guest.lastName}`,
-    accommodation: reservation.accommodation,
+    accommodation: reservation.unit ? `${reservation.accommodation} ${reservation.unit}` : reservation.accommodation,
   });
 }
 

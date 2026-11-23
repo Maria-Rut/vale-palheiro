@@ -146,7 +146,7 @@ const T = {
     wifi: (n, p) => `Wi-Fi <b>${n}</b> · password <b>${p}</b>`,
     copy: "Copy",
     copied: "Copied",
-    welcome: "Your welcome is at <b>Casa da Ribeira</b>, by the pool",
+    welcome: (m) => `We'll welcome you at <b>${m}</b>`,
     call: (p) => `Anything at all? Call us on <b>${p}</b>`,
     change: "Change something",
     closedTitle: "We're already preparing your stay",
@@ -241,7 +241,7 @@ const T = {
     wifi: (n, p) => `Wi-Fi <b>${n}</b> · palavra-passe <b>${p}</b>`,
     copy: "Copiar",
     copied: "Copiado",
-    welcome: "A receção é na <b>Casa da Ribeira</b>, junto à piscina",
+    welcome: (m) => `Recebemo-lo na <b>${m}</b>`,
     call: (p) => `Precisa de algo? Ligue-nos para o <b>${p}</b>`,
     change: "Alterar algo",
     closedTitle: "Já estamos a preparar a sua estadia",
@@ -336,7 +336,7 @@ const T = {
     wifi: (n, p) => `Wi-Fi <b>${n}</b> · mot de passe <b>${p}</b>`,
     copy: "Copier",
     copied: "Copié",
-    welcome: "L'accueil se fait à la <b>Casa da Ribeira</b>, près de la piscine",
+    welcome: (m) => `Nous vous accueillons à la <b>${m}</b>`,
     call: (p) => `Une question ? Appelez-nous au <b>${p}</b>`,
     change: "Modifier quelque chose",
     closedTitle: "Nous préparons déjà votre séjour",
@@ -403,7 +403,7 @@ function renderInfo(sel) {
     <h2 class="card-title">${esc(t("goodToKnow"))}</h2>
     <div class="info-row"><span class="icon">${icon("wifi")}</span><span>${t("wifi")(esc(stay.wifi.network), esc(stay.wifi.password))}</span>
       <button type="button" class="copy">${esc(t("copy"))}</button></div>
-    <div class="info-row"><span class="icon">${icon("home")}</span><span>${t("welcome")}</span></div>
+    <div class="info-row"><span class="icon">${icon("home")}</span><span>${t("welcome")(esc(stay.meetingPoint))}</span></div>
     <div class="info-row"><span class="icon">${icon("phone")}</span><span>${t("call")(esc(stay.phone))}</span></div>`;
   const btn = el.querySelector(".copy");
   btn.addEventListener("click", async () => {

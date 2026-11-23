@@ -1,243 +1,511 @@
 import type {
   Channel,
+  Guest,
   MessageKind,
   Reservation,
+  ResortEvent,
   ScheduledMessage,
+  StaffTask,
 } from "./types.ts";
-import { createGenerator, type Generator } from "./generator.ts";
+import { createGenerator, placeLabel, type Generator } from "./generator.ts";
 import { senderFor } from "./channels.ts";
-import { preferencesOpen, purgeAfterStay } from "./preferences.ts";
+import type { BookingSource, EventSource } from "./sources.ts";
+import {
+  RESORT_TZ,
+  atLocalTime,
+  fitToWindow,
+  localLabel,
+  zonedParts,
+  type Window,
+} from "./timezone.ts";
+import { OCCASION } from "./brand.ts";
+import { preferenceTasks, purgeAfterStay } from "./preferences.ts";
 
 /**
- * The scheduler is the brain of "option C". For every reservation it:
- *   1. decides *when* each automated message should go out,
- *   2. decides *which channel(s)* to use (the guest's preferences),
- *   3. renders the copy up front so staff can preview and edit it,
- *   4. sends anything that is now due.
+ * The scheduler is Terra's brain. For every reservation and every event it:
+ *   1. decides *which* messages a guest should get (and which they shouldn't),
+ *   2. decides *when*, in the guest's own time zone, avoiding awkward hours,
+ *   3. renders the copy up front so staff can preview, edit or hold it,
+ *   4. sends what's due — and skips anything whose moment has passed rather
+ *      than sending something stale,
+ *   5. raises the small manual tasks that keep the welcome human (a
+ *      welcome-back gift, a handwritten note for an anniversary, a late arrival).
  *
- * Timing rules (configurable):
- *   - preferences: PREFERENCES_HOURS_BEFORE check-in (default 7 days before);
- *                  late bookings get it straight away, and it is skipped when
- *                  arrival is too close for the team to prepare (they call instead)
- *   - pre-stay:  PRE_STAY_HOURS_BEFORE check-in  (default 2h before arrival)
- *   - post-stay: POST_STAY_HOURS_AFTER check-out (default 24h after departure)
- *
- * To keep the prototype honest and demoable, the scheduler never sends a
- * message whose send time is in the future, and it only sends each message
- * once (status flips scheduled -> sent).
+ * Anti-spam rules for event invites (all configurable):
+ *   - only guests who opted in, and who have actually stayed with us,
+ *   - never to someone who'll be staying during the event (they hear about it
+ *     in their stay messages instead),
+ *   - at most one invite every `inviteMinDaysBetween` days per guest,
+ *   - no invite within `inviteQuietDaysAroundStay` days of a stay message,
+ *   - at most `inviteMaxPerYear` per guest per year.
  */
 
 export interface SchedulerConfig {
-  preferencesHoursBefore: number;
-  preStayHoursBefore: number;
-  postStayHoursAfter: number;
-  /**
-   * How many channels to use per moment. "preferred" sends only on the guest's
-   * first preferred channel (least intrusive, recommended). "all" sends on
-   * every channel they opted into.
-   */
-  channelStrategy: "preferred" | "all";
+  preArrivalDaysBefore: number;
+  arrivalHoursBefore: number;
+  inStayHoursAfterCheckIn: number;
+  postStayHoursAfterCheckOut: number;
+  /** Guest-local hours in which non-urgent messages may arrive. */
+  sendWindowStart: number;
+  sendWindowEnd: number;
+  /** Also send a short WhatsApp/SMS on arrival day if the guest opted in. */
+  arrivalTextReminder: boolean;
+  /** Hold messages about a celebration until a team member approves them. */
+  holdPersonalMoments: boolean;
+  inviteMinDaysBetween: number;
+  inviteQuietDaysAroundStay: number;
+  inviteMaxPerYear: number;
 }
 
 export const DEFAULT_CONFIG: SchedulerConfig = {
-  preferencesHoursBefore: 7 * 24,
-  preStayHoursBefore: 2,
-  postStayHoursAfter: 24,
-  channelStrategy: "preferred",
+  preArrivalDaysBefore: 3,
+  arrivalHoursBefore: 3,
+  inStayHoursAfterCheckIn: 2,
+  postStayHoursAfterCheckOut: 24,
+  sendWindowStart: 9,
+  sendWindowEnd: 20,
+  arrivalTextReminder: true,
+  holdPersonalMoments: true,
+  inviteMinDaysBetween: 30,
+  inviteQuietDaysAroundStay: 7,
+  inviteMaxPerYear: 6,
 };
 
-function addHours(iso: string, hours: number): string {
-  return new Date(new Date(iso).getTime() + hours * 3600_000).toISOString();
+/** Why a past guest is not getting an invite — shown to staff for transparency. */
+export interface Suppression {
+  guestName: string;
+  eventTitle: string;
+  reason: string;
 }
 
-function channelsFor(
-  reservation: Reservation,
-  strategy: SchedulerConfig["channelStrategy"],
-): Channel[] {
-  const prefs = reservation.guest.preferredChannels;
-  if (prefs.length === 0) return ["email"];
-  return strategy === "all" ? prefs : [prefs[0]];
+function staffOccasion(r: Reservation): string {
+  return r.occasion ? OCCASION[r.occasion].en.replace(/^your /, "their ") : "";
 }
+
+const HOUR = 3600_000;
+const DAY = 24 * HOUR;
 
 let seq = 0;
-function newId(): string {
+function newId(prefix: string): string {
   seq += 1;
-  return `msg_${Date.now().toString(36)}_${seq}`;
+  return `${prefix}_${Date.now().toString(36)}_${seq}`;
+}
+
+interface Plan {
+  key: string;
+  kind: MessageKind;
+  reservation: Reservation;
+  guest: Guest;
+  channel: Channel;
+  sendAt: Date;
+  timeZone: string;
+  timingNote?: string;
+  expiresAt: Date;
+  hold?: string;
+  event?: ResortEvent;
 }
 
 export class Scheduler {
-  private messages = new Map<string, ScheduledMessage>();
-  private reservations: Reservation[];
+  private messages = new Map<string, ScheduledMessage & { key: string }>();
+  private tasks = new Map<string, StaffTask>();
+  private suppressions: Suppression[] = [];
+  private reservations: Reservation[] = [];
+  private events: ResortEvent[] = [];
   private config: SchedulerConfig;
   private generator: Generator;
+  private bookings: BookingSource;
+  private calendar: EventSource;
 
   constructor(
-    reservations: Reservation[],
+    bookings: BookingSource,
+    calendar: EventSource,
     config: SchedulerConfig = DEFAULT_CONFIG,
     generator: Generator = createGenerator(),
   ) {
-    this.reservations = reservations;
-    this.config = config;
+    this.bookings = bookings;
+    this.calendar = calendar;
+    this.config = { ...config };
     this.generator = generator;
   }
 
-  getConfig(): SchedulerConfig {
-    return this.config;
-  }
+  // ------------------------------------------------------------ accessors
 
-  setConfig(config: Partial<SchedulerConfig>): void {
-    this.config = { ...this.config, ...config };
-  }
-
-  getReservations(): Reservation[] {
-    return this.reservations;
-  }
-
-  getReservation(id: string): Reservation | undefined {
-    return this.reservations.find((r) => r.id === id);
-  }
+  getConfig(): SchedulerConfig { return this.config; }
+  setConfig(patch: Partial<SchedulerConfig>): void { this.config = { ...this.config, ...patch }; }
+  getReservations(): Reservation[] { return this.reservations; }
+  getReservation(id: string) { return this.reservations.find((r) => r.id === id); }
+  getEvents(): ResortEvent[] { return this.events; }
+  getSuppressions(): Suppression[] { return this.suppressions; }
+  getEventSource(): EventSource { return this.calendar; }
 
   getMessages(): ScheduledMessage[] {
-    return [...this.messages.values()].sort(
-      (a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt),
+    return [...this.messages.values()]
+      .map(({ key: _k, ...m }) => m)
+      .sort((a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt));
+  }
+
+  getTasks(): StaffTask[] {
+    return [...this.tasks.values()].sort((a, b) => Date.parse(a.dueBy) - Date.parse(b.dueBy));
+  }
+
+  // ------------------------------------------------------------ helpers
+
+  private isReturning(r: Reservation): boolean {
+    return this.reservations.some(
+      (o) => o.id !== r.id && !o.cancelled && o.guest.id === r.guest.id &&
+        Date.parse(o.checkOut) <= Date.parse(r.checkIn),
     );
   }
 
-  getMessage(id: string): ScheduledMessage | undefined {
-    return this.messages.get(id);
+  private eventsDuring(r: Reservation): ResortEvent[] {
+    const a = Date.parse(r.checkIn), b = Date.parse(r.checkOut);
+    return this.events.filter((e) => {
+      const t = Date.parse(e.start);
+      return t >= a && t < b;
+    });
   }
 
-  private sendAtFor(r: Reservation, kind: MessageKind, now: Date): string {
-    if (kind === "preferences") {
-      const ideal = addHours(r.checkIn, -this.config.preferencesHoursBefore);
-      // Booked late: invite them now rather than at a time already passed.
-      return Date.parse(ideal) < now.getTime() ? now.toISOString() : ideal;
+  private win(): Window {
+    return { startHour: this.config.sendWindowStart, endHour: this.config.sendWindowEnd };
+  }
+
+  // ------------------------------------------------------------ planning
+
+  /** The stay messages a single reservation should get. */
+  private journeyFor(r: Reservation): Plan[] {
+    const c = this.config;
+    const g = r.guest;
+    const checkIn = new Date(r.checkIn);
+    const checkOut = new Date(r.checkOut);
+    const plans: Plan[] = [];
+    const base = { reservation: r, guest: g };
+
+    // 1. Pre-arrival — N days before, at 10:00 in the guest's own time zone.
+    {
+      const day = new Date(checkIn.getTime() - c.preArrivalDaysBefore * DAY);
+      const sendAt = atLocalTime(day, g.timeZone, 10);
+      const hold = r.occasion && c.holdPersonalMoments
+        ? `Mentions ${staffOccasion(r)} — add a personal line, then approve.`
+        : undefined;
+      plans.push({
+        ...base, key: `pre_arrival:${r.id}:email`, kind: "pre_arrival", channel: "email",
+        sendAt, timeZone: g.timeZone, hold,
+        timingNote: `10:00 guest time, ${c.preArrivalDaysBefore} days before arrival`,
+        expiresAt: new Date(checkIn.getTime() - 12 * HOUR),
+      });
     }
-    return kind === "pre_stay"
-      ? addHours(r.checkIn, -this.config.preStayHoursBefore)
-      : addHours(r.checkOut, this.config.postStayHoursAfter);
-  }
 
-  /** Whether a guest should get the "prepare your stay" invite at all. */
-  private wantsPreferencesInvite(r: Reservation, now: Date): boolean {
-    return !r.preferences && preferencesOpen(r, now);
-  }
-
-  /** Called when a guest submits the preferences page. */
-  async preferencesUpdated(reservationId: string): Promise<void> {
-    for (const m of this.messages.values()) {
-      if (m.reservationId === reservationId && m.kind === "preferences" && m.status === "scheduled") {
-        m.status = "cancelled"; // they've already answered — no need to invite them
+    // 2. Arrival day — N hours before arrival. The guest is travelling to us,
+    //    so this uses the resort's clock, and must land *before* they arrive.
+    {
+      const raw = new Date(checkIn.getTime() - c.arrivalHoursBefore * HOUR);
+      const fit = fitToWindow(raw, RESORT_TZ, { startHour: 7, endHour: 22 }, "earlier");
+      const channels: Channel[] = ["email"];
+      if (c.arrivalTextReminder) {
+        const text = g.preferredChannels.find((ch) => ch !== "email");
+        if (text) channels.push(text);
+      }
+      for (const ch of channels) {
+        plans.push({
+          ...base, key: `arrival_day:${r.id}:${ch}`, kind: "arrival_day", channel: ch,
+          sendAt: fit.date, timeZone: RESORT_TZ, timingNote: fit.note ?? `${c.arrivalHoursBefore}h before arrival`,
+          expiresAt: checkIn,
+        });
       }
     }
-    await this.plan();
+
+    // 3. In-stay — after check-in, on the resort's clock.
+    {
+      const raw = new Date(checkIn.getTime() + c.inStayHoursAfterCheckIn * HOUR);
+      const fit = fitToWindow(raw, RESORT_TZ, { startHour: 8, endHour: 21 }, "later");
+      plans.push({
+        ...base, key: `in_stay:${r.id}:email`, kind: "in_stay", channel: "email",
+        sendAt: fit.date, timeZone: RESORT_TZ,
+        timingNote: fit.note ?? `${c.inStayHoursAfterCheckIn}h after check-in`,
+        expiresAt: new Date(checkOut.getTime() - 12 * HOUR),
+      });
+    }
+
+    // 4. Post-stay — after check-out, in the guest's time zone (they're home).
+    {
+      const raw = new Date(checkOut.getTime() + c.postStayHoursAfterCheckOut * HOUR);
+      const fit = fitToWindow(raw, g.timeZone, this.win(), "later");
+      plans.push({
+        ...base, key: `post_stay:${r.id}:email`, kind: "post_stay", channel: "email",
+        sendAt: fit.date, timeZone: g.timeZone,
+        timingNote: fit.note ?? `${c.postStayHoursAfterCheckOut}h after check-out`,
+        expiresAt: new Date(checkOut.getTime() + 7 * DAY),
+      });
+    }
+    return plans;
+  }
+
+  /** Event invites to opted-in past guests, with the anti-spam rules applied. */
+  private invites(journey: Plan[], now: Date): Plan[] {
+    const c = this.config;
+    this.suppressions = [];
+    const out: Plan[] = [];
+
+    // Already-sent invites count towards the limits.
+    const sentInvites = new Map<string, number[]>();
+    for (const m of this.messages.values()) {
+      if (m.kind === "event_invite" && m.status === "sent") {
+        const list = sentInvites.get(m.guestId) ?? [];
+        list.push(Date.parse(m.sendAt));
+        sentInvites.set(m.guestId, list);
+      }
+    }
+
+    const guestsById = new Map<string, Guest>();
+    for (const r of this.reservations) guestsById.set(r.guest.id, r.guest);
+
+    const candidates: { guest: Guest; event: ResortEvent; sendAt: Date; lastStay: Reservation }[] = [];
+    for (const event of this.events) {
+      if (event.audience !== "everyone") continue;
+      const evStart = Date.parse(event.start);
+      if (evStart < now.getTime()) continue;
+      for (const guest of guestsById.values()) {
+        const stays = this.reservations.filter((r) => r.guest.id === guest.id && !r.cancelled);
+        const past = stays
+          .filter((r) => Date.parse(r.checkOut) <= now.getTime())
+          .sort((a, b) => Date.parse(b.checkOut) - Date.parse(a.checkOut));
+        if (past.length === 0) continue; // never stayed yet — not a past guest
+        const name = `${guest.firstName} ${guest.lastName}`;
+        const skip = (reason: string) =>
+          this.suppressions.push({ guestName: name, eventTitle: event.title.en, reason });
+
+        if (!guest.marketingConsent) { skip("Didn't opt in to news after their stay"); continue; }
+        const staying = stays.some((r) => Date.parse(r.checkIn) <= evStart && Date.parse(r.checkOut) > evStart);
+        if (staying) { skip("Will be staying during the event — told in their stay messages instead"); continue; }
+
+        const day = new Date(evStart - event.inviteLeadDays * DAY);
+        let sendAt = atLocalTime(day, guest.timeZone, 10);
+        if (sendAt.getTime() < now.getTime()) {
+          sendAt = fitToWindow(new Date(now.getTime() + HOUR), guest.timeZone, this.win(), "later").date;
+        }
+        candidates.push({ guest, event, sendAt, lastStay: past[0] });
+      }
+    }
+
+    candidates.sort((a, b) => a.sendAt.getTime() - b.sendAt.getTime());
+    const accepted = new Map<string, number[]>(sentInvites);
+    for (const { guest, event, sendAt, lastStay } of candidates) {
+      const name = `${guest.firstName} ${guest.lastName}`;
+      const skip = (reason: string) =>
+        this.suppressions.push({ guestName: name, eventTitle: event.title.en, reason });
+      const t = sendAt.getTime();
+      const mine = accepted.get(guest.id) ?? [];
+
+      const tooSoon = mine.find((x) => Math.abs(x - t) < c.inviteMinDaysBetween * DAY);
+      if (tooSoon !== undefined) {
+        skip(`Already invited to something within ${c.inviteMinDaysBetween} days`);
+        continue;
+      }
+      const yearCount = mine.filter((x) => Math.abs(x - t) < 365 * DAY).length;
+      if (yearCount >= c.inviteMaxPerYear) { skip(`Reached ${c.inviteMaxPerYear} invites this year`); continue; }
+      const nearStay = journey.find(
+        (p) => p.guest.id === guest.id && Math.abs(p.sendAt.getTime() - t) < c.inviteQuietDaysAroundStay * DAY,
+      );
+      if (nearStay) {
+        skip(`Already hearing from us about a stay within ${c.inviteQuietDaysAroundStay} days`);
+        continue;
+      }
+
+      mine.push(t);
+      accepted.set(guest.id, mine);
+      out.push({
+        key: `event_invite:${guest.id}:${event.id}`, kind: "event_invite", channel: "email",
+        reservation: lastStay, guest, event, sendAt, timeZone: guest.timeZone,
+        timingNote: `10:00 guest time, ${event.inviteLeadDays} days before the event`,
+        expiresAt: new Date(Date.parse(event.start) - DAY),
+      });
+    }
+    return out;
+  }
+
+  /** Small manual touches Terra asks the team to do. */
+  private planTasks(now: Date): void {
+    const keep = new Map<string, StaffTask>();
+    for (const r of this.reservations) {
+      if (r.cancelled || Date.parse(r.checkIn) < now.getTime()) continue; // upcoming arrivals only
+      const who = `${r.guest.firstName} ${r.guest.lastName}`;
+      const where = placeLabel(r);
+      const add = (kind: StaffTask["kind"], text: string) => {
+        const id = `${kind}:${r.id}`;
+        keep.set(id, { id, reservationId: r.id, kind, dueBy: r.checkIn, text, done: this.tasks.get(id)?.done ?? false });
+      };
+      if (this.isReturning(r)) {
+        add("welcome_back_package", `Welcome-back gift for ${who} (returning guest) — place it in ${where} before arrival.`);
+      }
+      if (r.occasion) {
+        add("occasion", `${who} is celebrating ${staffOccasion(r)} — handwritten note in ${where}.`);
+      }
+      const { hour } = zonedParts(new Date(r.checkIn), RESORT_TZ);
+      if (hour >= 20 || hour < 7) {
+        add("late_arrival", `${who} arrives after reception closes (~${localLabel(new Date(r.checkIn), RESORT_TZ)}) — arrange someone to meet them.`);
+      }
+      // What the guest asked for on their "prepare your stay" page.
+      for (const t of preferenceTasks(r, where)) {
+        const id = `guest_request:${t.key}:${r.id}`;
+        keep.set(id, { id, reservationId: r.id, kind: "guest_request", dueBy: r.checkIn, text: t.text, done: this.tasks.get(id)?.done ?? false });
+      }
+    }
+    this.tasks = keep;
   }
 
   /**
-   * Build (or rebuild) the full message plan for all reservations. Existing
-   * sent messages are preserved; only still-scheduled ones are regenerated so
-   * that config/preview changes take effect without re-sending.
+   * Build (or rebuild) the full plan from the live sources. Sent, cancelled and
+   * skipped messages are kept as history; staff-edited wording is never
+   * overwritten; anything no longer wanted (e.g. an event was removed) is dropped.
    */
   async plan(now: Date = new Date()): Promise<void> {
-    const kinds: MessageKind[] = ["preferences", "pre_stay", "post_stay"];
-    for (const r of this.reservations) {
-      for (const kind of kinds) {
-        for (const channel of channelsFor(r, this.config.channelStrategy)) {
-          const key = `${r.id}:${kind}:${channel}`;
-          const existing = this.findBy(r.id, kind, channel);
-          if (existing && existing.status !== "scheduled") continue;
-          if (kind === "preferences" && !existing && !this.wantsPreferencesInvite(r, now)) continue;
+    this.reservations = await this.bookings.listReservations();
+    this.events = await this.calendar.listEvents();
 
-          const generated = await this.generator.generate({
-            reservation: r,
-            kind,
-            channel,
-            language: r.guest.language,
-          });
+    // Stays that ended over a week ago are history: they inform "welcome back"
+    // and invites, but get no stay messages.
+    const active = this.reservations.filter(
+      (r) => !r.cancelled && Date.parse(r.checkOut) + 7 * DAY > now.getTime(),
+    );
+    const journey = active.flatMap((r) => this.journeyFor(r));
+    const plans = [...journey, ...this.invites(journey, now)];
+    const wanted = new Set(plans.map((p) => p.key));
 
-          if (existing) {
-            existing.sendAt = this.sendAtFor(r, kind, now);
-            existing.subject = generated.subject;
-            existing.body = generated.body;
-            existing.generatedBy = generated.generatedBy;
-          } else {
-            const msg: ScheduledMessage = {
-              id: newId(),
-              reservationId: r.id,
-              kind,
-              channel,
-              language: r.guest.language,
-              sendAt: this.sendAtFor(r, kind, now),
-              status: "scheduled",
-              subject: generated.subject,
-              body: generated.body,
-              generatedBy: generated.generatedBy,
-            };
-            this.messages.set(msg.id, msg);
-            void key;
-          }
-        }
+    for (const p of plans) {
+      const existing = [...this.messages.values()].find((m) => m.key === p.key);
+      if (existing && ["sent", "cancelled", "skipped"].includes(existing.status)) continue;
+      // A moment that had already passed before Terra first saw the booking
+      // (e.g. a last-minute reservation) is simply not planned.
+      if (!existing && p.expiresAt.getTime() <= now.getTime()) continue;
+
+      const timing = {
+        sendAt: p.sendAt.toISOString(),
+        timeZone: p.timeZone,
+        localSendTime: localLabel(p.sendAt, p.timeZone),
+        timingNote: p.timingNote,
+        expiresAt: p.expiresAt.toISOString(),
+      };
+
+      if (existing?.edited) {
+        Object.assign(existing, timing);
+        continue;
+      }
+
+      const generated = await this.generator.generate({
+        reservation: p.reservation,
+        kind: p.kind,
+        channel: p.channel,
+        language: p.guest.language,
+        returning: this.isReturning(p.reservation),
+        eventsDuringStay: this.eventsDuring(p.reservation),
+        event: p.event,
+      });
+
+      const status = existing?.status === "scheduled" && existing.statusNote === "Approved"
+        ? "scheduled"
+        : p.hold ? "held" : "scheduled";
+
+      const msg = {
+        id: existing?.id ?? newId("msg"),
+        key: p.key,
+        reservationId: p.reservation.id,
+        guestId: p.guest.id,
+        kind: p.kind,
+        eventId: p.event?.id,
+        channel: p.channel,
+        language: p.guest.language,
+        ...timing,
+        status,
+        statusNote: status === "held" ? p.hold : existing?.statusNote,
+        subject: generated.subject,
+        body: generated.body,
+        generatedBy: generated.generatedBy,
+      } as ScheduledMessage & { key: string };
+      this.messages.set(msg.id, msg);
+    }
+
+    for (const [id, m] of this.messages) {
+      if (!wanted.has(m.key) && (m.status === "scheduled" || m.status === "held")) {
+        this.messages.delete(id);
       }
     }
+
+    this.planTasks(now);
   }
 
-  private findBy(
-    reservationId: string,
-    kind: MessageKind,
-    channel: Channel,
-  ): ScheduledMessage | undefined {
-    for (const m of this.messages.values()) {
-      if (
-        m.reservationId === reservationId &&
-        m.kind === kind &&
-        m.channel === channel
-      ) {
-        return m;
-      }
-    }
-    return undefined;
-  }
+  // ------------------------------------------------------------ staff actions
 
-  /** Lets staff edit the generated copy before it goes out. */
   editMessage(id: string, patch: { subject?: string; body?: string }): boolean {
     const m = this.messages.get(id);
-    if (!m || m.status !== "scheduled") return false;
+    if (!m || (m.status !== "scheduled" && m.status !== "held")) return false;
     if (patch.subject !== undefined) m.subject = patch.subject;
     if (patch.body !== undefined) m.body = patch.body;
+    m.edited = true;
+    return true;
+  }
+
+  approveMessage(id: string): boolean {
+    const m = this.messages.get(id);
+    if (!m || m.status !== "held") return false;
+    m.status = "scheduled";
+    m.statusNote = "Approved";
     return true;
   }
 
   cancelMessage(id: string): boolean {
     const m = this.messages.get(id);
-    if (!m || m.status !== "scheduled") return false;
+    if (!m || (m.status !== "scheduled" && m.status !== "held")) return false;
     m.status = "cancelled";
     return true;
   }
 
+  toggleTask(id: string): boolean {
+    const t = this.tasks.get(id);
+    if (!t) return false;
+    t.done = !t.done;
+    return true;
+  }
+
+  // ------------------------------------------------------------ sending
+
   /**
-   * Send every scheduled message whose send time is at or before `now`.
-   * Returns the messages that were sent on this run.
+   * Demo helper: fast-forward the clock to `target` as if Terra had been
+   * running the whole time — stepping an hour at a time so each message goes
+   * out at its own moment instead of being judged stale on arrival.
+   */
+  async runUntil(target: Date, from: Date = new Date()): Promise<ScheduledMessage[]> {
+    const sent: ScheduledMessage[] = [];
+    for (let t = from.getTime(); t < target.getTime(); t += HOUR) {
+      sent.push(...(await this.runDue(new Date(t))));
+    }
+    sent.push(...(await this.runDue(target)));
+    return sent;
+  }
+
+  /**
+   * Send every scheduled message whose time has come. A message whose moment
+   * has already passed (e.g. a booking made the day before arrival) is marked
+   * skipped instead — a stale "three days to go" is worse than none.
    */
   async runDue(now: Date = new Date()): Promise<ScheduledMessage[]> {
     const sent: ScheduledMessage[] = [];
-    let preferencesChanged = false;
-    for (const r of this.reservations) {
-      if (purgeAfterStay(r, now)) preferencesChanged = true;
-    }
-    if (preferencesChanged) await this.plan(now);
-    for (const m of this.getMessages()) {
-      if (m.status !== "scheduled") continue;
+    // Allergy details are only kept for the stay itself.
+    purgeAfterStay(this.reservations, now);
+    for (const m of [...this.messages.values()].sort((a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt))) {
+      if (m.status !== "scheduled" && m.status !== "held") continue;
       if (Date.parse(m.sendAt) > now.getTime()) continue;
+
+      if (now.getTime() > Date.parse(m.expiresAt)) {
+        m.status = "skipped";
+        m.statusNote = m.kind === "pre_arrival"
+          ? "Booked too close to arrival for this message — not sent"
+          : "Its moment passed before it could go — not sent";
+        continue;
+      }
+      if (m.status === "held") continue; // waits for a person
 
       const reservation = this.getReservation(m.reservationId);
       if (!reservation) continue;
-
-      // Too late to prepare, or already answered: don't send the invite.
-      if (m.kind === "preferences" && !this.wantsPreferencesInvite(reservation, now)) {
-        m.status = "cancelled";
-        continue;
-      }
-
       const result = await senderFor(m.channel).send(m, reservation);
       if (result.ok) {
         m.status = "sent";

@@ -1,61 +1,104 @@
 # Terra — guest messaging concierge for Vale Palheiro
 
-A prototype that automates **personalised pre-stay and post-stay messages** for
-[Vale Palheiro — Earth Resort](https://www.valepalheiro.com), across **email,
-SMS and WhatsApp**. Built for a hackathon pilot, with fictional reservations so
-it runs entirely offline — no access to the resort's real inbox, Booking.com or
-PMS required.
+A prototype that automates **personalised guest emails across the whole stay**
+for [Vale Palheiro — Earth Resort](https://www.valepalheiro.com): before
+arrival, on arrival day, during the stay, after check-out, and invitations to
+the resort's events. Every message is in the guest's language (**EN / PT / FR**)
+and arrives at a good hour **in the guest's own time zone**.
 
-The goal: take the repetitive, manual job of writing "we can't wait to welcome
-you" and "thank you for staying" messages off the team's plate, while keeping
-every message warm, personal, and unmistakably Vale Palheiro — never spam.
+Today the resort sends an automatic booking confirmation and then does the rest
+by hand (front-office emails 1–2 weeks out, manual invites for Fado nights and
+guest-chef dinners). Terra takes the repetitive part off the team, and keeps
+the personal part — a handwritten note, a welcome-back gift — with people.
+
+The prototype runs on fictional reservations and needs no access to the
+resort's real systems.
 
 ---
 
-## What it does
+## The guest journey
 
-- **Three automated moments in the guest journey**
-  - **Preferences invite** — "Let's prepare your stay", sent **7 days** before
-    arrival (straight away for late bookings; skipped when arrival is under
-    24h away, where front office calls instead).
-  - **Pre-stay** — sent a configurable window before arrival (default **2 hours**).
-  - **Post-stay** — sent a configurable window after departure (default **24 hours**).
-- **Guest preferences page** (`/stay/<token>`) — a personal, no-login link.
-  Everything is **pre-filled** (fireplace ready, still water in the fridge,
-  beds as booked, a plug adapter guessed from the guest's phone country,
-  arriving 3–6pm), so a happy guest just taps *Looks perfect*. They can add
-  regional wine, bubbles or beer to the fridge (staff confirm prices), ask for
-  separate or extra beds, and see Wi-Fi details. Optional extras stay folded
-  away: food & allergies, a celebration, experiences from the resort's own
-  Experiences Menu (with "picked for you" suggestions), a note. EN / PT / FR.
-  - **Wi-Fi values in `src/brand.ts` are placeholders** — replace with the
-    real network name and password.
-  - Allergies are only kept with an **explicit consent box**, and are
-    **deleted automatically after check-out**.
-  - Their choices show up in the **welcome message** ("the fireplace laid and ready
-    to light, sparkling water and something sparkling in the fridge…") plus
-    the Wi-Fi details and, if they opt in, the thank-you
-    message promises to remember them next time.
-  - Staff see a **prep sheet** per guest in the *Guest preferences* tab.
-- **Personalised copy**, not mail-merge. Each message is shaped by the guest's
-  name, their villa, their reason for visiting (couple, family, hiking, a
-  celebration…), and their language (**EN / PT / FR**). A hiking guest hears
-  about the Rota Vicentina and an early breakfast; a family hears about the
-  kitchen garden.
-- **Multi-channel** — email, SMS and WhatsApp, each with channel-appropriate
-  copy (a full, signed email vs. a short, friendly text).
-- **Staff dashboard** — log in, see every scheduled message, **preview and edit
-  the wording** before it sends, cancel anything, and watch a **delivery log**.
-- **"Simulate time" button** — fast-forward the clock to show the scheduler
-  firing the pre-stay message without waiting two hours. Ideal for a live demo.
-- **On-brand by design** — calm, unhurried, grounded in the valley. The brand
-  voice lives in one file (`src/brand.ts`) so the team can tune it.
+| # | Moment | Default timing | What it says |
+|---|--------|----------------|--------------|
+| 1 | **We're getting ready** | 3 days before arrival, 10:00 guest time | Your villa is being prepared, we can't wait; stay summary; events during the stay (with priority booking); asks for arrival time. Returning guests hear about a welcome-back gift. |
+| 2 | **Arrival details** | 3 hours before arrival | Villa / unit, where we'll meet you (Casa da Ribeira), directions + map, reception hours, late-arrival number. Plus a short WhatsApp/SMS if the guest opted in. |
+| 3 | **Settling in** | 2 hours after check-in | Wi-Fi, breakfast and dinner hours, reception + out-of-hours numbers, check-out time, what's on during the stay, spa / Rota Vicentina. |
+| 4 | **Thank you + review** | 24 hours after check-out, guest time | Thank-you, one personal line, a review link. |
+| 5 | **Event invites** | N days before each event, 10:00 guest time | To opted-in past guests only, with a welcome-back gift if they come to stay. |
+
+All timings, quiet hours and anti-spam limits are editable in **Settings**.
+
+## What makes it not spam
+
+- **Event invites only go to guests who opted in** and have actually stayed.
+- **At most one invite every 30 days**, at most 6 a year, and **never within 7
+  days of a stay message**.
+- Guests **staying during an event** hear about it in their stay messages
+  instead of a separate invite.
+- Every invite has a one-line **unsubscribe**.
+- The **Events** tab shows exactly **who isn't being invited, and why**.
+- A message whose moment has passed (e.g. a booking made the night before) is
+  **skipped, not sent late** — no "three days to go" on arrival day.
+
+## Time zones
+
+Each guest has a time zone (from the booking, or guessed from their country).
+Messages that reach guests at home (3-day, thank-you, invites) land at a good
+hour **in their zone** (default 09:00–20:00; anything outside moves into that
+window). Arrival-day and in-stay messages use the resort's clock (Lisbon),
+because the guest is travelling to or staying with us. Each message card in
+the dashboard shows the guest-local time it lands, and why it moved if it did.
+
+## Human in the loop
+
+- **Personal moments are held for approval.** A message mentioning a birthday
+  or anniversary waits for someone to add a personal line and press *Approve*.
+- **Team tasks**: Terra prompts, people deliver. Welcome-back gift for a
+  returning guest, a handwritten note for a celebration, someone to meet a
+  guest arriving after reception closes (20:00).
+- Every message can be **edited** or **stopped** before it goes. Edited wording
+  is never overwritten.
+
+## Guest preferences ("prepare your stay")
+
+The 3-days-before email links each guest to a **personal page** (`/stay/<token>`,
+no login) where their stay is **already set up the way most guests like it** —
+so a happy guest just taps *Looks perfect*, and nobody faces a questionnaire.
+
+- **Pre-filled:** fireplace laid and ready to light, still water in the fridge,
+  beds as booked, a plug adapter guessed from the guest's country (Portugal
+  uses EU sockets), arrival time.
+- **Easy to change:** regional wine, bubbles, beer or alcohol-free drinks in the
+  fridge (staff confirm prices); separate beds or one more bed (staff confirm
+  it's possible).
+- **Optional, folded away:** food & allergies, a celebration (including
+  *"Do we need a reason?"*), experiences from the resort's own Experiences
+  Menu with three "picked for you" ideas, and a note for the team.
+- **"Remember my preferences for future stays."**
+- **Allergies need an explicit consent box** and are **deleted automatically
+  after check-out**.
+- Wi-Fi and contact details come from **Property info**.
+- EN / PT / FR. The page closes 24 hours before arrival; bookings made later
+  than that get the usual personal call.
+
+Their answers become a **prep sheet** (dashboard → *Guest preferences*),
+**team tasks** (wine to stock, extra bed to check, experiences to arrange),
+a line in the **arrival-day email** ("we've prepared everything the way you
+asked…"), and a line in the **thank-you** if they asked us to remember them.
+Sophie's answers are pre-filled in the demo.
+
+## Property info
+
+Wi-Fi, phone numbers, directions (EN/PT/FR), meal hours, check-out time and the
+review link are edited in the **Property info** tab and flow straight into
+upcoming messages. Placeholder values are marked **sample** and counted on the
+dashboard, so nothing made-up reaches a real guest unnoticed.
 
 ---
 
 ## Run it
 
-Requires **Node.js 18+** (uses only the standard library — no `npm install`).
+Requires **Node.js 22+** (uses only the standard library — no `npm install`).
 
 ```bash
 npm start
@@ -70,17 +113,22 @@ Open <http://localhost:3000> and log in:
 
 (Override via `TERRA_USER` / `TERRA_PASS` env vars.)
 
-### Demo script (≈2 minutes)
+### Demo script (≈3 minutes)
 
-1. Log in → you land on **Scheduled messages**. Some are already `sent` (an
-   arrival that's imminent, a guest who just checked out), the rest `scheduled`.
-2. Open any message to **read the personalised copy**. Compare a family
-   pre-stay (EN email) with a hiking pre-stay (FR email) — note how the body
-   changes, not just the name.
-3. Click **Edit wording** on a scheduled message to show staff stay in control.
-4. Set **Simulate time passing → +25 hours** and click **Run scheduler** — watch
-   messages flip to `sent`.
-5. Open the **Delivery log** tab to show what went out, on which channel, to whom.
+1. Log in → the journey strip and counters show what's scheduled, what needs
+   approval, open team tasks and property details still to confirm.
+2. Filter **Needs approval** → Sophie's anniversary email (French). Add a line,
+   **Approve**.
+3. Compare a **3 days before** email for a returning guest with a first-timer,
+   and an **Arrival day** email in Portuguese.
+4. **Team tasks** → the welcome-back gift and the late-arrival pickup.
+5. **Events** → add an event; watch invites appear for past guests, and see
+   who is held back by the anti-spam rules and why.
+6. **Property info** → change the Wi-Fi password; every unsent message updates.
+7. **Demo tools → In 3 days → Send anything due**, then open the **Delivery log**.
+
+`public/snapshot.html` is a static export of the output (regenerate with
+`node --experimental-strip-types tools/snapshot.ts > public/snapshot.html`).
 
 ---
 
@@ -88,50 +136,41 @@ Open <http://localhost:3000> and log in:
 
 ```
 src/
-  types.ts      Domain model (Reservation, Guest, ScheduledMessage…)
-  mockData.ts   Fictional reservations (dates are relative to "now")
-  brand.ts      Vale Palheiro brand voice + localised phrasing (EN/PT/FR)
-  generator.ts  Message generation: TemplateGenerator (offline) + LlmGenerator seam
+  types.ts      Domain model (Guest, Reservation, ResortEvent, ScheduledMessage, StaffTask)
+  sources.ts    Connector seams: BookingSource (Host PMS) + EventSource (calendar)
+  mockData.ts   Fictional guests, stays and events (dates relative to "now")
+  property.ts   Wi-Fi, phones, directions… edited by staff, flagged until confirmed
+  timezone.ts   Guest-local timing and quiet hours (Intl, no dependencies)
+  preferences.ts  "Prepare your stay" answers: defaults, validation, links, tasks, email lines
+  brand.ts      Vale Palheiro voice + localised phrasing
+  generator.ts  The five message templates in EN / PT / FR (+ LLM seam)
   channels.ts   Email / SMS / WhatsApp adapters behind one interface
-  scheduler.ts  The "when + which channel + send if due" logic
+  scheduler.ts  Who gets what, when; anti-spam; tasks; send-if-due
   server.ts     Zero-dependency HTTP server + JSON API
 public/
-  index.html    Staff dashboard (earthy Vale Palheiro styling)
+  index.html    Staff dashboard
   app.js        Dashboard logic (vanilla JS)
+  stay.html     Guest "prepare your stay" page (mobile-first)
+  stay.js       Its logic + EN / PT / FR copy and the Experiences Menu
 ```
-
-### Design choices that matter for the pilot
-
-- **Pluggable integrations.** Email/SMS/WhatsApp sending and LLM generation are
-  each behind a single interface. Today they're mock/offline adapters. Going
-  live means swapping in SendGrid + Twilio + an LLM key — a config change, not a
-  rewrite. See `createGenerator()` in `generator.ts` and `senderFor()` in
-  `channels.ts`.
-- **Reliable by default.** Copy is generated by on-brand templates that always
-  work offline. When a live LLM is enabled it adds extra warmth and variety, and
-  **falls back to the template on any error** — a model outage can never block a
-  guest message.
-- **Staff stay in control.** Nothing is a black box: every message is previewable
-  and editable before it sends, and the activity log shows exactly what went out.
-
----
 
 ## From prototype to pilot
 
-This is the demo. To present it to Vale Palheiro as a hosted pilot:
-
-1. **Hosting** — a `render.yaml` is included for one-click deploy to
-   [Render](https://render.com) (free tier). Connect the repo and it goes live
-   at a public URL; set `TERRA_USER` / `TERRA_PASS` in the dashboard for real
-   staff accounts. Any other Node host works too.
-2. **Real sending** — add SendGrid (email) and Twilio (SMS + WhatsApp) keys.
-   WhatsApp requires Meta-approved message templates for the pre-stay/post-stay
-   moments.
-3. **Live LLM** — set `OPENAI_API_KEY` to enable `LlmGenerator`; templates remain
-   the fallback.
-4. **Booking integration** — replace `mockData.ts` with a connector to the
-   resort's PMS / Booking.com so reservations flow in automatically.
-5. **Consent & preferences** — honour per-guest channel opt-ins (the model
-   already carries `preferredChannels`) and add unsubscribe handling.
+1. **Booking data** — implement `BookingSource` against **Host**, the PMS the
+   team already treats as the single source of truth (direct bookings are
+   entered there; Booking.com / Expedia / website bookings arrive via
+   GuestCentric). Needed fields: guest name, email, language, country / time
+   zone, dates and expected arrival time, villa + unit, adults / children,
+   occasion, and the guest's opt-in for news.
+2. **Events calendar** — implement `EventSource` against the calendar the team
+   uses (e.g. Google Calendar), including buy-outs so no invites go out for
+   closed dates.
+3. **Sending** — swap the mock adapters for an email provider (and Twilio for
+   SMS / WhatsApp; WhatsApp needs Meta-approved templates).
+4. **Property info** — confirm every field marked *sample*.
+5. **Hosting** — `render.yaml` deploys to Render. State is in memory today; a
+   pilot needs a small database so approvals, edits and sent history survive a
+   restart.
+6. **Consent** — honour opt-ins and unsubscribe replies (GDPR).
 
 > All guest data in this prototype is fictional.
