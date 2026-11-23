@@ -34,6 +34,16 @@ export const reservations: Reservation[] = [
     ratePlan: "Early Booking Rate",
     breakfastIncluded: true,
     notes: "Travelling with children. Requested a cot and a late dinner at The Barn.",
+    preferences: {
+      estimatedArrival: iso(3),
+      dietary: "One child is dairy-free.",
+      occasion: "Family summer holiday",
+      interests: ["land_trails", "food_wine", "crafts"],
+      pace: "balanced",
+      arrangements: ["Cot", "Restaurant booking at The Barn", "Babysitting one evening"],
+      notes: "Would love something the children can join in with.",
+      submittedAt: iso(-5 * DAY),
+    },
     guest: {
       id: "gst_001",
       firstName: "Charlotte",
@@ -78,6 +88,15 @@ export const reservations: Reservation[] = [
     ratePlan: "Early Booking Rate",
     breakfastIncluded: true,
     notes: "Planning to walk the Rota Vicentina. Early breakfast requested.",
+    preferences: {
+      estimatedArrival: iso(30),
+      dietary: "Vegetarian.",
+      occasion: "Walking holiday",
+      interests: ["land_trails", "sea_coast", "wellbeing"],
+      pace: "active",
+      arrangements: ["Early breakfast", "Packed picnic for the trail"],
+      submittedAt: iso(-2 * DAY),
+    },
     guest: {
       id: "gst_003",
       firstName: "Sophie",

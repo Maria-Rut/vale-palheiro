@@ -1,8 +1,10 @@
 import type {
   Channel,
+  GuestPreferences,
   MessageKind,
   Reservation,
   ScheduledMessage,
+  WeatherKind,
 } from "./types.ts";
 import { createGenerator, type Generator } from "./generator.ts";
 import { senderFor } from "./channels.ts";
@@ -14,9 +16,13 @@ import { senderFor } from "./channels.ts";
  *   3. renders the copy up front so staff can preview and edit it,
  *   4. sends anything that is now due.
  *
- * Timing rules (configurable):
- *   - pre-stay:  PRE_STAY_HOURS_BEFORE check-in  (default 2h before arrival)
- *   - post-stay: POST_STAY_HOURS_AFTER check-out (default 24h after departure)
+ * There are four moments, in order:
+ *   - preferences : PREFERENCES_DAYS_BEFORE check-in (default 7 days before) —
+ *                   invites the guest to fill the questionnaire.
+ *   - pre_stay    : PRE_STAY_HOURS_BEFORE check-in (default 2h before arrival).
+ *   - experiences : EXPERIENCES_HOURS_AFTER check-in (default 3h after arrival) —
+ *                   suggests activities for the day's weather.
+ *   - post_stay   : POST_STAY_HOURS_AFTER check-out (default 24h after departure).
  *
  * To keep the prototype honest and demoable, the scheduler never sends a
  * message whose send time is in the future, and it only sends each message
@@ -24,7 +30,9 @@ import { senderFor } from "./channels.ts";
  */
 
 export interface SchedulerConfig {
+  preferencesDaysBefore: number;
   preStayHoursBefore: number;
+  experiencesHoursAfter: number;
   postStayHoursAfter: number;
   /**
    * How many channels to use per moment. "preferred" sends only on the guest's
@@ -35,10 +43,14 @@ export interface SchedulerConfig {
 }
 
 export const DEFAULT_CONFIG: SchedulerConfig = {
+  preferencesDaysBefore: 7,
   preStayHoursBefore: 2,
+  experiencesHoursAfter: 3,
   postStayHoursAfter: 24,
   channelStrategy: "preferred",
 };
+
+const ALL_KINDS: MessageKind[] = ["preferences", "pre_stay", "experiences", "post_stay"];
 
 function addHours(iso: string, hours: number): string {
   return new Date(new Date(iso).getTime() + hours * 3600_000).toISOString();
@@ -64,15 +76,21 @@ export class Scheduler {
   private reservations: Reservation[];
   private config: SchedulerConfig;
   private generator: Generator;
+  /** Simulated forecast per reservation, keyed by reservation id. */
+  private weather = new Map<string, WeatherKind>();
+  /** Base URL used to build each guest's questionnaire link. */
+  private questionnaireBase: string;
 
   constructor(
     reservations: Reservation[],
     config: SchedulerConfig = DEFAULT_CONFIG,
     generator: Generator = createGenerator(),
+    questionnaireBase = "/q",
   ) {
     this.reservations = reservations;
     this.config = config;
     this.generator = generator;
+    this.questionnaireBase = questionnaireBase;
   }
 
   getConfig(): SchedulerConfig {
@@ -101,23 +119,49 @@ export class Scheduler {
     return this.messages.get(id);
   }
 
+  /** Weather used for a reservation's experiences message (simulated in demo). */
+  getWeather(reservationId: string): WeatherKind {
+    return this.weather.get(reservationId) ?? "sunny";
+  }
+
+  setWeather(reservationId: string, weather: WeatherKind): void {
+    this.weather.set(reservationId, weather);
+  }
+
+  /**
+   * Record the preferences a guest submits via the questionnaire. Stored on the
+   * reservation (the CRM reads this) and used to tailor later messages.
+   */
+  setPreferences(reservationId: string, prefs: GuestPreferences): boolean {
+    const r = this.getReservation(reservationId);
+    if (!r) return false;
+    r.preferences = prefs;
+    return true;
+  }
+
   private sendAtFor(r: Reservation, kind: MessageKind): string {
-    return kind === "pre_stay"
-      ? addHours(r.checkIn, -this.config.preStayHoursBefore)
-      : addHours(r.checkOut, this.config.postStayHoursAfter);
+    switch (kind) {
+      case "preferences":
+        return addHours(r.checkIn, -this.config.preferencesDaysBefore * 24);
+      case "pre_stay":
+        return addHours(r.checkIn, -this.config.preStayHoursBefore);
+      case "experiences":
+        return addHours(r.checkIn, this.config.experiencesHoursAfter);
+      case "post_stay":
+        return addHours(r.checkOut, this.config.postStayHoursAfter);
+    }
   }
 
   /**
    * Build (or rebuild) the full message plan for all reservations. Existing
    * sent messages are preserved; only still-scheduled ones are regenerated so
-   * that config/preview changes take effect without re-sending.
+   * that config/preview/weather/preferences changes take effect without
+   * re-sending.
    */
   async plan(): Promise<void> {
-    const kinds: MessageKind[] = ["pre_stay", "post_stay"];
     for (const r of this.reservations) {
-      for (const kind of kinds) {
+      for (const kind of ALL_KINDS) {
         for (const channel of channelsFor(r, this.config.channelStrategy)) {
-          const key = `${r.id}:${kind}:${channel}`;
           const existing = this.findBy(r.id, kind, channel);
           if (existing && existing.status === "sent") continue;
 
@@ -126,6 +170,8 @@ export class Scheduler {
             kind,
             channel,
             language: r.guest.language,
+            questionnaireUrl: `${this.questionnaireBase}/${r.reference}`,
+            weather: this.getWeather(r.id),
           });
 
           if (existing) {
@@ -147,7 +193,6 @@ export class Scheduler {
               generatedBy: generated.generatedBy,
             };
             this.messages.set(msg.id, msg);
-            void key;
           }
         }
       }

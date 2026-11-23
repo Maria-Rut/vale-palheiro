@@ -23,8 +23,51 @@ export type Channel = "email" | "sms" | "whatsapp";
  */
 export type Motive = "business" | "leisure" | "both";
 
-/** The two automated moments in the guest journey. */
-export type MessageKind = "pre_stay" | "post_stay";
+/**
+ * The automated moments in the guest journey, in order:
+ *   - preferences : earliest — asks the guest to fill the questionnaire so the
+ *                   team has time to prepare.
+ *   - pre_stay    : the welcome message, shortly before arrival.
+ *   - experiences : shortly after check-in — suggests activities that suit the
+ *                   day's weather (and the guest's stated interests).
+ *   - post_stay   : after checkout — thanks and an invitation to share feedback.
+ */
+export type MessageKind = "preferences" | "pre_stay" | "experiences" | "post_stay";
+
+/** Weather used to tailor the experiences message. */
+export type WeatherKind = "sunny" | "cloudy" | "rainy" | "windy";
+
+/** Interests a guest can tick in the pre-arrival questionnaire. */
+export type Interest =
+  | "land_trails"
+  | "sea_coast"
+  | "wellbeing"
+  | "food_wine"
+  | "crafts";
+
+/**
+ * Preferences a guest submits via the questionnaire link in the first email.
+ * Everything is optional — guests share only what they wish. These feed the
+ * CRM and personalise later messages.
+ */
+export interface GuestPreferences {
+  /** ISO datetime the guest expects to arrive, if given. */
+  estimatedArrival?: string;
+  /** Dietary needs / allergies, free text. */
+  dietary?: string;
+  /** Occasion, e.g. "anniversary", "birthday", "honeymoon", "just relaxing". */
+  occasion?: string;
+  /** What they'd like to do — maps to experiences. */
+  interests: Interest[];
+  /** Preferred pace of stay. */
+  pace?: "active" | "balanced" | "restful";
+  /** Things to arrange before arrival (cot, transfer, restaurant, babysitting…). */
+  arrangements: string[];
+  /** Anything else, free text. */
+  notes?: string;
+  /** When the guest submitted the questionnaire. */
+  submittedAt: string;
+}
 
 /** Lifecycle of a scheduled message. */
 export type MessageStatus = "scheduled" | "sent" | "cancelled";
@@ -65,6 +108,8 @@ export interface Reservation {
   breakfastIncluded: boolean;
   /** Optional free-text the staff noted, woven into personalisation. */
   notes?: string;
+  /** Preferences submitted via the questionnaire, once the guest responds. */
+  preferences?: GuestPreferences;
 }
 
 /**

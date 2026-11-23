@@ -5,6 +5,8 @@ import path from "node:path";
 import { reservations } from "./mockData.ts";
 import { Scheduler, DEFAULT_CONFIG } from "./scheduler.ts";
 import { getSentLog } from "./channels.ts";
+import { EXPERIENCES } from "./experiences.ts";
+import type { GuestPreferences, Interest, WeatherKind } from "./types.ts";
 
 /**
  * HTTP layer for Terra. Serves the staff dashboard and a small JSON API.
@@ -26,6 +28,14 @@ const STAFF_USER = process.env.TERRA_USER ?? "palheiro";
 const STAFF_PASS = process.env.TERRA_PASS ?? "costa-vicentina";
 
 const scheduler = new Scheduler(reservations, { ...DEFAULT_CONFIG });
+
+// Give each reservation a (simulated) forecast so the experiences message has
+// something to react to. In production this comes from a weather API keyed by
+// the resort's location and the stay dates.
+const demoWeather = ["sunny", "rainy", "sunny", "windy", "cloudy"] as const;
+scheduler.getReservations().forEach((r, i) => {
+  scheduler.setWeather(r.id, demoWeather[i % demoWeather.length]);
+});
 
 // Build the initial plan, then auto-send anything already due (e.g. the
 // imminent arrival and the recent checkout in the mock data) so the demo opens
@@ -122,6 +132,8 @@ function withReservationContext() {
       partySize: r?.partySize,
       checkIn: r?.checkIn,
       checkOut: r?.checkOut,
+      weather: r ? scheduler.getWeather(r.id) : undefined,
+      hasPreferences: !!r?.preferences,
     };
   });
 }
@@ -168,14 +180,68 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, scheduler.getConfig());
     }
     if (pathname === "/api/config" && method === "POST") {
-      const { preStayHoursBefore, postStayHoursAfter, channelStrategy } = await readBody(req);
+      const b = await readBody(req);
       const patch: Record<string, unknown> = {};
-      if (typeof preStayHoursBefore === "number") patch.preStayHoursBefore = preStayHoursBefore;
-      if (typeof postStayHoursAfter === "number") patch.postStayHoursAfter = postStayHoursAfter;
-      if (channelStrategy === "preferred" || channelStrategy === "all") patch.channelStrategy = channelStrategy;
+      for (const k of [
+        "preferencesDaysBefore",
+        "preStayHoursBefore",
+        "experiencesHoursAfter",
+        "postStayHoursAfter",
+      ] as const) {
+        if (typeof b[k] === "number") patch[k] = b[k];
+      }
+      if (b.channelStrategy === "preferred" || b.channelStrategy === "all") {
+        patch.channelStrategy = b.channelStrategy;
+      }
       scheduler.setConfig(patch);
       await scheduler.plan();
       return sendJson(res, 200, scheduler.getConfig());
+    }
+
+    // --- CRM: one row per reservation with guest, preferences and weather ---
+    if (pathname === "/api/crm" && method === "GET") {
+      const rows = scheduler.getReservations().map((r) => ({
+        ...r,
+        weather: scheduler.getWeather(r.id),
+      }));
+      return sendJson(res, 200, rows);
+    }
+
+    // --- set simulated weather for a reservation (drives experiences email) ---
+    const weatherMatch = pathname.match(/^\/api\/reservations\/([^/]+)\/weather$/);
+    if (weatherMatch && method === "POST") {
+      const { weather } = await readBody(req);
+      if (["sunny", "cloudy", "rainy", "windy"].includes(weather as string)) {
+        scheduler.setWeather(weatherMatch[1], weather as WeatherKind);
+        await scheduler.plan();
+        return sendJson(res, 200, { ok: true });
+      }
+      return sendJson(res, 400, { ok: false, error: "Invalid weather" });
+    }
+
+    // --- staff records guest questionnaire answers (CRM) ---
+    const prefMatch = pathname.match(/^\/api\/reservations\/([^/]+)\/preferences$/);
+    if (prefMatch && method === "POST") {
+      const b = await readBody(req);
+      const prefs: GuestPreferences = {
+        estimatedArrival: typeof b.estimatedArrival === "string" ? b.estimatedArrival : undefined,
+        dietary: typeof b.dietary === "string" ? b.dietary : undefined,
+        occasion: typeof b.occasion === "string" ? b.occasion : undefined,
+        interests: Array.isArray(b.interests) ? (b.interests as Interest[]) : [],
+        pace: ["active", "balanced", "restful"].includes(b.pace as string)
+          ? (b.pace as GuestPreferences["pace"])
+          : undefined,
+        arrangements: Array.isArray(b.arrangements) ? (b.arrangements as string[]) : [],
+        notes: typeof b.notes === "string" ? b.notes : undefined,
+        submittedAt: new Date().toISOString(),
+      };
+      const ok = scheduler.setPreferences(prefMatch[1], prefs);
+      if (ok) await scheduler.plan(); // regenerate experiences copy with new interests
+      return sendJson(res, ok ? 200 : 404, { ok });
+    }
+
+    if (pathname === "/api/experiences" && method === "GET") {
+      return sendJson(res, 200, EXPERIENCES);
     }
 
     const editMatch = pathname.match(/^\/api\/messages\/([^/]+)\/edit$/);

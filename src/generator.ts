@@ -3,6 +3,7 @@ import type {
   Language,
   MessageKind,
   Reservation,
+  WeatherKind,
 } from "./types.ts";
 import {
   BRAND,
@@ -10,6 +11,7 @@ import {
   MOTIVE_LINE,
   SIGNOFF,
 } from "./brand.ts";
+import { suggestExperiences, type Experience } from "./experiences.ts";
 
 /**
  * Message generation.
@@ -38,6 +40,10 @@ export interface GenerationInput {
   kind: MessageKind;
   channel: Channel;
   language: Language;
+  /** Base URL for the preferences questionnaire link (preferences email). */
+  questionnaireUrl?: string;
+  /** Forecast for the stay, used by the experiences (post check-in) message. */
+  weather?: WeatherKind;
 }
 
 export interface Generator {
@@ -71,11 +77,28 @@ function breakfastLine(included: boolean, lang: Language): string {
   return "Breakfast is included with your stay.";
 }
 
+const WEATHER_WORD: Record<WeatherKind, Record<Language, string>> = {
+  sunny: { en: "sunny", pt: "sol", fr: "ensoleillé" },
+  cloudy: { en: "soft and cloudy", pt: "ameno e nublado", fr: "doux et nuageux" },
+  rainy: { en: "rainy", pt: "chuvoso", fr: "pluvieux" },
+  windy: { en: "breezy", pt: "ventoso", fr: "venteux" },
+};
+
 const SUBJECTS: Record<MessageKind, Record<Language, string>> = {
+  preferences: {
+    en: "A few questions before you arrive",
+    pt: "Algumas perguntas antes da sua chegada",
+    fr: "Quelques questions avant votre arrivée",
+  },
   pre_stay: {
     en: "The valley is ready for you",
     pt: "O vale está pronto para si",
     fr: "La vallée vous attend",
+  },
+  experiences: {
+    en: "Ideas for your days in the valley",
+    pt: "Ideias para os seus dias no vale",
+    fr: "Des idées pour vos journées dans la vallée",
   },
   post_stay: {
     en: "Thank you for staying with us",
@@ -88,19 +111,154 @@ export class TemplateGenerator implements Generator {
   async generate(input: GenerationInput): Promise<GeneratedMessage> {
     const { reservation: r, kind, channel, language } = input;
     const name = r.guest.firstName;
-    const motiveLine = MOTIVE_LINE[kind][r.motive][language];
     const short = channel !== "email";
 
-    const body =
-      kind === "pre_stay"
-        ? this.preStay(name, r.accommodation, language, motiveLine, short, r.checkIn, r.breakfastIncluded)
-        : this.postStay(name, language, motiveLine, short);
+    let body: string;
+    switch (kind) {
+      case "preferences":
+        body = this.preferences(name, language, short, input.questionnaireUrl ?? "#");
+        break;
+      case "pre_stay": {
+        const motiveLine = MOTIVE_LINE.pre_stay[r.motive][language];
+        body = this.preStay(name, r.accommodation, language, motiveLine, short, r.checkIn, r.breakfastIncluded);
+        break;
+      }
+      case "experiences":
+        body = this.experiences(name, language, short, input.weather ?? "sunny", r);
+        break;
+      case "post_stay": {
+        const motiveLine = MOTIVE_LINE.post_stay[r.motive][language];
+        body = this.postStay(name, language, motiveLine, short);
+        break;
+      }
+    }
 
     return {
       subject: short ? undefined : SUBJECTS[kind][language],
       body,
       generatedBy: "template",
     };
+  }
+
+  /** Earliest email: invite the guest to share preferences via a questionnaire. */
+  private preferences(name: string, lang: Language, short: boolean, url: string): string {
+    if (lang === "pt") {
+      if (short) {
+        return `${GREETING.pt(name)}, para prepararmos a sua chegada ao Vale Palheiro, poderia partilhar algumas preferências? Leva um minuto: ${url}`;
+      }
+      return [
+        GREETING.pt(name) + ",",
+        "",
+        "Estamos a preparar a sua estadia no vale e gostaríamos de a tornar sua desde o início.",
+        "",
+        "Se tiver um momento, partilhe connosco algumas preferências — hora prevista de chegada, restrições alimentares, uma ocasião a assinalar, o que gostaria de fazer por aqui, e qualquer coisa que possamos tratar antes de chegar (berço, transfer, reserva de restaurante, babysitting).",
+        "",
+        `É rápido e ajuda-nos a preparar tudo com calma: ${url}`,
+        "",
+        "Se preferir, basta responder a esta mensagem.",
+        "",
+        SIGNOFF.pt,
+      ].join("\n");
+    }
+    if (lang === "fr") {
+      if (short) {
+        return `${GREETING.fr(name)}, afin de préparer votre arrivée à Vale Palheiro, pourriez-vous partager quelques préférences ? Cela prend une minute : ${url}`;
+      }
+      return [
+        GREETING.fr(name) + ",",
+        "",
+        "Nous préparons votre séjour dans la vallée et aimerions qu'il vous ressemble dès le début.",
+        "",
+        "Si vous avez un instant, partagez quelques préférences — heure d'arrivée estimée, régime alimentaire, une occasion à marquer, ce que vous aimeriez faire sur place, et tout ce que nous pouvons organiser avant votre arrivée (lit bébé, transfert, réservation de restaurant, baby-sitting).",
+        "",
+        `C'est rapide et cela nous aide à tout préparer sereinement : ${url}`,
+        "",
+        "Vous pouvez aussi simplement répondre à ce message.",
+        "",
+        SIGNOFF.fr,
+      ].join("\n");
+    }
+    if (short) {
+      return `${GREETING.en(name)}, to prepare for your arrival at Vale Palheiro, could you share a few preferences? It takes a minute: ${url}`;
+    }
+    return [
+      GREETING.en(name) + ",",
+      "",
+      "We're starting to prepare your stay in the valley, and we'd love to make it feel like yours from the very beginning.",
+      "",
+      "If you have a moment, tell us a little about your visit — your estimated arrival time, any dietary needs, an occasion you're marking, what you'd like to do while you're here, and anything we can arrange before you arrive (a cot, a transfer, a restaurant booking, babysitting).",
+      "",
+      `It's quick, and it gives us time to prepare everything with care: ${url}`,
+      "",
+      "If you'd rather, simply reply to this message.",
+      "",
+      SIGNOFF.en,
+    ].join("\n");
+  }
+
+  /** Post check-in email: suggest experiences that suit the day's weather. */
+  private experiences(
+    name: string,
+    lang: Language,
+    short: boolean,
+    weather: WeatherKind,
+    r: Reservation,
+  ): string {
+    const picks = suggestExperiences(weather, r.preferences?.interests ?? [], short ? 2 : 3);
+    const weatherWord = WEATHER_WORD[weather][lang];
+
+    const line = (e: Experience) =>
+      `• ${e.name[lang]} — ${e.blurb[lang]} (${e.price[lang]})`;
+
+    if (lang === "pt") {
+      if (short) {
+        const names = picks.map((e) => e.name.pt).join(" ou ");
+        return `${GREETING.pt(name)}, o tempo hoje está ${weatherWord}. Talvez ${names}? Diga-nos e tratamos de tudo.`;
+      }
+      return [
+        GREETING.pt(name) + ",",
+        "",
+        `Esperamos que já se tenha instalado. Como o tempo está ${weatherWord} por estes dias, deixamos algumas ideias para aproveitar o vale e a Costa Vicentina:`,
+        "",
+        ...picks.map(line),
+        "",
+        "Se alguma lhe despertar interesse, é só dizer — tratamos da marcação consigo. Todas as experiências estão sujeitas a disponibilidade e as atividades ao ar livre podem ajustar-se ao tempo.",
+        "",
+        SIGNOFF.pt,
+      ].join("\n");
+    }
+    if (lang === "fr") {
+      if (short) {
+        const names = picks.map((e) => e.name.fr).join(" ou ");
+        return `${GREETING.fr(name)}, le temps est ${weatherWord} aujourd'hui. Peut-être ${names} ? Dites-nous et nous organisons tout.`;
+      }
+      return [
+        GREETING.fr(name) + ",",
+        "",
+        `Nous espérons que vous êtes bien installé. Comme le temps est ${weatherWord} ces jours-ci, voici quelques idées pour profiter de la vallée et de la Costa Vicentina :`,
+        "",
+        ...picks.map(line),
+        "",
+        "Si l'une d'elles vous tente, dites-le-nous et nous nous occupons de la réservation. Toutes les expériences sont soumises à disponibilité et les activités en plein air peuvent s'adapter à la météo.",
+        "",
+        SIGNOFF.fr,
+      ].join("\n");
+    }
+    if (short) {
+      const names = picks.map((e) => e.name.en).join(" or ");
+      return `${GREETING.en(name)}, it's ${weatherWord} here today. Perhaps ${names}? Let us know and we'll arrange it.`;
+    }
+    return [
+      GREETING.en(name) + ",",
+      "",
+      `We hope you've settled in. As it's ${weatherWord} here at the moment, here are a few ideas for making the most of the valley and the Costa Vicentina:`,
+      "",
+      ...picks.map(line),
+      "",
+      "If any of these appeal, just let us know and we'll arrange it with you. All experiences are subject to availability, and outdoor activities can be adjusted to the weather.",
+      "",
+      SIGNOFF.en,
+    ].join("\n");
   }
 
   private preStay(

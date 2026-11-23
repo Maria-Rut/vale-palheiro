@@ -13,9 +13,11 @@ import { getSentLog } from "../src/channels.ts";
 import type { ScheduledMessage } from "../src/types.ts";
 
 const scheduler = new Scheduler(reservations, { ...DEFAULT_CONFIG });
+const demoWeather = ["sunny", "rainy", "sunny", "windy", "cloudy"] as const;
+reservations.forEach((r, i) => scheduler.setWeather(r.id, demoWeather[i % demoWeather.length]));
 await scheduler.plan();
-// Fast-forward a week so every scheduled message is delivered.
-await scheduler.runDue(new Date(Date.now() + 168 * 3600_000));
+// Fast-forward two weeks so every scheduled message is delivered.
+await scheduler.runDue(new Date(Date.now() + 336 * 3600_000));
 
 const byId = Object.fromEntries(reservations.map((r) => [r.id, r]));
 const messages = scheduler.getMessages();
@@ -32,7 +34,12 @@ function fmt(iso: string): string {
   return new Date(iso).toUTCString().replace("GMT", "UTC");
 }
 
-const KIND: Record<string, string> = { pre_stay: "Pre-stay", post_stay: "Post-stay" };
+const KIND: Record<string, string> = {
+  preferences: "Preferences",
+  pre_stay: "Welcome",
+  experiences: "Experiences",
+  post_stay: "Thank-you",
+};
 
 function card(m: ScheduledMessage): string {
   const r = byId[m.reservationId];
