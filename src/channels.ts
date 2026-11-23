@@ -1,4 +1,5 @@
 import type { Channel, DeliveryResult, ScheduledMessage } from "./types.ts";
+import { toPlainText } from "./templates.ts";
 import type { Reservation } from "./types.ts";
 
 /**
@@ -48,7 +49,9 @@ function record(
     channel: message.channel,
     to,
     subject: message.subject,
-    body: message.body,
+    // What a real provider would get: the plain-text part (buttons spelled
+    // out as "Label: link"); the HTML part is toEmailHtml(message.body).
+    body: toPlainText(message.body),
     guestName: `${reservation.guest.firstName} ${reservation.guest.lastName}`,
     accommodation: reservation.unit ? `${reservation.accommodation} ${reservation.unit}` : reservation.accommodation,
   });

@@ -21,6 +21,8 @@ import {
 } from "./preferences.ts";
 import { prop } from "./property.ts";
 import { getActivities, setActivityEnabled } from "./activities.ts";
+import { DEFAULT_TEMPLATES, FIELDS, getTemplate, isEdited, isTemplateKey, resetTemplate, setTemplate, toEmailHtml, type TemplateKey } from "./templates.ts";
+import { exampleGuests } from "./examples.ts";
 import { conditionsFor } from "./recommender.ts";
 
 /**
@@ -146,6 +148,8 @@ function withReservationContext() {
       checkOut: r?.checkOut,
       occasion: r?.occasion,
       eventTitle: m.eventId ? evById[m.eventId]?.title.en : undefined,
+      html: m.channel === "email" ? toEmailHtml(m.body) : undefined,
+      englishHtml: m.channel === "email" && m.english ? toEmailHtml(m.english.body) : undefined,
     };
   });
 }
@@ -155,7 +159,34 @@ const CONFIG_NUMBERS: (keyof SchedulerConfig)[] = [
   "postStayHoursAfterCheckOut", "sendWindowStart", "sendWindowEnd",
   "inviteMinDaysBetween", "inviteQuietDaysAroundStay", "inviteMaxPerYear",
 ];
-const CONFIG_BOOLS: (keyof SchedulerConfig)[] = ["arrivalTextReminder", "holdPersonalMoments"];
+const CONFIG_BOOLS: (keyof SchedulerConfig)[] = ["arrivalTextReminder"];
+const APPROVAL_POLICIES = ["personal", "personal_and_suggestions", "all", "none"];
+
+/** The journey, in order, as the Emails tab shows it. */
+const STEPS: { key: TemplateKey; title: string; when: string }[] = [
+  { key: "pre_arrival", title: "3 days before arrival", when: "10:00 in the guest's own time zone" },
+  { key: "arrival_day", title: "3 hours before arrival", when: "Directions, where we meet them, their villa" },
+  { key: "arrival_text", title: "Arrival-day text message", when: "Sent with the email above, by WhatsApp / SMS if the guest opted in" },
+  { key: "in_stay", title: "Welcome, after check-in", when: "2 hours after they arrive: Wi-Fi, contacts, and suggestions from the weather forecast" },
+  { key: "post_stay", title: "Thank you, after check-out", when: "24 hours after they leave, with a review button" },
+  { key: "event_invite", title: "Event invitation", when: "To past guests who agreed to hear from us, before each event" },
+];
+const LANGS: Language[] = ["en", "pt", "fr"];
+
+async function templatePreviews(key: TemplateKey, lang: Language | "own") {
+  const kind = key === "arrival_text" ? "arrival_day" : key;
+  const channel = key === "arrival_text" ? "whatsapp" : "email";
+  return Promise.all(exampleGuests().map(async (e) => {
+    const l = lang === "own" ? e.reservation.guest.language : lang;
+    const out = await scheduler.preview(e.reservation, kind, l, { returning: e.returning, channel });
+    return {
+      name: `${e.reservation.guest.firstName} ${e.reservation.guest.lastName}`,
+      about: e.about, language: l, email: e.reservation.guest.email,
+      subject: out.subject, text: out.body,
+      html: channel === "email" ? toEmailHtml(out.body) : undefined,
+    };
+  }));
+}
 
 function str(v: unknown): string { return typeof v === "string" ? v.trim() : ""; }
 
@@ -253,6 +284,36 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, rows);
     }
 
+    if (pathname === "/api/templates" && method === "GET") {
+      return sendJson(res, 200, STEPS.map((s) => ({
+        ...s,
+        fields: FIELDS[s.key],
+        templates: Object.fromEntries(LANGS.map((l) => [l, { ...getTemplate(s.key, l), edited: isEdited(s.key, l) }])),
+      })));
+    }
+    const tplMatch = pathname.match(/^\/api\/templates\/([a-z_]+)(?:\/(en|pt|fr))?(\/preview)?$/);
+    if (tplMatch && isTemplateKey(tplMatch[1])) {
+      const key = tplMatch[1];
+      if (tplMatch[3] && method === "GET") {
+        const lang = (url.searchParams.get("lang") ?? "en") as Language | "own";
+        return sendJson(res, 200, await templatePreviews(key, LANGS.includes(lang as Language) ? lang : lang === "own" ? "own" : "en"));
+      }
+      const lang = tplMatch[2] as Language | undefined;
+      if (lang && method === "POST") {
+        const body = await readBody(req);
+        if (body.reset === true) resetTemplate(key, lang);
+        else {
+          const d = DEFAULT_TEMPLATES[key][lang];
+          setTemplate(key, lang, {
+            subject: typeof body.subject === "string" ? body.subject : d.subject,
+            body: typeof body.body === "string" && body.body.trim() ? body.body : d.body,
+          });
+        }
+        await scheduler.plan(); // every unsent, unedited message picks up the new wording
+        return sendJson(res, 200, { ...getTemplate(key, lang), edited: isEdited(key, lang) });
+      }
+    }
+
     if (pathname === "/api/reservations" && method === "GET") {
       return sendJson(res, 200, scheduler.getReservations());
     }
@@ -280,6 +341,7 @@ const server = http.createServer(async (req, res) => {
         if (typeof v === "number" && Number.isFinite(v) && v >= 0) patch[k] = v;
       }
       for (const k of CONFIG_BOOLS) if (typeof body[k] === "boolean") patch[k] = body[k];
+      if (typeof body.approvalPolicy === "string" && APPROVAL_POLICIES.includes(body.approvalPolicy)) patch.approvalPolicy = body.approvalPolicy;
       scheduler.setConfig(patch as Partial<SchedulerConfig>);
       await scheduler.plan();
       return sendJson(res, 200, scheduler.getConfig());

@@ -58,6 +58,8 @@ export interface Guest {
   language: Language;
   /** ISO 3166 country code from the booking (e.g. "DE"). */
   country: string;
+  /** Home town, if the booking has it — used for a warmer welcome. */
+  city?: string;
   /** IANA time zone of where the guest lives, e.g. "Europe/Berlin". */
   timeZone: string;
   /** Channels this guest has opted into, in order of preference. */
@@ -157,6 +159,8 @@ export interface ScheduledMessage {
   statusNote?: string;
   subject?: string;
   body: string;
+  /** English copy for staff, when the guest's language isn't English. */
+  english?: { subject?: string; body: string };
   /** For the welcome email: what the recommendation agent picked and why. */
   suggestions?: { date: string; activity: string; reason: string }[];
   /** Staff edited the wording — never overwrite it on re-plan. */
