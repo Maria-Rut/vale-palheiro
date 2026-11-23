@@ -84,6 +84,13 @@
     .tabbtn.active { color: var(--earth-900); border-bottom-color: var(--clay); }
     .tab-count { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-left: 4px; }
 
+    .subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .subtab { background: var(--white); border: 1px solid var(--line); color: var(--earth-700); font-family: var(--sans); font-size: 13px; padding: 8px 15px; border-radius: 999px; cursor: pointer; transition: all 0.2s; }
+    .subtab:hover { background: var(--sand); }
+    .subtab.active { background: var(--earth-800); color: var(--sand); border-color: var(--earth-800); }
+    .sub-count { opacity: 0.7; margin-left: 3px; }
+    .stage-desc { font-size: 13.5px; color: var(--muted); margin: 0 0 18px; }
+
     .grid { display: grid; gap: 16px; }
     .msg-card { background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow 0.2s; }
     .msg-card:hover { box-shadow: var(--shadow); }
@@ -239,7 +246,16 @@
         <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
       </div>
 
-      <section id="tab-messages"><div class="grid" id="messages"></div></section>
+      <section id="tab-messages">
+        <div class="subtabs" id="stageTabs">
+          <button class="subtab active" data-stage="preferences">Preferences <span class="sub-count" id="cnt-preferences"></span></button>
+          <button class="subtab" data-stage="pre_stay">Welcome · 2h before <span class="sub-count" id="cnt-pre_stay"></span></button>
+          <button class="subtab" data-stage="experiences">After check-in <span class="sub-count" id="cnt-experiences"></span></button>
+          <button class="subtab" data-stage="post_stay">Post-stay <span class="sub-count" id="cnt-post_stay"></span></button>
+        </div>
+        <p class="stage-desc" id="stageDesc"></p>
+        <div class="grid" id="messages"></div>
+      </section>
       <section id="tab-crm" class="hidden"><div id="crm"></div></section>
       <section id="tab-log" class="hidden"><div id="log"></div></section>
     </main>

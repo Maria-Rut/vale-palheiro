@@ -95,12 +95,38 @@ const PACE_LABEL = { active: "Active", balanced: "Balanced", restful: "Restful" 
 
 function statusDotColor(s) { return s === "sent" ? "#4f8a3f" : s === "cancelled" ? "#bbb" : "#c3a079"; }
 
+let activeStage = "preferences";
+const STAGE_DESC = {
+  preferences: "The earliest email. Invites the guest to fill an easy questionnaire so the team has time to prepare.",
+  pre_stay: "The welcome message, sent shortly before the guest arrives.",
+  experiences: "Sent after check-in. Suggests activities matched to the day's weather and the guest's interests.",
+  post_stay: "Sent after checkout — thanks and a gentle invitation to share feedback.",
+};
+
+document.querySelectorAll(".subtab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".subtab").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeStage = btn.dataset.stage;
+    renderMessages();
+  });
+});
+
 async function renderMessages() {
-  const msgs = await api.get("/api/messages");
-  $("#msgCount").textContent = `(${msgs.length})`;
+  const all = await api.get("/api/messages");
+  $("#msgCount").textContent = `(${all.length})`;
+  // Per-stage counts for the sub-tabs.
+  for (const stage of ["preferences", "pre_stay", "experiences", "post_stay"]) {
+    const n = all.filter((m) => m.kind === stage).length;
+    const badge = $(`#cnt-${stage}`);
+    if (badge) badge.textContent = `(${n})`;
+  }
+  $("#stageDesc").textContent = STAGE_DESC[activeStage] || "";
+
+  const msgs = all.filter((m) => m.kind === activeStage);
   const el = $("#messages");
   el.innerHTML = "";
-  if (!msgs.length) { el.innerHTML = `<p class="empty">No messages planned.</p>`; return; }
+  if (!msgs.length) { el.innerHTML = `<p class="empty">No messages in this stage.</p>`; return; }
 
   for (const m of msgs) {
     const g = m.guest ?? {};
