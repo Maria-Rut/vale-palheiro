@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <meta name="color-scheme" content="light" />
+  <title>Prepare your stay · Vale Palheiro</title>
+  <style>
+    :root {
+      --earth-900: #2b2117;
+      --earth-800: #3a2d1f;
+      --earth-700: #5a4632;
+      --earth-500: #8a6f4e;
+      --clay: #a87f54;
+      --clay-soft: #c3a079;
+      --terracotta: #b8673f;
+      --sand: #e7dcc8;
+      --paper: #f4efe4;
+      --paper-2: #efe8d9;
+      --sage: #7c8a6a;
+      --sage-dark: #566049;
+      --white: #fffdf8;
+      --line: #ddceb5;
+      --line-soft: #e6dac4;
+      --muted: #8f806a;
+      --danger: #9b3b2f;
+      --shadow-sm: 0 3px 12px rgba(43, 33, 23, 0.06);
+      --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+      --sans: -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; font-family: var(--sans); background: var(--paper); color: var(--earth-900);
+      line-height: 1.5; -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 500; margin: 0; }
+    button { font-family: inherit; }
+    .hidden { display: none !important; }
+
+    /* ---------- hero ---------- */
+    .hero {
+      color: var(--sand); padding: 18px 20px 30px;
+      background:
+        linear-gradient(180deg, rgba(43,33,23,0.25), rgba(43,33,23,0.85)),
+        radial-gradient(circle at 70% 10%, #c08a5c, #5a4632 55%, #2b2117 100%);
+    }
+    .hero-inner { max-width: 560px; margin: 0 auto; }
+    .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 34px; }
+    .wordmark { font-family: var(--serif); letter-spacing: 4px; text-transform: uppercase; font-size: 15px; }
+    .langs { display: flex; gap: 2px; }
+    .langs button {
+      background: none; border: none; color: var(--clay-soft); font-size: 12px; letter-spacing: 1px;
+      padding: 6px 7px; cursor: pointer; border-radius: 6px;
+    }
+    .langs button[aria-pressed="true"] { color: var(--white); background: rgba(255,255,255,0.12); }
+    .countdown {
+      display: inline-block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      border: 1px solid rgba(231,220,200,0.45); border-radius: 999px; padding: 4px 12px; margin-bottom: 14px;
+    }
+    .hero h1 { font-size: 34px; line-height: 1.12; color: var(--white); }
+    .hero .stay { margin-top: 10px; font-size: 14px; color: var(--sand); opacity: 0.9; }
+
+    main { max-width: 560px; margin: 0 auto; padding: 0 16px 140px; }
+    .lead {
+      background: var(--white); border-radius: 14px; margin: -16px 0 18px; padding: 16px 18px;
+      box-shadow: var(--shadow-sm); border: 1px solid var(--line-soft); font-size: 15px; color: var(--earth-700);
+      position: relative;
+    }
+    .lead b { color: var(--earth-900); font-weight: 600; }
+    .lead .time { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ---------- the villa card ---------- */
+    .card {
+      background: var(--white); border: 1px solid var(--line-soft); border-radius: 16px;
+      box-shadow: var(--shadow-sm); margin-bottom: 16px; overflow: hidden;
+    }
+    .card-title {
+      padding: 16px 18px 4px; font-family: var(--serif); font-size: 22px; color: var(--earth-800);
+    }
+    .row { display: flex; gap: 14px; padding: 14px 18px; border-top: 1px solid var(--line-soft); }
+    .card-title + .row { border-top: none; }
+    .icon {
+      flex: 0 0 38px; height: 38px; border-radius: 50%; background: var(--paper-2);
+      display: flex; align-items: center; justify-content: center; color: var(--terracotta);
+    }
+    .icon svg { width: 20px; height: 20px; }
+    .row-body { flex: 1; min-width: 0; }
+    .row-label { font-size: 14px; font-weight: 600; color: var(--earth-800); margin-bottom: 8px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      border: 1px solid var(--line); background: var(--white); color: var(--earth-700);
+      padding: 8px 14px; border-radius: 999px; font-size: 14px; cursor: pointer; min-height: 38px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .chip[aria-pressed="true"] { background: var(--earth-800); border-color: var(--earth-800); color: var(--white); }
+    .chip:focus-visible, .toggle:focus-visible, .step:focus-visible, .primary:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+    .temp { display: flex; align-items: center; gap: 14px; }
+    .step {
+      width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); background: var(--white);
+      font-size: 22px; color: var(--earth-700); cursor: pointer; line-height: 1;
+    }
+    .step:disabled { opacity: 0.35; cursor: default; }
+    .temp-value { text-align: center; min-width: 92px; }
+    .temp-value .num { font-family: var(--serif); font-size: 32px; color: var(--earth-900); line-height: 1; }
+    .temp-value .word { font-size: 12px; color: var(--terracotta); letter-spacing: 0.5px; margin-top: 2px; }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .toggle-row .row-label { margin: 0; }
+    .toggle-row .sub { font-size: 13px; color: var(--muted); }
+    .toggle {
+      flex: 0 0 auto; width: 52px; height: 30px; border-radius: 999px; border: none; cursor: pointer;
+      background: var(--line); position: relative; transition: background 0.2s;
+    }
+    .toggle::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+      background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s;
+    }
+    .toggle[aria-checked="true"] { background: var(--sage-dark); }
+    .toggle[aria-checked="true"]::after { transform: translateX(22px); }
+
+    .row-hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+
+    /* ---------- experiences ---------- */
+    .pick-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--terracotta); margin: 4px 0 8px; }
+    .exp-list { display: grid; gap: 8px; }
+    .exp {
+      display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+      border: 1px solid var(--line); background: var(--white); border-radius: 12px; padding: 11px 14px;
+      color: var(--earth-800); transition: background 0.15s, border-color 0.15s;
+    }
+    .exp .name { font-size: 14.5px; font-weight: 600; display: block; }
+    .exp .desc { font-size: 12.5px; color: var(--muted); display: block; margin-top: 1px; }
+    .exp .price { margin-left: auto; font-size: 12px; color: var(--earth-700); white-space: nowrap; }
+    .exp .tick {
+      flex: 0 0 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: flex;
+      align-items: center; justify-content: center; color: transparent; font-size: 13px;
+    }
+    .exp[aria-pressed="true"] { border-color: var(--earth-800); background: var(--paper-2); }
+    .exp[aria-pressed="true"] .tick { background: var(--earth-800); border-color: var(--earth-800); color: var(--white); }
+    .exp:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+    details.all-exp { margin-top: 12px; }
+    details.all-exp > summary {
+      cursor: pointer; font-size: 14px; color: var(--earth-700); text-decoration: underline; padding: 6px 0; list-style: none;
+    }
+    details.all-exp > summary::-webkit-details-marker { display: none; }
+    .exp-group { font-family: var(--serif); font-size: 18px; color: var(--earth-800); margin: 14px 0 8px; }
+
+    /* ---------- good to know ---------- */
+    .card.info { padding: 4px 0 6px; margin-top: 18px; text-align: left; }
+    .info .card-title { padding-bottom: 6px; }
+    .info-row { display: flex; gap: 14px; align-items: center; padding: 10px 18px; font-size: 14px; color: var(--earth-700); }
+    .info-row .icon { flex-basis: 34px; height: 34px; }
+    .info-row .icon svg { width: 18px; height: 18px; }
+    .info-row b { color: var(--earth-900); font-weight: 600; }
+    .copy {
+      margin-left: auto; border: 1px solid var(--line); background: var(--white); color: var(--earth-700);
+      border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer;
+    }
+
+    /* ---------- optional extras ---------- */
+    .extras-head { margin: 26px 4px 10px; }
+    .extras-head h2 { font-size: 24px; color: var(--earth-800); }
+    .extras-head p { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+    details.extra {
+      background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px; margin-bottom: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+    details.extra > summary {
+      list-style: none; cursor: pointer; padding: 15px 18px; display: flex; align-items: center; gap: 14px;
+      font-size: 15px; color: var(--earth-800); font-weight: 600;
+    }
+    details.extra > summary::-webkit-details-marker { display: none; }
+    details.extra > summary .hint { font-weight: 400; font-size: 13px; color: var(--muted); display: block; }
+    details.extra > summary .chev { flex: 0 0 auto; margin-left: auto; color: var(--muted); transition: transform 0.2s; }
+    details.extra[open] > summary .chev { transform: rotate(180deg); }
+    .extra-body { padding: 0 18px 18px; }
+    .extra-body .row-label { margin-top: 6px; }
+    .badge {
+      font-size: 11px; font-weight: 600; color: var(--sage-dark); background: #e6ecd9; border-radius: 999px;
+      padding: 2px 8px; margin-left: 6px;
+    }
+    textarea, input[type="text"] {
+      width: 100%; font-family: var(--sans); font-size: 16px; padding: 11px 13px; border: 1px solid var(--line);
+      border-radius: 10px; background: var(--white); color: var(--earth-900); resize: vertical;
+    }
+    textarea { min-height: 76px; }
+    textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--clay); }
+    .consent {
+      display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; padding: 12px; border-radius: 10px;
+      background: var(--paper-2); font-size: 13px; color: var(--earth-700); cursor: pointer;
+    }
+    .consent input { width: 20px; height: 20px; margin: 1px 0 0; flex: 0 0 auto; accent-color: var(--sage-dark); }
+    .consent.needs { outline: 2px solid var(--danger); }
+    .consent-err { color: var(--danger); font-size: 13px; margin-top: 6px; }
+    .remember {
+      display: flex; gap: 10px; align-items: flex-start; padding: 6px 6px 0; font-size: 14px; color: var(--earth-700);
+      cursor: pointer;
+    }
+    .remember input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--sage-dark); }
+
+    /* ---------- sticky action ---------- */
+    .actionbar {
+      position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(244,239,228,0), var(--paper) 30%);
+    }
+    .actionbar-inner { max-width: 560px; margin: 0 auto; }
+    .primary {
+      width: 100%; border: none; border-radius: 999px; padding: 16px 20px; font-size: 16px; letter-spacing: 0.3px;
+      background: var(--sage-dark); color: var(--white); cursor: pointer; box-shadow: 0 8px 20px rgba(86,96,73,0.3);
+      transition: background 0.2s;
+    }
+    .primary:hover { background: var(--sage); }
+    .primary:disabled { opacity: 0.6; cursor: default; }
+    .action-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .form-err { text-align: center; color: var(--danger); font-size: 13px; margin-top: 6px; }
+
+    /* ---------- done / closed ---------- */
+    .done { text-align: center; padding: 34px 8px 10px; }
+    .done .seal {
+      width: 66px; height: 66px; border-radius: 50%; margin: 0 auto 16px; background: var(--sage-dark);
+      color: var(--white); display: flex; align-items: center; justify-content: center;
+      animation: pop 0.5s ease-out;
+    }
+    @keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .done .seal { animation: none; } }
+    .done h2 { font-size: 32px; color: var(--earth-800); }
+    .done p { color: var(--earth-700); font-size: 15px; margin: 8px auto 0; max-width: 420px; }
+    .summary { list-style: none; padding: 0; margin: 22px 0 0; text-align: left; }
+    .summary li {
+      display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: var(--white);
+      border: 1px solid var(--line-soft); border-radius: 12px; margin-bottom: 8px; font-size: 15px;
+    }
+    .summary .icon { flex-basis: 32px; height: 32px; }
+    .summary .icon svg { width: 17px; height: 17px; }
+    .linkbtn {
+      background: none; border: none; color: var(--earth-700); text-decoration: underline; font-size: 14px;
+      cursor: pointer; margin-top: 18px; padding: 8px;
+    }
+    .message { text-align: center; padding: 50px 12px; color: var(--earth-700); }
+    .message h2 { font-size: 28px; color: var(--earth-800); margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="topline">
+        <span class="wordmark">Vale Palheiro</span>
+        <div class="langs" id="langs" role="group" aria-label="Language">
+          <button data-lang="en">EN</button><button data-lang="pt">PT</button><button data-lang="fr">FR</button>
+        </div>
+      </div>
+      <span class="countdown hidden" id="countdown"></span>
+      <h1 id="heroTitle">&nbsp;</h1>
+      <div class="stay" id="stayLine"></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- FORM -->
+    <form id="form" class="hidden" novalidate>
+      <div class="lead"><span id="leadText"></span><span class="time" id="leadTime"></span></div>
+
+      <section class="card" aria-labelledby="villaTitle">
+        <h2 class="card-title" id="villaTitle"></h2>
+
+        <div class="row">
+          <div class="icon" data-icon="fire"></div>
+          <div class="row-body toggle-row">
+            <div><div class="row-label" data-t="fireplace"></div><div class="sub" data-t="fireplaceSub"></div></div>
+            <button type="button" class="toggle" id="fireplace" role="switch" aria-checked="true" data-t-aria="fireplace"></button>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="icon" data-icon="bottle"></div>
+          <div class="row-body">
+            <div class="row-label" data-t="fridge"></div>
+            <div class="chips" data-field="drinks" data-multi data-options="still_water,sparkling_water,wine,sparkling_wine,beer,alcohol_free"></div>
+            <div class="sub row-hint" data-t="fridgeHint"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="icon" data-icon="bed"></div>
+          <div class="row-body">
+            <div class="row-label" data-t="beds"></div>
+            <div class="chips" data-field="beds" data-options="as_booked,separate,extra"></div>
+            <div class="sub row-hint hidden" id="bedsHint" data-t="bedsHint"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="icon" data-icon="plug"></div>
+          <div class="row-body">
+            <div class="row-label" data-t="adapter"></div>
+            <div class="chips" data-field="adapter" data-options="none,uk,us,other"></div>
+            <div class="sub row-hint" data-t="adapterHint"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="icon" data-icon="clock"></div>
+          <div class="row-body">
+            <div class="row-label" data-t="arrival"></div>
+            <div class="chips" data-field="arrival" data-options="early,afternoon,evening,late"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="extras-head">
+        <h2 data-t="extrasTitle"></h2>
+        <p data-t="extrasSub"></p>
+      </div>
+
+      <details class="extra" id="foodBox">
+        <summary>
+          <div class="icon" data-icon="leaf"></div>
+          <div><span data-t="foodTitle"></span><span class="badge hidden" id="foodBadge"></span><span class="hint" data-t="foodHint"></span></div>
+          <svg class="chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="extra-body">
+          <div class="chips" data-field="dietary" data-multi data-options="vegetarian,vegan,pescatarian,gluten_free,lactose_free"></div>
+          <div class="row-label" style="margin-top:16px" data-t="allergiesLabel"></div>
+          <textarea id="allergies" maxlength="500" data-t-ph="allergiesPh"></textarea>
+          <label class="consent hidden" id="consentBox">
+            <input type="checkbox" id="allergyConsent" />
+            <span data-t="consent"></span>
+          </label>
+          <div class="consent-err hidden" id="consentErr" data-t="consentErr"></div>
+        </div>
+      </details>
+
+      <details class="extra" id="occasionBox">
+        <summary>
+          <div class="icon" data-icon="spark"></div>
+          <div><span data-t="occasionTitle"></span><span class="badge hidden" id="occasionBadge"></span><span class="hint" data-t="occasionHint"></span></div>
+          <svg class="chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="extra-body">
+          <div class="chips" data-field="occasion" data-toggle data-options="birthday,anniversary,honeymoon,treat,other"></div>
+          <div id="occasionNoteWrap" class="hidden" style="margin-top:12px">
+            <input type="text" id="occasionNote" maxlength="200" data-t-ph="occasionPh" />
+          </div>
+        </div>
+      </details>
+
+      <details class="extra" id="interestBox">
+        <summary>
+          <div class="icon" data-icon="path"></div>
+          <div><span data-t="interestTitle"></span><span class="badge hidden" id="interestBadge"></span><span class="hint" data-t="interestHint"></span></div>
+          <svg class="chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="extra-body">
+          <div class="pick-label" data-t="pickedForYou"></div>
+          <div class="exp-list" id="suggested"></div>
+          <details class="all-exp">
+            <summary data-t="seeAll"></summary>
+            <div id="allExperiences"></div>
+          </details>
+          <div class="sub row-hint" data-t="expHint"></div>
+        </div>
+      </details>
+
+      <details class="extra" id="noteBox">
+        <summary>
+          <div class="icon" data-icon="note"></div>
+          <div><span data-t="noteTitle"></span><span class="badge hidden" id="noteBadge"></span><span class="hint" data-t="noteHint"></span></div>
+          <svg class="chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="extra-body">
+          <textarea id="note" maxlength="600" data-t-ph="notePh"></textarea>
+        </div>
+      </details>
+
+      <section class="card info" id="infoCard"></section>
+
+      <label class="remember">
+        <input type="checkbox" id="remember" />
+        <span data-t="remember"></span>
+      </label>
+
+      <div class="actionbar">
+        <div class="actionbar-inner">
+          <button class="primary" type="submit" id="submitBtn"></button>
+          <div class="form-err hidden" id="formErr"></div>
+          <div class="action-note" id="actionNote"></div>
+        </div>
+      </div>
+    </form>
+
+    <!-- DONE -->
+    <section id="done" class="done hidden" aria-live="polite">
+      <div class="seal"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2 id="doneTitle"></h2>
+      <p id="doneSub"></p>
+      <ul class="summary" id="summary"></ul>
+      <section class="card info" id="doneInfo"></section>
+      <button class="linkbtn" id="editBtn" data-t="change"></button>
+    </section>
+
+    <!-- CLOSED / NOT FOUND -->
+    <section id="message" class="message hidden"><h2 id="msgTitle"></h2><p id="msgText"></p></section>
+  </main>
+
+  <script src="/stay.js"></script>
+</body>
+</html>

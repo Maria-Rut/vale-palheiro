@@ -19,6 +19,7 @@ import {
   type Window,
 } from "./timezone.ts";
 import { OCCASION } from "./brand.ts";
+import { preferenceTasks, purgeAfterStay } from "./preferences.ts";
 import { createWeather, type CachedWeather, type Forecast } from "./weather.ts";
 import { recommend } from "./recommender.ts";
 
@@ -351,6 +352,11 @@ export class Scheduler {
       if (hour >= 20 || hour < 7) {
         add("late_arrival", `${who} arrives after reception closes (~${localLabel(new Date(r.checkIn), RESORT_TZ)}) — arrange someone to meet them.`);
       }
+      // What the guest asked for on their "prepare your stay" page.
+      for (const t of preferenceTasks(r, where)) {
+        const id = `guest_request:${t.key}:${r.id}`;
+        keep.set(id, { id, reservationId: r.id, kind: "guest_request", dueBy: r.checkIn, text: t.text, done: this.tasks.get(id)?.done ?? false });
+      }
     }
     this.tasks = keep;
   }
@@ -495,6 +501,8 @@ export class Scheduler {
    */
   async runDue(now: Date = new Date()): Promise<ScheduledMessage[]> {
     const sent: ScheduledMessage[] = [];
+    // Allergy details are only kept for the stay itself.
+    purgeAfterStay(this.reservations, now);
     for (const m of [...this.messages.values()].sort((a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt))) {
       if (m.status !== "scheduled" && m.status !== "held") continue;
       if (Date.parse(m.sendAt) > now.getTime()) continue;

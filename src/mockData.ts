@@ -1,4 +1,4 @@
-import type { Guest, Reservation, ResortEvent } from "./types.ts";
+import type { Guest, GuestPreferences, Reservation, ResortEvent } from "./types.ts";
 import { RESORT_TZ, timeZoneFor, zonedParts, zonedTime } from "./timezone.ts";
 
 /**
@@ -254,3 +254,28 @@ export const events: ResortEvent[] = [
     inviteLeadDays: 21,
   },
 ];
+
+/**
+ * Answers already given on the "prepare your stay" page, keyed by reservation
+ * id. Sophie (anniversary, arriving in 5 days) filled hers in early, so the
+ * demo shows a prep sheet, the team tasks it raises, and how the arrival-day
+ * email reflects her choices.
+ */
+export const preferenceSeeds: Record<string, GuestPreferences> = {
+  res_003: {
+    arrival: "evening",
+    fireplace: true,
+    drinks: ["sparkling_water", "sparkling_wine"],
+    beds: "as_booked",
+    adapter: "none",
+    dietary: ["vegetarian"],
+    allergies: "Tree nuts (walnuts, almonds)",
+    allergyConsent: true,
+    occasion: "anniversary",
+    occasionNote: "Our 10th wedding anniversary",
+    experiences: ["trail", "massage", "barn"],
+    note: "We'd love a table by the window at The Barn on our first night.",
+    rememberForNextTime: true,
+    submittedAt: day(-1, 18),
+  },
+};

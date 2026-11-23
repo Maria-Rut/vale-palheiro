@@ -106,6 +106,40 @@
     .demo-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .demo-controls .field { flex: 1; min-width: 150px; }
 
+    /* ---------- guest preferences / prep sheets ---------- */
+    .prefs-intro { font-size: 14px; color: var(--earth-700); max-width: 680px; margin: 0 0 18px; }
+    .prep-card {
+      background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px;
+      box-shadow: var(--shadow-sm); margin-bottom: 16px; overflow: hidden;
+    }
+    .prep-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 16px 20px 6px; }
+    .prep-head .who { font-family: var(--serif); font-size: 20px; color: var(--earth-800); }
+    .prep-head .book { font-size: 12.5px; color: var(--muted); }
+    .prep-head .grow { flex: 1; }
+    .prep-status { padding: 0 20px 14px; font-size: 13px; color: var(--earth-700); }
+    .prep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); border-top: 1px solid var(--line-soft); }
+    .prep-item { background: var(--white); padding: 12px 18px; box-shadow: 1px 0 0 var(--line-soft), 0 1px 0 var(--line-soft); }
+    .prep-item .k { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+    .prep-item .v { font-size: 14.5px; color: var(--earth-900); margin-top: 2px; }
+    .prep-item.alert { background: #fbefe9; }
+    .prep-item.alert .k { color: #9b3b2f; }
+    .prep-item.alert .v { color: #7a2a20; font-weight: 600; }
+    .prep-item.todo { background: #eef2e6; }
+    .prep-item.todo .k { color: var(--sage-dark); }
+    .prep-item.wide { grid-column: 1 / -1; }
+    .prep-actions { display: flex; gap: 10px; flex-wrap: wrap; padding: 14px 20px 16px; border-top: 1px solid var(--line-soft); }
+    .prep-actions a, .prep-actions button {
+      text-decoration: none; display: inline-block; background: var(--white); border: 1px solid var(--line);
+      color: var(--earth-700); padding: 8px 16px; border-radius: 999px; font-size: 13px; cursor: pointer; font-family: var(--sans);
+    }
+    .prep-actions a:hover, .prep-actions button:hover { background: var(--sand); }
+    .ppill { font-size: 11px; letter-spacing: 0.4px; padding: 3px 11px; border-radius: 999px; }
+    .ppill.answered { background: #d7e7d1; color: #3f6b36; }
+    .ppill.waiting { background: #efe8d7; color: var(--earth-700); }
+    .ppill.upcoming { background: #ece6f0; color: #5a4a6a; }
+    .ppill.call { background: #f3e1d3; color: #8a4b2b; }
+    .ppill.past { background: #eee; color: #888; }
+
     /* ---------- tabs ---------- */
     .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
     .tabbtn {
@@ -319,6 +353,7 @@
       <div class="tabs">
         <button class="tabbtn active" data-tab="messages">Messages <span class="tab-count" id="msgCount"></span></button>
         <button class="tabbtn" data-tab="tasks">Team tasks <span class="tab-count" id="taskCount"></span></button>
+        <button class="tabbtn" data-tab="prefs">Guest preferences <span class="tab-count" id="prefCount"></span></button>
         <button class="tabbtn" data-tab="events">Events</button>
         <button class="tabbtn" data-tab="weather">Weather &amp; activities</button>
         <button class="tabbtn" data-tab="property">Property info</button>
@@ -352,6 +387,15 @@
       <section id="tab-tasks" class="hidden">
         <p class="hint muted" style="margin-top:0">Things Terra can't (and shouldn't) do on its own — a gift for a returning guest, a handwritten note, someone waiting for a late arrival.</p>
         <div id="tasks"></div>
+      </section>
+
+      <section id="tab-prefs" class="hidden">
+        <p class="prefs-intro">
+          The 3-days-before email links each guest to a personal page where their stay is already set up
+          the way most guests like it. Whatever they change shows up here as a prep sheet, and anything
+          that needs a person (extra bed, drinks to stock, experiences to arrange) becomes a team task.
+        </p>
+        <div id="prefs"></div>
       </section>
 
       <section id="tab-events" class="hidden">

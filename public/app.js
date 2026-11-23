@@ -41,9 +41,9 @@ $("#loginForm").addEventListener("submit", async (e) => {
 $("#logoutBtn").addEventListener("click", async () => { await api.post("/api/logout"); showLogin(); });
 
 // --- tabs ---
-const TABS = ["messages", "tasks", "events", "weather", "property", "settings", "log"];
+const TABS = ["messages", "tasks", "prefs", "events", "weather", "property", "settings", "log"];
 const RENDER = {
-  messages: renderMessages, tasks: renderTasks, events: renderEvents, weather: renderWeather,
+  messages: renderMessages, tasks: renderTasks, prefs: renderPrefs, events: renderEvents, weather: renderWeather,
   property: renderProperty, settings: loadConfig, log: renderLog,
 };
 document.querySelectorAll(".tabbtn").forEach((btn) => {
@@ -260,6 +260,90 @@ async function renderTasks() {
     }));
 }
 
+// --- guest preferences / prep sheets ---
+const P_ARRIVAL = { early: "Before 15:00", afternoon: "15:00–18:00", evening: "18:00–21:00", late: "After 21:00" };
+const P_DRINK = { still_water: "Still water", sparkling_water: "Sparkling water", wine: "Regional wine", sparkling_wine: "Sparkling wine", beer: "Beer", alcohol_free: "Alcohol-free" };
+const P_BEDS = { separate: "Separate beds — check villa", extra: "Extra bed — check villa" };
+const P_ADAPTER = { uk: "UK", us: "US", other: "Other — ask guest" };
+const P_DIET = { vegetarian: "Vegetarian", vegan: "Vegan", pescatarian: "Pescatarian", gluten_free: "Gluten-free", lactose_free: "Lactose-free" };
+const P_OCCASION = { birthday: "Birthday", anniversary: "Anniversary", honeymoon: "Honeymoon", treat: "\"Do we need a reason?\" — a treat", other: "Something special" };
+const P_EXPERIENCE = {
+  trail: "Vale Palheiro Trail", picnic: "Picnic", jeep: "Jeep tour", horse: "Horse riding", balloon: "Balloon flight",
+  bikes: "Bicycles", surf: "Surf lessons", boat: "Boat trip (Lagos)", kayak: "Kayak (Lagos)", yoga: "Yoga / Pilates / Barre",
+  massage: "Massage in villa", wine_tasting: "Wine tasting", barn: "Table at The Barn", private_dinner: "Private lunch/dinner",
+  cooking: "Cooking workshop", workshop: "Creative workshop", transfer: "Airport transfer", babysitting: "Babysitting",
+};
+
+function prefStatus(r) {
+  const now = Date.now();
+  if (Date.parse(r.checkOut) < now) return { cls: "past", label: "Stay over", text: r.preferences ? "Preferences from this stay." : "No preferences were collected." };
+  if (r.preferences) return { cls: "answered", label: "Answered", text: `Guest answered ${relative(r.preferences.submittedAt)} · ${fmt(r.preferences.submittedAt)}` };
+  if (Date.parse(r.checkIn) < now) return { cls: "past", label: "In house", text: "Guest is staying with us now." };
+  const inv = r.invite;
+  if (inv && inv.status === "sent") return { cls: "waiting", label: "Waiting for guest", text: `Link sent in the 3-days-before email (${fmt(inv.sentAt)}). If they don't answer, the defaults are used.` };
+  if (inv && (inv.status === "scheduled" || inv.status === "held")) return { cls: "upcoming", label: "Link not sent yet", text: `Goes out with the 3-days-before email · ${fmt(inv.sendAt)}${inv.status === "held" ? " (waiting for approval)" : ""}` };
+  return { cls: "call", label: "Call guest", text: "Booked too close to arrival for the online page — front office reaches out personally." };
+}
+
+function prepGrid(p) {
+  if (!p) return "";
+  const item = (k, v, extra = "") => `<div class="prep-item ${extra}"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`;
+  let html = item("Fireplace", p.fireplace ? "Lay & ready to light" : "Not needed")
+    + item("Fridge", p.drinks.length ? p.drinks.map((d) => P_DRINK[d]).join(", ") : "Nothing")
+    + (p.beds !== "as_booked" ? item("Beds", P_BEDS[p.beds], "alert") : item("Beds", "As booked"))
+    + (p.adapter !== "none" ? item("Plug adapter", P_ADAPTER[p.adapter]) : "")
+    + item("Arrival", P_ARRIVAL[p.arrival]);
+  if (p.allergies) html += item("Allergies · guest consented", p.allergies, "alert");
+  else if (p.allergiesDeletedAt) html += item("Allergies", `Deleted after stay · ${fmt(p.allergiesDeletedAt)}`);
+  if (p.dietary.length) html += item("Dietary", p.dietary.map((d) => P_DIET[d]).join(", "));
+  if (p.occasion !== "none") html += item("Occasion", P_OCCASION[p.occasion] + (p.occasionNote ? ` — ${p.occasionNote}` : ""), "wide");
+  if (p.experiences.length) html += item("To arrange · contact guest", p.experiences.map((e) => P_EXPERIENCE[e]).join(", "), "wide todo");
+  if (p.note) html += item("Note from guest", p.note, "wide");
+  if (p.rememberForNextTime) html += item("Return visits", "Guest asked us to remember these", "wide");
+  return `<div class="prep-grid">${html}</div>`;
+}
+
+async function renderPrefs() {
+  const now = Date.now();
+  // Upcoming arrivals first (soonest at the top), then in-house, then stays that just ended.
+  const stage = (r) => (Date.parse(r.checkIn) > now ? 0 : Date.parse(r.checkOut) > now ? 1 : 2);
+  const rows = (await api.get("/api/preferences"))
+    .sort((a, b) => stage(a) - stage(b) || Date.parse(a.checkIn) - Date.parse(b.checkIn));
+  $("#prefCount").textContent = `(${rows.filter((r) => r.preferences).length}/${rows.length})`;
+  const el = $("#prefs");
+  el.innerHTML = "";
+  for (const r of rows) {
+    const st = prefStatus(r);
+    const card = document.createElement("div");
+    card.className = "prep-card";
+    card.innerHTML = `
+      <div class="prep-head">
+        <span class="who">${esc(r.guest.firstName)} ${esc(r.guest.lastName)}</span>
+        <span class="book">${esc(r.place)} · arrives ${fmt(r.checkIn)} · ${r.partySize} guest${r.partySize === 1 ? "" : "s"} · ${esc(r.reference)}</span>
+        <span class="grow"></span>
+        <span class="pill lang">${LANG_LABEL[r.guest.language]}</span>
+        <span class="ppill ${st.cls}">${st.label}</span>
+      </div>
+      <div class="prep-status">${esc(st.text)}</div>
+      ${prepGrid(r.preferences)}
+      ${r.open ? `
+      <div class="prep-actions">
+        <a href="${escAttr(r.url)}" target="_blank" rel="noopener">Open guest page ↗</a>
+        <button data-copy="${escAttr(r.url)}">Copy guest link</button>
+      </div>` : ""}`;
+    el.appendChild(card);
+  }
+  el.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast("Guest link copied"); }
+    catch { toast(b.dataset.copy); }
+  }));
+}
+
+// Refresh when coming back to the dashboard (e.g. after answering as a guest in another tab).
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && !$("#app").classList.contains("hidden")) refreshAll();
+});
+
 // --- events ---
 async function renderEvents() {
   const { events, suppressions } = await api.get("/api/events");
@@ -407,7 +491,7 @@ async function renderLog() {
   }
 }
 
-function refreshAll() { renderOverview(); renderMessages(); renderLog(); }
+function refreshAll() { renderOverview(); renderMessages(); renderLog(); renderPrefs(); renderTasks(); }
 
 // --- boot ---
 (async () => {

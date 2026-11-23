@@ -7,6 +7,7 @@ import type {
 } from "./types.ts";
 import { GREETING, LOCALE, OCCASION, POST_STAY_LINE, SIGNOFF } from "./brand.ts";
 import { prop } from "./property.ts";
+import { postStayPreferencesLine, preferencesInviteLine, welcomePreferencesLine } from "./preferences.ts";
 import { RESORT_TZ } from "./timezone.ts";
 import { renderStayPlan, type StayPlan } from "./recommender.ts";
 
@@ -147,7 +148,8 @@ function preArrival({ reservation: r, language: l, returning, eventsDuringStay }
         "",
         `A sua estadia: ${stay} · ${place} · ${party(r, l)}${r.breakfastIncluded ? " · pequeno-almoço incluído" : ""}`,
         "",
-        `Para prepararmos tudo, responda com a sua hora prevista de chegada e qualquer pedido especial. A receção está aberta (${p.receptionHours}); se chegar mais tarde, avise-nos e alguém estará à sua espera.`,
+        preferencesInviteLine(r, l), "",
+        `A receção está aberta (${p.receptionHours}); se chegar mais tarde, avise-nos e alguém estará à sua espera.`,
         "", SIGNOFF.pt,
       ),
     };
@@ -164,7 +166,8 @@ function preArrival({ reservation: r, language: l, returning, eventsDuringStay }
         "",
         `Votre séjour : ${stay} · ${place} · ${party(r, l)}${r.breakfastIncluded ? " · petit-déjeuner inclus" : ""}`,
         "",
-        `Pour tout préparer, répondez-nous simplement avec votre heure d'arrivée prévue et vos éventuelles demandes. La réception est ouverte (${p.receptionHours}) ; si vous arrivez plus tard, prévenez-nous et quelqu'un vous attendra.`,
+        preferencesInviteLine(r, l), "",
+        `La réception est ouverte (${p.receptionHours}) ; si vous arrivez plus tard, prévenez-nous et quelqu'un vous attendra.`,
         "", SIGNOFF.fr,
       ),
     };
@@ -180,7 +183,8 @@ function preArrival({ reservation: r, language: l, returning, eventsDuringStay }
       "",
       `Your stay: ${stay} · ${place} · ${party(r, l)}${r.breakfastIncluded ? " · breakfast included" : ""}`,
       "",
-      `To help us prepare, just reply with your expected arrival time and anything you'd like us to arrange. Reception is open ${p.receptionHours}; if you'll arrive later, let us know and someone will be there for you.`,
+      preferencesInviteLine(r, l), "",
+      `Reception is open ${p.receptionHours}; if you'll arrive later, let us know and someone will be there for you.`,
       "", SIGNOFF.en,
     ),
   };
@@ -205,6 +209,7 @@ function arrivalDay({ reservation: r, language: l }: GenerationInput): Copy {
         `• Mapa: ${p.mapsLink}`,
         `• Receção: ${p.receptionHours}. Se chegar depois, ligue para ${p.emergencyPhone} e estaremos lá.`,
         `• Alguma dúvida pelo caminho: ${p.whatsappNumber} (WhatsApp) ou ${p.receptionPhone}`,
+        welcomePreferencesLine(r, l) ? `\n${welcomePreferencesLine(r, l)}` : undefined,
         "", `Contamos consigo por volta das ${arrive}. Boa viagem.`,
         "", SIGNOFF.pt,
       ),
@@ -222,6 +227,7 @@ function arrivalDay({ reservation: r, language: l }: GenerationInput): Copy {
         `• Plan : ${p.mapsLink}`,
         `• Réception : ${p.receptionHours}. Si vous arrivez plus tard, appelez le ${p.emergencyPhone} et nous serons là.`,
         `• Une question en route : ${p.whatsappNumber} (WhatsApp) ou ${p.receptionPhone}`,
+        welcomePreferencesLine(r, l) ? `\n${welcomePreferencesLine(r, l)}` : undefined,
         "", `Nous vous attendons vers ${arrive}. Bonne route.`,
         "", SIGNOFF.fr,
       ),
@@ -238,6 +244,7 @@ function arrivalDay({ reservation: r, language: l }: GenerationInput): Copy {
       `• Map: ${p.mapsLink}`,
       `• Reception: ${p.receptionHours}. Arriving later? Call ${p.emergencyPhone} and we'll be there.`,
       `• Questions on the way: ${p.whatsappNumber} (WhatsApp) or ${p.receptionPhone}`,
+      welcomePreferencesLine(r, l) ? `\n${welcomePreferencesLine(r, l)}` : undefined,
       "", `We're expecting you around ${arrive}. Travel safely.`,
       "", SIGNOFF.en,
     ),
@@ -340,6 +347,7 @@ function postStay({ reservation: r, language: l, returning }: GenerationInput): 
         "Se tiver um minuto, uma breve avaliação significa muito para um lugar pequeno e independente como o nosso:",
         p.reviewLink, "",
         "Quando quiser voltar, o vale estará aqui — e nós também.",
+        postStayPreferencesLine(r, l) || undefined,
         "", SIGNOFF.pt,
       ),
     };
@@ -353,6 +361,7 @@ function postStay({ reservation: r, language: l, returning }: GenerationInput): 
         "Si vous avez une minute, un court avis compte beaucoup pour une petite maison indépendante comme la nôtre :",
         p.reviewLink, "",
         "Quand vous voudrez revenir, la vallée sera là — et nous aussi.",
+        postStayPreferencesLine(r, l) || undefined,
         "", SIGNOFF.fr,
       ),
     };
@@ -365,6 +374,7 @@ function postStay({ reservation: r, language: l, returning }: GenerationInput): 
       "If you have a minute, a short review means a great deal to a small, independent place like ours:",
       p.reviewLink, "",
       "Whenever you'd like to return, the valley will be here — and so will we.",
+      postStayPreferencesLine(r, l) || undefined,
       "", SIGNOFF.en,
     ),
   };

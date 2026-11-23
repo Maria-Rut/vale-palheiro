@@ -122,7 +122,7 @@ export interface ResortEvent {
 export interface StaffTask {
   id: string;
   reservationId: string;
-  kind: "welcome_back_package" | "occasion" | "late_arrival";
+  kind: "welcome_back_package" | "occasion" | "late_arrival" | "guest_request";
   /** When it should be done by (ISO). */
   dueBy: string;
   text: string;
@@ -171,4 +171,59 @@ export interface DeliveryResult {
   channel: Channel;
   to: string;
   detail: string;
+}
+
+// ---------------------------------------------------------------- preferences
+
+/** Roughly when the guest expects to arrive. */
+export type ArrivalWindow = "early" | "afternoon" | "evening" | "late";
+/** What we stock in the villa fridge before arrival. */
+export type Drink = "still_water" | "sparkling_water" | "wine" | "sparkling_wine" | "beer" | "alcohol_free";
+/** Sleeping set-up: as booked, split into separate beds, or one extra bed. */
+export type Beds = "as_booked" | "separate" | "extra";
+/** Portugal uses EU (type F) sockets; guests from elsewhere may need an adapter. */
+export type Adapter = "none" | "uk" | "us" | "other";
+/** What the guest says they're celebrating ("treat" = "Do we need a reason?"). */
+export type GuestOccasion = "none" | "birthday" | "anniversary" | "honeymoon" | "treat" | "other";
+export type Dietary = "vegetarian" | "vegan" | "pescatarian" | "gluten_free" | "lactose_free";
+/** Experiences from Vale Palheiro's own Experiences Menu (brochure v4). */
+export type Experience =
+  | "trail" | "picnic" | "jeep" | "horse" | "balloon" | "bikes"
+  | "surf" | "boat" | "kayak"
+  | "yoga" | "massage"
+  | "wine_tasting" | "barn" | "private_dinner" | "cooking"
+  | "workshop"
+  | "transfer" | "babysitting";
+
+/**
+ * What the guest told us through their "prepare your stay" page (linked from
+ * the 3-days-before email). Every field has a default, so a guest who is happy
+ * with everything submits in one tap — they only change what matters to them.
+ */
+export interface GuestPreferences {
+  arrival: ArrivalWindow;
+  /** Fireplace laid and ready to light on arrival. */
+  fireplace: boolean;
+  /** Drinks waiting in the fridge. Anything beyond water is confirmed (and priced) by staff. */
+  drinks: Drink[];
+  beds: Beds;
+  adapter: Adapter;
+  dietary: Dietary[];
+  /**
+   * Allergies are health data (GDPR special category). They are only stored
+   * when the guest ticks the explicit consent box, and are deleted
+   * automatically after check-out.
+   */
+  allergies?: string;
+  allergyConsent: boolean;
+  /** Set once allergies were deleted after the stay. */
+  allergiesDeletedAt?: string;
+  occasion: GuestOccasion;
+  occasionNote?: string;
+  /** Experiences the guest would like the team to help arrange. */
+  experiences: Experience[];
+  note?: string;
+  /** Guest opted in to having these remembered for future stays. */
+  rememberForNextTime: boolean;
+  submittedAt: string;
 }

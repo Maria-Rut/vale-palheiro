@@ -98,6 +98,34 @@ the dashboard shows the guest-local time it lands, and why it moved if it did.
 - Every message can be **edited** or **stopped** before it goes. Edited wording
   is never overwritten.
 
+## Guest preferences ("prepare your stay")
+
+The 3-days-before email links each guest to a **personal page** (`/stay/<token>`,
+no login) where their stay is **already set up the way most guests like it** —
+so a happy guest just taps *Looks perfect*, and nobody faces a questionnaire.
+
+- **Pre-filled:** fireplace laid and ready to light, still water in the fridge,
+  beds as booked, a plug adapter guessed from the guest's country (Portugal
+  uses EU sockets), arrival time.
+- **Easy to change:** regional wine, bubbles, beer or alcohol-free drinks in the
+  fridge (staff confirm prices); separate beds or one more bed (staff confirm
+  it's possible).
+- **Optional, folded away:** food & allergies, a celebration (including
+  *"Do we need a reason?"*), experiences from the resort's own Experiences
+  Menu with three "picked for you" ideas, and a note for the team.
+- **"Remember my preferences for future stays."**
+- **Allergies need an explicit consent box** and are **deleted automatically
+  after check-out**.
+- Wi-Fi and contact details come from **Property info**.
+- EN / PT / FR. The page closes 24 hours before arrival; bookings made later
+  than that get the usual personal call.
+
+Their answers become a **prep sheet** (dashboard → *Guest preferences*),
+**team tasks** (wine to stock, extra bed to check, experiences to arrange),
+a line in the **arrival-day email** ("we've prepared everything the way you
+asked…"), and a line in the **thank-you** if they asked us to remember them.
+Sophie's answers are pre-filled in the demo.
+
 ## Property info
 
 Wi-Fi, phone numbers, directions (EN/PT/FR), meal hours, check-out time and the
@@ -158,6 +186,7 @@ src/
   weather.ts    Forecast + sea state: simulated, or live Open-Meteo
   activities.ts Experiences catalogue with weather rules (from the brochure)
   recommender.ts The agent: forecast → conditions → one experience per day
+  preferences.ts  "Prepare your stay" answers: defaults, validation, links, tasks, email lines
   brand.ts      Vale Palheiro voice + localised phrasing
   generator.ts  The five message templates in EN / PT / FR (+ LLM seam)
   channels.ts   Email / SMS / WhatsApp adapters behind one interface
@@ -166,6 +195,8 @@ src/
 public/
   index.html    Staff dashboard
   app.js        Dashboard logic (vanilla JS)
+  stay.html     Guest "prepare your stay" page (mobile-first)
+  stay.js       Its logic + EN / PT / FR copy and the Experiences Menu
 ```
 
 ## From prototype to pilot

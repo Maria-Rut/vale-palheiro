@@ -5,10 +5,21 @@ import path from "node:path";
 import { Scheduler, DEFAULT_CONFIG, type SchedulerConfig } from "./scheduler.ts";
 import { getSentLog } from "./channels.ts";
 import { MockBookingSource, InMemoryEventSource } from "./sources.ts";
+import { preferenceSeeds } from "./mockData.ts";
 import { getPropertyInfo, updatePropertyInfo, sampleFieldCount } from "./property.ts";
 import { placeLabel } from "./generator.ts";
-import type { Language, ResortEvent } from "./types.ts";
+import type { Language, Reservation, ResortEvent } from "./types.ts";
 import { RESORT_TZ, zonedTime } from "./timezone.ts";
+import {
+  defaultPreferences,
+  findByToken,
+  getPreferences,
+  parsePreferences,
+  preferencesOpen,
+  preferencesUrl,
+  setPreferences,
+} from "./preferences.ts";
+import { prop } from "./property.ts";
 import { getActivities, setActivityEnabled } from "./activities.ts";
 import { conditionsFor } from "./recommender.ts";
 
@@ -32,6 +43,9 @@ const STAFF_USER = process.env.TERRA_USER ?? "palheiro";
 const STAFF_PASS = process.env.TERRA_PASS ?? "costa-vicentina";
 
 const scheduler = new Scheduler(new MockBookingSource(), new InMemoryEventSource(), { ...DEFAULT_CONFIG });
+
+// Demo: one guest has already filled in their "prepare your stay" page.
+for (const [id, prefs] of Object.entries(preferenceSeeds)) setPreferences(id, prefs);
 
 // Build the initial plan, then send anything already due so the demo opens
 // with a realistic mix of sent / scheduled / held / skipped.
@@ -153,6 +167,26 @@ function resortTime(v: string): Date {
   return zonedTime(y, mo, d, h, mi, RESORT_TZ);
 }
 
+/** What a guest's own page may see about their booking — nothing more. */
+function guestView(r: Reservation) {
+  const p = prop();
+  const prefs = getPreferences(r.id);
+  return {
+    firstName: r.guest.firstName,
+    language: r.guest.language,
+    accommodation: placeLabel(r),
+    checkIn: r.checkIn,
+    checkOut: r.checkOut,
+    partySize: r.adults + r.children,
+    open: preferencesOpen(r),
+    answered: !!prefs,
+    preferences: prefs ?? { ...defaultPreferences(r), submittedAt: null },
+    wifi: { network: p.wifiNetwork, password: p.wifiPassword },
+    phone: p.receptionPhone,
+    meetingPoint: p.meetingPoint,
+  };
+}
+
 // --- router ---
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
@@ -182,8 +216,42 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { authed: isAuthed(req) });
     }
 
+    // Public: the guest's personal "prepare your stay" page. The unguessable
+    // token in the link is the only key, so guests never need to log in.
+    const stayMatch = pathname.match(/^\/api\/stay\/([A-Za-z0-9_-]{16,64})$/);
+    if (stayMatch && (method === "GET" || method === "POST")) {
+      const r = findByToken(scheduler.getReservations(), stayMatch[1]);
+      if (!r) return sendJson(res, 404, { error: "not_found" });
+      if (method === "GET") return sendJson(res, 200, guestView(r));
+      if (!preferencesOpen(r)) return sendJson(res, 409, { error: "closed" });
+      const parsed = parsePreferences(r, await readBody(req));
+      if (!parsed.ok) return sendJson(res, 400, { error: parsed.error });
+      setPreferences(r.id, parsed.preferences);
+      await scheduler.plan(); // refresh tasks + upcoming messages with their answers
+      return sendJson(res, 200, guestView(r));
+    }
+
     // Everything below requires auth
     if (!isAuthed(req)) return sendJson(res, 401, { error: "Not authenticated" });
+
+    if (pathname === "/api/preferences" && method === "GET") {
+      const now = Date.now();
+      const msgs = scheduler.getMessages();
+      const rows = scheduler.getReservations()
+        .filter((r) => !r.cancelled && Date.parse(r.checkOut) + 7 * 24 * 3600_000 > now)
+        .sort((a, b) => Date.parse(a.checkIn) - Date.parse(b.checkIn))
+        .map((r) => {
+          const invite = msgs.find((m) => m.reservationId === r.id && m.kind === "pre_arrival");
+          return {
+            id: r.id, reference: r.reference, guest: r.guest, place: placeLabel(r),
+            checkIn: r.checkIn, checkOut: r.checkOut, partySize: r.adults + r.children,
+            preferences: getPreferences(r.id) ?? null,
+            url: preferencesUrl(r), open: preferencesOpen(r),
+            invite: invite ? { status: invite.status, sendAt: invite.sendAt, sentAt: invite.sentAt } : null,
+          };
+        });
+      return sendJson(res, 200, rows);
+    }
 
     if (pathname === "/api/reservations" && method === "GET") {
       return sendJson(res, 200, scheduler.getReservations());
@@ -321,6 +389,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     return sendJson(res, 404, { error: "Unknown endpoint" });
+  }
+
+  // Guest preferences page: /stay/<token>
+  if (/^\/stay\/[A-Za-z0-9_-]+\/?$/.test(pathname)) {
+    return serveStatic(res, "/stay.html");
   }
 
   // Static files + SPA fallback
