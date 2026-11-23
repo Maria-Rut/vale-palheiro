@@ -136,6 +136,12 @@
     }
     .pill.pre { background: #e6ecd9; color: var(--sage-dark); }
     .pill.post { background: var(--sand); color: var(--earth-700); }
+    .pill.prefs { background: #f3e1d3; color: #8a4b2b; }
+    .pill.answered { background: #d7e7d1; color: #3f6b36; }
+    .pill.waiting { background: #efe8d7; color: var(--earth-700); }
+    .pill.upcoming { background: #ece6f0; color: #5a4a6a; }
+    .pill.call { background: #f3e1d3; color: #8a4b2b; }
+    .pill.past { background: #eee; color: #888; }
     .pill.email { background: #dfe8f0; color: #3a5a74; }
     .pill.sms { background: #f0e4da; color: #7a4a36; }
     .pill.whatsapp { background: #dcefe0; color: #2e7d4f; }
@@ -162,6 +168,38 @@
       border: 1px solid var(--line); border-radius: 8px; background: var(--white); margin-bottom: 8px;
     }
     .edit-area textarea { min-height: 170px; resize: vertical; line-height: 1.55; }
+
+    /* ---------- guest preferences / prep sheets ---------- */
+    .prep-card {
+      background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px;
+      box-shadow: var(--shadow-sm); margin-bottom: 16px; overflow: hidden;
+    }
+    .prep-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 16px 20px 6px; }
+    .prep-head .who { font-family: var(--serif); font-size: 20px; color: var(--earth-800); }
+    .prep-head .book { font-size: 12.5px; color: var(--muted); }
+    .prep-status { padding: 0 20px 14px; font-size: 13px; color: var(--earth-700); }
+    .prep-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      border-top: 1px solid var(--line-soft);
+    }
+    .prep-item {
+      background: var(--white); padding: 12px 18px;
+      box-shadow: 1px 0 0 var(--line-soft), 0 1px 0 var(--line-soft);
+    }
+    .prep-item .k { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+    .prep-item .v { font-size: 14.5px; color: var(--earth-900); margin-top: 2px; }
+    .prep-item.alert { background: #fbefe9; }
+    .prep-item.alert .k { color: #9b3b2f; }
+    .prep-item.alert .v { color: #7a2a20; font-weight: 600; }
+    .prep-item.wide { grid-column: 1 / -1; }
+    .prep-item.todo { background: #eef2e6; }
+    .prep-item.todo .k { color: var(--sage-dark); }
+    .prep-actions { display: flex; gap: 10px; flex-wrap: wrap; padding: 14px 20px 16px; border-top: 1px solid var(--line-soft); }
+    .prep-actions a.ghost {
+      text-decoration: none; display: inline-block; background: var(--white); border: 1px solid var(--line);
+      color: var(--earth-700); padding: 9px 18px; border-radius: 999px; font-size: 13px; transition: background 0.2s;
+    }
+    .prep-actions a.ghost:hover { background: var(--sand); }
 
     /* ---------- delivery log ---------- */
     .log-item {
@@ -236,6 +274,8 @@
         <p>
           Terra prepares a warm, personal message for every guest before they arrive
           and after they leave — in their own language, on their preferred channel.
+          A few days before arrival it also invites them to set up their stay, and
+          their choices appear under <b>Guest preferences</b> as a prep sheet for the team.
           Review the wording here, edit anything you like, and Terra sends each one at the right moment.
         </p>
       </div>
@@ -246,6 +286,14 @@
           <h3>When messages are sent</h3>
           <p class="hint">Set how far from a guest's stay each message goes out. This applies to everyone.</p>
           <div class="timing-row">
+            <div class="timing-item">
+              <div class="lead">Preferences invite</div>
+              <div class="explain">"Let's prepare your stay" link, sent <b>days before</b> arrival.</div>
+              <div class="stepper">
+                <input id="prefDays" type="number" min="2" step="1" />
+                <span class="unit">days before arrival</span>
+              </div>
+            </div>
             <div class="timing-item">
               <div class="lead">Welcome message</div>
               <div class="explain">Sent shortly <b>before</b> the guest arrives.</div>
@@ -292,11 +340,16 @@
 
       <div class="tabs">
         <button class="tabbtn active" data-tab="messages">Messages <span class="tab-count" id="msgCount"></span></button>
+        <button class="tabbtn" data-tab="prefs">Guest preferences <span class="tab-count" id="prefCount"></span></button>
         <button class="tabbtn" data-tab="log">Delivery log <span class="tab-count" id="logCount"></span></button>
       </div>
 
       <section id="tab-messages">
         <div class="grid" id="messages"></div>
+      </section>
+
+      <section id="tab-prefs" class="hidden">
+        <div id="prefs"></div>
       </section>
 
       <section id="tab-log" class="hidden">

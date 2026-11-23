@@ -32,7 +32,7 @@ function fmt(iso: string): string {
   return new Date(iso).toUTCString().replace("GMT", "UTC");
 }
 
-const KIND: Record<string, string> = { pre_stay: "Pre-stay", post_stay: "Post-stay" };
+const KIND: Record<string, string> = { preferences: "Preferences invite", pre_stay: "Pre-stay", post_stay: "Post-stay" };
 
 function card(m: ScheduledMessage): string {
   const r = byId[m.reservationId];

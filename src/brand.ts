@@ -29,6 +29,15 @@ export const BRAND = {
     trail: "the Rota Vicentina", // nearby hiking trail
     material: "taipa", // compressed-earth walls
   },
+  /**
+   * Practical "good to know" details shown to guests.
+   * PLACEHOLDER Wi-Fi values — replace with the resort's real network details.
+   */
+  practical: {
+    wifiNetwork: "ValePalheiro_Guests",
+    wifiPassword: "taipa-e-mar",
+    phone: "+351 933 979 043",
+  },
 } as const;
 
 /** Localised greeting by language. */

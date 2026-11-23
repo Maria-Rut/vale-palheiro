@@ -5,6 +5,14 @@ import path from "node:path";
 import { reservations } from "./mockData.ts";
 import { Scheduler, DEFAULT_CONFIG } from "./scheduler.ts";
 import { getSentLog } from "./channels.ts";
+import {
+  defaultPreferences,
+  parsePreferences,
+  preferencesOpen,
+  preferencesUrl,
+} from "./preferences.ts";
+import type { Reservation } from "./types.ts";
+import { BRAND } from "./brand.ts";
 
 /**
  * HTTP layer for Terra. Serves the staff dashboard and a small JSON API.
@@ -126,6 +134,28 @@ function withReservationContext() {
   });
 }
 
+/** What the guest's own page may see about their booking — nothing more. */
+function guestView(r: Reservation) {
+  return {
+    firstName: r.guest.firstName,
+    language: r.guest.language,
+    accommodation: r.accommodation,
+    checkIn: r.checkIn,
+    checkOut: r.checkOut,
+    partySize: r.partySize,
+    motive: r.motive,
+    open: preferencesOpen(r),
+    wifi: { network: BRAND.practical.wifiNetwork, password: BRAND.practical.wifiPassword },
+    phone: BRAND.practical.phone,
+    answered: !!r.preferences,
+    preferences: r.preferences ?? { ...defaultPreferences(r), submittedAt: null },
+  };
+}
+
+function byToken(token: string): Reservation | undefined {
+  return scheduler.getReservations().find((r) => r.preferencesToken === token);
+}
+
 // --- router ---
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
@@ -155,11 +185,36 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { authed: isAuthed(req) });
     }
 
+    // Public: the guest's personal "prepare your stay" page. The unguessable
+    // token in the link is the only key, so guests never need to log in.
+    const stayMatch = pathname.match(/^\/api\/stay\/([A-Za-z0-9_-]{8,64})$/);
+    if (stayMatch) {
+      const r = byToken(stayMatch[1]);
+      if (!r) return sendJson(res, 404, { error: "not_found" });
+      if (method === "GET") return sendJson(res, 200, guestView(r));
+      if (method === "POST") {
+        if (!preferencesOpen(r)) return sendJson(res, 409, { error: "closed" });
+        const parsed = parsePreferences(r, await readBody(req));
+        if (!parsed.ok) return sendJson(res, 400, { error: parsed.error });
+        r.preferences = parsed.preferences;
+        await scheduler.preferencesUpdated(r.id);
+        return sendJson(res, 200, guestView(r));
+      }
+    }
+
     // Everything below requires auth
     if (!isAuthed(req)) return sendJson(res, 401, { error: "Not authenticated" });
 
     if (pathname === "/api/reservations" && method === "GET") {
-      return sendJson(res, 200, scheduler.getReservations());
+      return sendJson(
+        res,
+        200,
+        scheduler.getReservations().map((r) => ({
+          ...r,
+          preferencesUrl: preferencesUrl(r),
+          preferencesOpen: preferencesOpen(r),
+        })),
+      );
     }
     if (pathname === "/api/messages" && method === "GET") {
       return sendJson(res, 200, withReservationContext());
@@ -168,8 +223,9 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, scheduler.getConfig());
     }
     if (pathname === "/api/config" && method === "POST") {
-      const { preStayHoursBefore, postStayHoursAfter, channelStrategy } = await readBody(req);
+      const { preferencesHoursBefore, preStayHoursBefore, postStayHoursAfter, channelStrategy } = await readBody(req);
       const patch: Record<string, unknown> = {};
+      if (typeof preferencesHoursBefore === "number") patch.preferencesHoursBefore = preferencesHoursBefore;
       if (typeof preStayHoursBefore === "number") patch.preStayHoursBefore = preStayHoursBefore;
       if (typeof postStayHoursAfter === "number") patch.postStayHoursAfter = postStayHoursAfter;
       if (channelStrategy === "preferred" || channelStrategy === "all") patch.channelStrategy = channelStrategy;
@@ -209,6 +265,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     return sendJson(res, 404, { error: "Unknown endpoint" });
+  }
+
+  // Guest preferences page: /stay/<token>
+  if (/^\/stay\/[A-Za-z0-9_-]+\/?$/.test(pathname)) {
+    return serveStatic(res, "/stay.html");
   }
 
   // Static files + SPA fallback

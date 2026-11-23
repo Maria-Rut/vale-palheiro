@@ -6,6 +6,7 @@ import type {
 } from "./types.ts";
 import { createGenerator, type Generator } from "./generator.ts";
 import { senderFor } from "./channels.ts";
+import { preferencesOpen, purgeAfterStay } from "./preferences.ts";
 
 /**
  * The scheduler is the brain of "option C". For every reservation it:
@@ -15,6 +16,9 @@ import { senderFor } from "./channels.ts";
  *   4. sends anything that is now due.
  *
  * Timing rules (configurable):
+ *   - preferences: PREFERENCES_HOURS_BEFORE check-in (default 7 days before);
+ *                  late bookings get it straight away, and it is skipped when
+ *                  arrival is too close for the team to prepare (they call instead)
  *   - pre-stay:  PRE_STAY_HOURS_BEFORE check-in  (default 2h before arrival)
  *   - post-stay: POST_STAY_HOURS_AFTER check-out (default 24h after departure)
  *
@@ -24,6 +28,7 @@ import { senderFor } from "./channels.ts";
  */
 
 export interface SchedulerConfig {
+  preferencesHoursBefore: number;
   preStayHoursBefore: number;
   postStayHoursAfter: number;
   /**
@@ -35,6 +40,7 @@ export interface SchedulerConfig {
 }
 
 export const DEFAULT_CONFIG: SchedulerConfig = {
+  preferencesHoursBefore: 7 * 24,
   preStayHoursBefore: 2,
   postStayHoursAfter: 24,
   channelStrategy: "preferred",
@@ -101,10 +107,30 @@ export class Scheduler {
     return this.messages.get(id);
   }
 
-  private sendAtFor(r: Reservation, kind: MessageKind): string {
+  private sendAtFor(r: Reservation, kind: MessageKind, now: Date): string {
+    if (kind === "preferences") {
+      const ideal = addHours(r.checkIn, -this.config.preferencesHoursBefore);
+      // Booked late: invite them now rather than at a time already passed.
+      return Date.parse(ideal) < now.getTime() ? now.toISOString() : ideal;
+    }
     return kind === "pre_stay"
       ? addHours(r.checkIn, -this.config.preStayHoursBefore)
       : addHours(r.checkOut, this.config.postStayHoursAfter);
+  }
+
+  /** Whether a guest should get the "prepare your stay" invite at all. */
+  private wantsPreferencesInvite(r: Reservation, now: Date): boolean {
+    return !r.preferences && preferencesOpen(r, now);
+  }
+
+  /** Called when a guest submits the preferences page. */
+  async preferencesUpdated(reservationId: string): Promise<void> {
+    for (const m of this.messages.values()) {
+      if (m.reservationId === reservationId && m.kind === "preferences" && m.status === "scheduled") {
+        m.status = "cancelled"; // they've already answered — no need to invite them
+      }
+    }
+    await this.plan();
   }
 
   /**
@@ -112,14 +138,15 @@ export class Scheduler {
    * sent messages are preserved; only still-scheduled ones are regenerated so
    * that config/preview changes take effect without re-sending.
    */
-  async plan(): Promise<void> {
-    const kinds: MessageKind[] = ["pre_stay", "post_stay"];
+  async plan(now: Date = new Date()): Promise<void> {
+    const kinds: MessageKind[] = ["preferences", "pre_stay", "post_stay"];
     for (const r of this.reservations) {
       for (const kind of kinds) {
         for (const channel of channelsFor(r, this.config.channelStrategy)) {
           const key = `${r.id}:${kind}:${channel}`;
           const existing = this.findBy(r.id, kind, channel);
-          if (existing && existing.status === "sent") continue;
+          if (existing && existing.status !== "scheduled") continue;
+          if (kind === "preferences" && !existing && !this.wantsPreferencesInvite(r, now)) continue;
 
           const generated = await this.generator.generate({
             reservation: r,
@@ -129,7 +156,7 @@ export class Scheduler {
           });
 
           if (existing) {
-            existing.sendAt = this.sendAtFor(r, kind);
+            existing.sendAt = this.sendAtFor(r, kind, now);
             existing.subject = generated.subject;
             existing.body = generated.body;
             existing.generatedBy = generated.generatedBy;
@@ -140,7 +167,7 @@ export class Scheduler {
               kind,
               channel,
               language: r.guest.language,
-              sendAt: this.sendAtFor(r, kind),
+              sendAt: this.sendAtFor(r, kind, now),
               status: "scheduled",
               subject: generated.subject,
               body: generated.body,
@@ -193,12 +220,23 @@ export class Scheduler {
    */
   async runDue(now: Date = new Date()): Promise<ScheduledMessage[]> {
     const sent: ScheduledMessage[] = [];
+    let preferencesChanged = false;
+    for (const r of this.reservations) {
+      if (purgeAfterStay(r, now)) preferencesChanged = true;
+    }
+    if (preferencesChanged) await this.plan(now);
     for (const m of this.getMessages()) {
       if (m.status !== "scheduled") continue;
       if (Date.parse(m.sendAt) > now.getTime()) continue;
 
       const reservation = this.getReservation(m.reservationId);
       if (!reservation) continue;
+
+      // Too late to prepare, or already answered: don't send the invite.
+      if (m.kind === "preferences" && !this.wantsPreferencesInvite(reservation, now)) {
+        m.status = "cancelled";
+        continue;
+      }
 
       const result = await senderFor(m.channel).send(m, reservation);
       if (result.ok) {

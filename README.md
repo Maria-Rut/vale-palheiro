@@ -14,9 +14,29 @@ every message warm, personal, and unmistakably Vale Palheiro — never spam.
 
 ## What it does
 
-- **Two automated moments in the guest journey**
+- **Three automated moments in the guest journey**
+  - **Preferences invite** — "Let's prepare your stay", sent **7 days** before
+    arrival (straight away for late bookings; skipped when arrival is under
+    24h away, where front office calls instead).
   - **Pre-stay** — sent a configurable window before arrival (default **2 hours**).
   - **Post-stay** — sent a configurable window after departure (default **24 hours**).
+- **Guest preferences page** (`/stay/<token>`) — a personal, no-login link.
+  Everything is **pre-filled** (fireplace ready, still water in the fridge,
+  beds as booked, a plug adapter guessed from the guest's phone country,
+  arriving 3–6pm), so a happy guest just taps *Looks perfect*. They can add
+  regional wine, bubbles or beer to the fridge (staff confirm prices), ask for
+  separate or extra beds, and see Wi-Fi details. Optional extras stay folded
+  away: food & allergies, a celebration, experiences from the resort's own
+  Experiences Menu (with "picked for you" suggestions), a note. EN / PT / FR.
+  - **Wi-Fi values in `src/brand.ts` are placeholders** — replace with the
+    real network name and password.
+  - Allergies are only kept with an **explicit consent box**, and are
+    **deleted automatically after check-out**.
+  - Their choices show up in the **welcome message** ("the fireplace laid and ready
+    to light, sparkling water and something sparkling in the fridge…") plus
+    the Wi-Fi details and, if they opt in, the thank-you
+    message promises to remember them next time.
+  - Staff see a **prep sheet** per guest in the *Guest preferences* tab.
 - **Personalised copy**, not mail-merge. Each message is shaped by the guest's
   name, their villa, their reason for visiting (couple, family, hiking, a
   celebration…), and their language (**EN / PT / FR**). A hiking guest hears

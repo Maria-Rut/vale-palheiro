@@ -23,8 +23,65 @@ export type Channel = "email" | "sms" | "whatsapp";
  */
 export type Motive = "business" | "leisure" | "both";
 
-/** The two automated moments in the guest journey. */
-export type MessageKind = "pre_stay" | "post_stay";
+/**
+ * The automated moments in the guest journey:
+ *   - preferences: "Let's prepare your stay" invite, a few days before arrival
+ *   - pre_stay:    welcome, shortly before arrival
+ *   - post_stay:   thank-you, after departure
+ */
+export type MessageKind = "preferences" | "pre_stay" | "post_stay";
+
+/** Roughly when the guest expects to arrive. */
+export type ArrivalWindow = "early" | "afternoon" | "evening" | "late";
+/** What we stock in the villa fridge before arrival. */
+export type Drink = "still_water" | "sparkling_water" | "wine" | "sparkling_wine" | "beer" | "alcohol_free";
+/** Sleeping set-up: as booked, split into separate beds, or one extra bed. */
+export type Beds = "as_booked" | "separate" | "extra";
+/** Portugal uses EU (type F) sockets; guests from elsewhere may need an adapter. */
+export type Adapter = "none" | "uk" | "us" | "other";
+export type Occasion = "none" | "birthday" | "anniversary" | "honeymoon" | "treat" | "other";
+export type Dietary = "vegetarian" | "vegan" | "pescatarian" | "gluten_free" | "lactose_free";
+/** Experiences from Vale Palheiro's own Experiences Menu (brochure v4). */
+export type Experience =
+  | "trail" | "picnic" | "jeep" | "horse" | "balloon" | "bikes"
+  | "surf" | "boat" | "kayak"
+  | "yoga" | "massage"
+  | "wine_tasting" | "barn" | "private_dinner" | "cooking"
+  | "workshop"
+  | "transfer" | "babysitting";
+
+/**
+ * What the guest told us through the "prepare your stay" page. Every field has
+ * a sensible default, so a guest who is happy with everything submits in one
+ * tap — they only change what matters to them.
+ */
+export interface GuestPreferences {
+  arrival: ArrivalWindow;
+  /** Fireplace laid and ready to light on arrival. */
+  fireplace: boolean;
+  /** Drinks waiting in the fridge. Alcohol is confirmed (and priced) by staff. */
+  drinks: Drink[];
+  beds: Beds;
+  adapter: Adapter;
+  dietary: Dietary[];
+  /**
+   * Allergies are health data (GDPR special category). They are only stored
+   * when the guest ticks the explicit consent box, and are deleted
+   * automatically after check-out.
+   */
+  allergies?: string;
+  allergyConsent: boolean;
+  /** Set once allergies were deleted after the stay. */
+  allergiesDeletedAt?: string;
+  occasion: Occasion;
+  occasionNote?: string;
+  /** Experiences the guest would like the team to help arrange. */
+  experiences: Experience[];
+  note?: string;
+  /** Guest opted in to having these remembered for future stays. */
+  rememberForNextTime: boolean;
+  submittedAt: string;
+}
 
 /** Lifecycle of a scheduled message. */
 export type MessageStatus = "scheduled" | "sent" | "cancelled";
@@ -65,6 +122,13 @@ export interface Reservation {
   breakfastIncluded: boolean;
   /** Optional free-text the staff noted, woven into personalisation. */
   notes?: string;
+  /**
+   * Unguessable token for the guest's personal "prepare your stay" link, so
+   * they never need to log in or type their booking reference.
+   */
+  preferencesToken: string;
+  /** Filled in once the guest answers the preferences page. */
+  preferences?: GuestPreferences;
 }
 
 /**

@@ -10,6 +10,12 @@ import {
   MOTIVE_LINE,
   SIGNOFF,
 } from "./brand.ts";
+import {
+  postStayPreferencesLine,
+  preferencesUrl,
+  welcomePreferencesLine,
+  wifiLine,
+} from "./preferences.ts";
 
 /**
  * Message generation.
@@ -72,6 +78,11 @@ function breakfastLine(included: boolean, lang: Language): string {
 }
 
 const SUBJECTS: Record<MessageKind, Record<Language, string>> = {
+  preferences: {
+    en: "Let's prepare your stay",
+    pt: "Vamos preparar a sua estadia",
+    fr: "Préparons votre séjour",
+  },
   pre_stay: {
     en: "The valley is ready for you",
     pt: "O vale está pronto para si",
@@ -84,23 +95,106 @@ const SUBJECTS: Record<MessageKind, Record<Language, string>> = {
   },
 };
 
+/**
+ * Adds a personal line to a message: as its own paragraph before the sign-off
+ * in an email, or appended to the single paragraph of a short message.
+ */
+function weaveIn(body: string, line: string, short: boolean): string {
+  if (!line) return body;
+  if (short) return `${body} ${line}`;
+  const paras = body.split("\n\n");
+  // Insert before the final two paragraphs (closing line + sign-off).
+  paras.splice(Math.max(1, paras.length - 2), 0, line);
+  return paras.join("\n\n");
+}
+
 export class TemplateGenerator implements Generator {
   async generate(input: GenerationInput): Promise<GeneratedMessage> {
     const { reservation: r, kind, channel, language } = input;
     const name = r.guest.firstName;
-    const motiveLine = MOTIVE_LINE[kind][r.motive][language];
+    const motiveLine = kind === "preferences" ? "" : MOTIVE_LINE[kind][r.motive][language];
     const short = channel !== "email";
 
-    const body =
-      kind === "pre_stay"
-        ? this.preStay(name, r.accommodation, language, motiveLine, short, r.checkIn, r.breakfastIncluded)
-        : this.postStay(name, language, motiveLine, short);
+    let body: string;
+    if (kind === "preferences") {
+      body = this.preferencesInvite(r, language, short);
+    } else if (kind === "pre_stay") {
+      body = this.preStay(name, r.accommodation, language, motiveLine, short, r.checkIn, r.breakfastIncluded);
+      body = weaveIn(body, welcomePreferencesLine(r, language), short);
+      body = weaveIn(body, wifiLine(language), short);
+    } else {
+      body = this.postStay(name, language, motiveLine, short);
+      body = weaveIn(body, postStayPreferencesLine(r, language), short);
+    }
 
     return {
       subject: short ? undefined : SUBJECTS[kind][language],
       body,
       generatedBy: "template",
     };
+  }
+
+  /**
+   * The "let's prepare your stay" invite. Framed as a treat, not a form: the
+   * guest is told everything is already set and they only change what they like.
+   */
+  private preferencesInvite(r: Reservation, lang: Language, short: boolean): string {
+    const name = r.guest.firstName;
+    const link = preferencesUrl(r);
+    const place = r.accommodation;
+
+    if (lang === "pt") {
+      if (short) {
+        return `${GREETING.pt(name)}, estamos a preparar ${place} para si. Bebidas no frigorífico, lareira, experiências — ajuste em 30 segundos: ${link}`;
+      }
+      return [
+        GREETING.pt(name) + ",",
+        "",
+        `Já começámos a preparar ${place} para a sua chegada.`,
+        "",
+        "Deixámos tudo como a maioria dos nossos hóspedes gosta: a lareira pronta a acender e água fresca no frigorífico. Apetece-lhe uma garrafa de vinho da região, uma cama extra, um passeio a cavalo ao pôr do sol? Basta ajustar aqui:",
+        "",
+        link,
+        "",
+        "Demora cerca de 30 segundos. Se estiver tudo bem assim, não precisa de fazer nada.",
+        "",
+        SIGNOFF.pt,
+      ].join("\n");
+    }
+    if (lang === "fr") {
+      if (short) {
+        return `${GREETING.fr(name)}, nous préparons ${place} pour vous. Boissons au frais, cheminée, expériences — ajustez en 30 secondes : ${link}`;
+      }
+      return [
+        GREETING.fr(name) + ",",
+        "",
+        `Nous avons déjà commencé à préparer ${place} pour votre arrivée.`,
+        "",
+        "Tout est réglé comme la plupart de nos hôtes l'aiment : la cheminée prête à être allumée et de l'eau fraîche au réfrigérateur. Envie d'une bouteille de vin de la région, d'un lit supplémentaire, d'une balade à cheval au coucher du soleil ? Il suffit d'ajuster ici :",
+        "",
+        link,
+        "",
+        "Cela prend environ 30 secondes. Si tout vous convient, vous n'avez rien à faire.",
+        "",
+        SIGNOFF.fr,
+      ].join("\n");
+    }
+    if (short) {
+      return `${GREETING.en(name)}, we're preparing ${place} for you. Drinks in the fridge, the fireplace, experiences — adjust it all in 30 seconds: ${link}`;
+    }
+    return [
+      GREETING.en(name) + ",",
+      "",
+      `We've started preparing ${place} for your arrival.`,
+      "",
+      "We've set it up the way most of our guests love it: the fireplace laid and ready to light, and fresh water in the fridge. Fancy a bottle of regional wine, an extra bed, or a sunset horse ride? Just adjust it here:",
+      "",
+      link,
+      "",
+      "It takes about 30 seconds. If everything sounds right, there's nothing you need to do.",
+      "",
+      SIGNOFF.en,
+    ].join("\n");
   }
 
   private preStay(

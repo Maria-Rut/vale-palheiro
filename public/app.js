@@ -48,13 +48,16 @@ document.querySelectorAll(".tabbtn").forEach((btn) => {
     const tab = btn.dataset.tab;
     $("#tab-messages").classList.toggle("hidden", tab !== "messages");
     $("#tab-log").classList.toggle("hidden", tab !== "log");
+    $("#tab-prefs").classList.toggle("hidden", tab !== "prefs");
     if (tab === "log") renderLog();
+    if (tab === "prefs") renderPrefs();
   });
 });
 
 // --- save timing ---
 $("#applyConfig").addEventListener("click", async () => {
   await api.post("/api/config", {
+    preferencesHoursBefore: Number($("#prefDays").value) * 24,
     preStayHoursBefore: Number($("#preHours").value),
     postStayHoursAfter: Number($("#postHours").value),
   });
@@ -71,6 +74,7 @@ $("#simBtn").addEventListener("click", async () => {
     : "Nothing due to send yet");
   renderMessages();
   renderLog();
+  renderPrefs();
 });
 
 // --- helpers ---
@@ -88,7 +92,8 @@ function relative(iso) {
   const d = Math.round(h / 24);
   return d > 0 ? `in ${d} days` : `${-d} days ago`;
 }
-const KIND_LABEL = { pre_stay: "Welcome", post_stay: "Thank-you" };
+const KIND_LABEL = { preferences: "Preferences invite", pre_stay: "Welcome", post_stay: "Thank-you" };
+const KIND_CLASS = { preferences: "prefs", pre_stay: "pre", post_stay: "post" };
 const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 const MOTIVE_LABEL = { business: "Business", leisure: "Leisure", both: "Business & leisure" };
 const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
@@ -108,7 +113,7 @@ async function renderMessages() {
     const g = m.guest ?? {};
     const card = document.createElement("div");
     card.className = "msg-card";
-    const kindClass = m.kind === "pre_stay" ? "pre" : "post";
+    const kindClass = KIND_CLASS[m.kind];
     const channelNote = m.channel === "email"
       ? "Sent by email"
       : `Short message sent by ${CHANNEL_LABEL[m.channel]}`;
@@ -180,6 +185,86 @@ function openEditor(id, msgs) {
   body.querySelector("#cancelEdit").addEventListener("click", renderMessages);
 }
 
+// --- guest preferences / prep sheets ---
+const ARRIVAL = { early: "Before 15:00", afternoon: "15:00–18:00", evening: "18:00–21:00", late: "After 21:00" };
+const DRINK = { still_water: "Still water", sparkling_water: "Sparkling water", wine: "Regional wine", sparkling_wine: "Sparkling wine", beer: "Beer", alcohol_free: "Alcohol-free" };
+const BEDS = { separate: "Separate beds — check villa", extra: "Extra bed — check villa" };
+const ADAPTER = { uk: "UK", us: "US", other: "Other — ask guest" };
+const DIET = { vegetarian: "Vegetarian", vegan: "Vegan", pescatarian: "Pescatarian", gluten_free: "Gluten-free", lactose_free: "Lactose-free" };
+const OCCASION = { birthday: "Birthday", anniversary: "Anniversary", honeymoon: "Honeymoon", treat: "Treating themselves", other: "Celebration" };
+const EXPERIENCE = {
+  trail: "Vale Palheiro Trail", picnic: "Picnic", jeep: "Jeep tour", horse: "Horse riding", balloon: "Balloon flight",
+  bikes: "Bicycles", surf: "Surf lessons", boat: "Boat trip (Lagos)", kayak: "Kayak (Lagos)", yoga: "Yoga / Pilates / Barre",
+  massage: "Massage in villa", wine_tasting: "Wine tasting", barn: "Table at The Barn", private_dinner: "Private lunch/dinner",
+  cooking: "Cooking workshop", workshop: "Creative workshop", transfer: "Airport transfer", babysitting: "Babysitting",
+};
+
+function prefStatus(r, invites) {
+  const now = Date.now();
+  if (Date.parse(r.checkOut) < now) return { cls: "past", label: "Stay over", text: r.preferences ? "Preferences from this stay." : "No preferences were collected." };
+  if (r.preferences) return { cls: "answered", label: "Answered", text: `Guest answered ${relative(r.preferences.submittedAt)} · ${fmt(r.preferences.submittedAt)}` };
+  const inv = invites.find((m) => m.reservationId === r.id && m.status !== "cancelled");
+  if (inv && inv.status === "sent") return { cls: "waiting", label: "Waiting for guest", text: `Invite sent ${fmt(inv.sentAt)}. Defaults will be used if they don't answer.` };
+  if (inv) return { cls: "upcoming", label: "Invite scheduled", text: `Invite sends ${relative(inv.sendAt)} · ${fmt(inv.sendAt)}` };
+  if (Date.parse(r.checkIn) < now) return { cls: "answered", label: "In house", text: "Guest is staying with us now." };
+  return { cls: "call", label: "Call guest", text: "Arrival is too close for the online invite — front office reaches out personally." };
+}
+
+function prepGrid(r) {
+  const p = r.preferences;
+  if (!p) return "";
+  const item = (k, v, extra = "") => `<div class="prep-item ${extra}"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`;
+  let html = item("Fireplace", p.fireplace ? "Lay & ready to light" : "Not needed")
+    + item("Fridge", p.drinks.length ? p.drinks.map((d) => DRINK[d]).join(", ") : "Nothing")
+    + (p.beds !== "as_booked" ? item("Beds", BEDS[p.beds], "alert") : item("Beds", "As booked"))
+    + (p.adapter !== "none" ? item("Plug adapter", ADAPTER[p.adapter]) : "")
+    + item("Arrival", ARRIVAL[p.arrival]);
+  if (p.allergies) html += item("Allergies · guest consented", p.allergies, "alert");
+  else if (p.allergiesDeletedAt) html += item("Allergies", `Deleted after stay · ${fmt(p.allergiesDeletedAt)}`);
+  if (p.dietary.length) html += item("Dietary", p.dietary.map((d) => DIET[d]).join(", "));
+  if (p.occasion !== "none") html += item("Occasion", OCCASION[p.occasion] + (p.occasionNote ? ` — ${p.occasionNote}` : ""), "wide");
+  if (p.experiences.length) html += item("To arrange · contact guest", p.experiences.map((i) => EXPERIENCE[i]).join(", "), "wide todo");
+  if (p.note) html += item("Note from guest", p.note, "wide");
+  if (p.rememberForNextTime) html += item("Return visits", "Guest asked us to remember these", "wide");
+  return `<div class="prep-grid">${html}</div>`;
+}
+
+async function renderPrefs() {
+  const [res, msgs] = await Promise.all([api.get("/api/reservations"), api.get("/api/messages")]);
+  const invites = msgs.filter((m) => m.kind === "preferences");
+  const sorted = [...res].sort((a, b) => Date.parse(a.checkIn) - Date.parse(b.checkIn))
+    .sort((a, b) => (Date.parse(a.checkOut) < Date.now()) - (Date.parse(b.checkOut) < Date.now()));
+  $("#prefCount").textContent = `(${res.filter((r) => r.preferences).length}/${res.length})`;
+  const el = $("#prefs");
+  el.innerHTML = "";
+  for (const r of sorted) {
+    const st = prefStatus(r, invites);
+    const card = document.createElement("div");
+    card.className = "prep-card";
+    card.innerHTML = `
+      <div class="prep-head">
+        <span class="who">${esc(r.guest.firstName)} ${esc(r.guest.lastName)}</span>
+        <span class="book">${esc(r.accommodation)} · arrives ${fmt(r.checkIn)} · ${r.partySize} guest${r.partySize === 1 ? "" : "s"} · ${esc(r.reference)}</span>
+        <span class="spacer"></span>
+        <span class="pill lang">${LANG_LABEL[r.guest.language]}</span>
+        <span class="pill ${st.cls}">${st.label}</span>
+      </div>
+      <div class="prep-status">${esc(st.text)}</div>
+      ${prepGrid(r)}
+      ${r.preferencesOpen || (r.preferences && Date.parse(r.checkOut) > Date.now()) ? `
+      <div class="prep-actions">
+        <a class="ghost" href="${escAttr(r.preferencesUrl)}" target="_blank" rel="noopener">Open guest page ↗</a>
+        <button class="ghost" data-copy="${escAttr(r.preferencesUrl)}">Copy guest link</button>
+      </div>` : ""}
+    `;
+    el.appendChild(card);
+  }
+  el.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast("Guest link copied"); }
+    catch { toast(b.dataset.copy); }
+  }));
+}
+
 async function renderLog() {
   const log = await api.get("/api/sent-log");
   $("#logCount").textContent = `(${log.length})`;
@@ -209,11 +294,19 @@ async function renderLog() {
 
 async function loadConfig() {
   const cfg = await api.get("/api/config");
+  $("#prefDays").value = Math.round(cfg.preferencesHoursBefore / 24);
   $("#preHours").value = cfg.preStayHoursBefore;
   $("#postHours").value = cfg.postStayHoursAfter;
 }
 
-function refreshAll() { loadConfig(); renderMessages(); }
+function refreshAll() { loadConfig(); renderMessages(); renderPrefs(); }
+
+// Refresh when coming back to the tab (e.g. after answering as a guest in another tab).
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && !$("#app").classList.contains("hidden")) {
+    renderMessages(); renderPrefs();
+  }
+});
 
 function esc(s) {
   return String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
