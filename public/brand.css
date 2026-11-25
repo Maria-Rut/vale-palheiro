@@ -40,16 +40,14 @@
    ---------------------------------------------------------------------- */
 .vp-logo {
   display: inline-block;
-  width: var(--logo-w, 190px);
-  height: var(--logo-h, 51px);         /* 560 x 150 viewBox ratio */
+  width: var(--logo-w, 230px);
+  height: var(--logo-h, 51px);         /* 680 x 150 viewBox ratio */
   background-color: currentColor;
-  -webkit-mask: url("/logo.svg") no-repeat center / contain;
-  mask: url("/logo.svg") no-repeat center / contain;
+  -webkit-mask: url("/logo.svg") no-repeat left center / contain;
+  mask: url("/logo.svg") no-repeat left center / contain;
 }
 /* wordmark only (no EARTH RESORT line) — for tight horizontal spots */
 .vp-logo--mark {
-  height: var(--logo-h, 34px);
-  width: var(--logo-w, 160px);
   -webkit-mask-image: url("/logo-wordmark.svg");
   mask-image: url("/logo-wordmark.svg");
 }

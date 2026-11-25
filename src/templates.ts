@@ -338,26 +338,26 @@ const C = { ink: "#2f2f2f", muted: "#938a7c", accent: "#934d3f", bg: "#f2eee8", 
  * (triangular V/A, three-bar E, round O) with "EARTH RESORT" beneath.
  * `color` sets the stroke/fill; `w` is the rendered width in px.
  */
-function wordmarkHtml(color: string, w = 190, withSub = true): string {
+function wordmarkHtml(color: string, w = 230, withSub = true): string {
   const sub = withSub
-    ? `<text x="280" y="140" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" letter-spacing="7" fill="${color}">EARTH RESORT</text>`
+    ? `<text x="256" y="138" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" letter-spacing="8" fill="${color}">EARTH RESORT</text>`
     : "";
-  const vb = withSub ? "0 0 560 150" : "0 0 560 120";
-  const h = Math.round(w * (withSub ? 150 : 120) / 560);
+  const vb = withSub ? "0 0 680 150" : "0 0 530 120";
+  const h = Math.round(w * (withSub ? 150 / 680 : 120 / 530));
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${w}" height="${h}" fill="none" style="display:inline-block;vertical-align:middle">`
-    + `<g stroke="${color}" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round" fill="none">`
-    + `<path d="M14 46 L26 104 L38 46"/>`
-    + `<path d="M52 104 L66 46 L80 104 M57.5 86 H74.5"/>`
-    + `<path d="M94 46 V104 H116"/>`
-    + `<path d="M130 46 H156 M130 75 H150 M130 104 H156"/>`
-    + `<path d="M246 104 V46 H262 a13 13 0 0 1 0 26 H246"/>`
-    + `<path d="M286 104 L300 46 L314 104 M291.5 86 H308.5"/>`
-    + `<path d="M328 46 V104 H350"/>`
-    + `<path d="M364 46 V104 M392 46 V104 M364 75 H392"/>`
-    + `<path d="M406 46 H432 M406 75 H426 M406 104 H432"/>`
-    + `<path d="M446 46 V104"/>`
-    + `<path d="M460 104 V46 H476 a13 13 0 0 1 0 26 H460 M474 72 L488 104"/>`
-    + `<circle cx="520" cy="75" r="22"/>`
+    + `<g stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none">`
+    + `<path d="M12 52 L24 100 L36 52"/>`
+    + `<path d="M52 100 L64 52 L76 100 M57 84 H71"/>`
+    + `<path d="M92 52 V100 H112"/>`
+    + `<path d="M128 52 H150 M128 76 H146 M128 100 H150"/>`
+    + `<path d="M232 100 V52 H248 a12 12 0 0 1 0 24 H232"/>`
+    + `<path d="M272 100 L284 52 L296 100 M277 84 H291"/>`
+    + `<path d="M312 52 V100 H332"/>`
+    + `<path d="M348 52 V100 M374 52 V100 M348 76 H374"/>`
+    + `<path d="M390 52 H412 M390 76 H408 M390 100 H412"/>`
+    + `<path d="M428 52 V100"/>`
+    + `<path d="M444 100 V52 H460 a12 12 0 0 1 0 24 H444 M458 76 L472 100"/>`
+    + `<circle cx="500" cy="76" r="22"/>`
     + `</g>${sub}</svg>`;
 }
 
