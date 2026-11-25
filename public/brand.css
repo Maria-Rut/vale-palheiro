@@ -33,53 +33,25 @@
   --sans: "General Sans", -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif; /* body */
 }
 
-/* ---- editorial wordmark: VALE PALHEIRO with the Ξ-style E ---- */
+/* ----------------------------------------------------------------------
+   Editorial wordmark — the real logo as an SVG, recoloured via CSS mask so
+   it inherits the surrounding text colour (terracotta on light, off-white on
+   dark). Set the height with --logo-h; width scales automatically.
+   ---------------------------------------------------------------------- */
 .vp-logo {
-  font-family: var(--label);
-  text-transform: uppercase;
-  font-weight: 400;
-  line-height: 1;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-}
-.vp-logo .vp-name { font-size: 1em; letter-spacing: 0.42em; padding-left: 0.42em; }
-/*
-  The brand "E" is drawn as three stacked bars (Ξ). We approximate it with a
-  small inline glyph so it reads as the brand mark without the licensed font
-  file. Used via <span class="vp-E"></span> in place of the E in PALHEIRO.
-*/
-.vp-E {
   display: inline-block;
-  width: 0.52em;
-  height: 0.62em;
-  position: relative;
-  transform: translateY(0.02em);
-  margin: 0 0.06em;
+  width: var(--logo-w, 190px);
+  height: var(--logo-h, 51px);         /* 560 x 150 viewBox ratio */
+  background-color: currentColor;
+  -webkit-mask: url("/logo.svg") no-repeat center / contain;
+  mask: url("/logo.svg") no-repeat center / contain;
 }
-.vp-E::before,
-.vp-E::after,
-.vp-E > i {
-  content: "";
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 0.09em;
-  background: currentColor;
-  border-radius: 1px;
-}
-.vp-E::before { top: 0; }
-.vp-E > i { top: 50%; transform: translateY(-50%); width: 82%; }
-.vp-E::after { bottom: 0; }
-
-.vp-sub {
-  font-family: var(--label);
-  text-transform: uppercase;
-  letter-spacing: 0.34em;
-  font-size: 0.42em;
-  display: block;
-  margin-top: 0.7em;
-  opacity: 0.9;
+/* wordmark only (no EARTH RESORT line) — for tight horizontal spots */
+.vp-logo--mark {
+  height: var(--logo-h, 34px);
+  width: var(--logo-w, 160px);
+  -webkit-mask-image: url("/logo-wordmark.svg");
+  mask-image: url("/logo-wordmark.svg");
 }
 
 /* ---- email signature block (brand guide pp.42–44) ---- */

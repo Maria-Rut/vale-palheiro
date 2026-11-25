@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" role="img" aria-label="Vale Palheiro" fill="none">
+  <!-- Editorial wordmark only (no EARTH RESORT line). currentColor inherits. -->
+  <g stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M14 46 L26 104 L38 46"/>
+    <path d="M52 104 L66 46 L80 104 M57.5 86 H74.5"/>
+    <path d="M94 46 V104 H116"/>
+    <path d="M130 46 H156 M130 75 H150 M130 104 H156"/>
+    <path d="M246 104 V46 H262 a13 13 0 0 1 0 26 H246"/>
+    <path d="M286 104 L300 46 L314 104 M291.5 86 H308.5"/>
+    <path d="M328 46 V104 H350"/>
+    <path d="M364 46 V104 M392 46 V104 M364 75 H392"/>
+    <path d="M406 46 H432 M406 75 H426 M406 104 H432"/>
+    <path d="M446 46 V104"/>
+    <path d="M460 104 V46 H476 a13 13 0 0 1 0 26 H460 M474 72 L488 104"/>
+    <circle cx="520" cy="75" r="22"/>
+  </g>
+</svg>

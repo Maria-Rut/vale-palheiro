@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 150" role="img" aria-label="Vale Palheiro — Earth Resort" fill="none">
+  <!--
+    Vale Palheiro editorial wordmark (brand guide p.10 / logo file p.4).
+    Light, wide-tracked geometric sans with the signature details:
+      · V and A drawn as open triangles (pointed apex, no serifs)
+      · E as three stacked horizontal bars (no vertical stem)
+      · round O
+    Colour via currentColor so it inherits (terracotta / off-white / anthracite).
+  -->
+  <g stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- ===== VALE ===== (word 1) -->
+    <!-- V -->
+    <path d="M14 46 L26 104 L38 46"/>
+    <!-- A -->
+    <path d="M52 104 L66 46 L80 104 M57.5 86 H74.5"/>
+    <!-- L -->
+    <path d="M94 46 V104 H116"/>
+    <!-- E (three bars) -->
+    <path d="M130 46 H156 M130 75 H150 M130 104 H156"/>
+
+    <!-- ===== PALHEIRO ===== (word 2), starts after a wide space -->
+    <!-- P -->
+    <path d="M246 104 V46 H262 a13 13 0 0 1 0 26 H246"/>
+    <!-- A -->
+    <path d="M286 104 L300 46 L314 104 M291.5 86 H308.5"/>
+    <!-- L -->
+    <path d="M328 46 V104 H350"/>
+    <!-- H -->
+    <path d="M364 46 V104 M392 46 V104 M364 75 H392"/>
+    <!-- E (three bars) -->
+    <path d="M406 46 H432 M406 75 H426 M406 104 H432"/>
+    <!-- I -->
+    <path d="M446 46 V104"/>
+    <!-- R -->
+    <path d="M460 104 V46 H476 a13 13 0 0 1 0 26 H460 M474 72 L488 104"/>
+    <!-- O (round) -->
+    <circle cx="520" cy="75" r="22"/>
+  </g>
+  <!-- EARTH RESORT, small and letter-spaced, centred under the wordmark -->
+  <text x="280" y="140" text-anchor="middle"
+        font-family="Jost, 'General Sans', -apple-system, sans-serif"
+        font-size="13" letter-spacing="7" fill="currentColor">EARTH RESORT</text>
+</svg>

@@ -334,19 +334,31 @@ function inline(s: string): string {
 const C = { ink: "#2f2f2f", muted: "#938a7c", accent: "#934d3f", bg: "#f2eee8", card: "#f8f5ef", line: "#e0d8ca", terracotta: "#934d3f", offwhite: "#f2eee8", anthracite: "#2f2f2f" };
 
 /**
- * The editorial wordmark as inline HTML for email — "VALE PALHΞIRO" with the
- * brand's three-bar E, and a small "EARTH RESORT" beneath. Colour configurable
- * so it reads on both the dark header and the light signature.
+ * The editorial wordmark as inline SVG for email — the real letterforms
+ * (triangular V/A, three-bar E, round O) with "EARTH RESORT" beneath.
+ * `color` sets the stroke/fill; `w` is the rendered width in px.
  */
-function wordmarkHtml(color: string, size = 17): string {
-  const bar = `display:inline-block;width:0.5em;height:0.09em;background:${color};border-radius:1px;vertical-align:middle;margin:0 1px`;
-  // three stacked bars approximating the Ξ-style E
-  const E = `<span style="display:inline-block;width:0.52em;height:0.6em;position:relative;vertical-align:middle">`
-    + `<span style="${bar};position:absolute;left:0;top:0.08em;width:100%"></span>`
-    + `<span style="${bar};position:absolute;left:0;top:0.28em;width:82%"></span>`
-    + `<span style="${bar};position:absolute;left:0;top:0.48em;width:100%"></span></span>`;
-  return `<span style="font-family:Georgia,serif;letter-spacing:.34em;color:${color};font-size:${size}px">VALE&nbsp;PALH${E}IRO</span>`
-    + `<div style="font-family:Georgia,serif;letter-spacing:.3em;color:${color};font-size:${Math.round(size * 0.52)}px;margin-top:6px;opacity:.9">EARTH&nbsp;RESORT</div>`;
+function wordmarkHtml(color: string, w = 190, withSub = true): string {
+  const sub = withSub
+    ? `<text x="280" y="140" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" letter-spacing="7" fill="${color}">EARTH RESORT</text>`
+    : "";
+  const vb = withSub ? "0 0 560 150" : "0 0 560 120";
+  const h = Math.round(w * (withSub ? 150 : 120) / 560);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${w}" height="${h}" fill="none" style="display:inline-block;vertical-align:middle">`
+    + `<g stroke="${color}" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round" fill="none">`
+    + `<path d="M14 46 L26 104 L38 46"/>`
+    + `<path d="M52 104 L66 46 L80 104 M57.5 86 H74.5"/>`
+    + `<path d="M94 46 V104 H116"/>`
+    + `<path d="M130 46 H156 M130 75 H150 M130 104 H156"/>`
+    + `<path d="M246 104 V46 H262 a13 13 0 0 1 0 26 H246"/>`
+    + `<path d="M286 104 L300 46 L314 104 M291.5 86 H308.5"/>`
+    + `<path d="M328 46 V104 H350"/>`
+    + `<path d="M364 46 V104 M392 46 V104 M364 75 H392"/>`
+    + `<path d="M406 46 H432 M406 75 H426 M406 104 H432"/>`
+    + `<path d="M446 46 V104"/>`
+    + `<path d="M460 104 V46 H476 a13 13 0 0 1 0 26 H460 M474 72 L488 104"/>`
+    + `<circle cx="520" cy="75" r="22"/>`
+    + `</g>${sub}</svg>`;
 }
 
 /**
@@ -388,7 +400,7 @@ export function toEmailHtml(body: string): string {
 
   // Brand email signature (guide pp.42–44): editorial wordmark + contact.
   const signature = `<div style="border-top:1px solid ${C.line};margin-top:8px;padding:20px 24px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${C.muted};font-size:12px;line-height:1.55">`
-    + `<div style="margin-bottom:10px">${wordmarkHtml(C.terracotta, 16)}</div>`
+    + `<div style="margin-bottom:10px">${wordmarkHtml(C.terracotta, 150)}</div>`
     + `<div style="color:${C.ink};font-weight:600">Vale Palheiro — Earth Resort</div>`
     + `Rua Vale Palheiro, 8670-016 Aljezur · Costa Vicentina<br>`
     + `<a href="https://www.valepalheiro.com" style="color:${C.ink};font-weight:600;text-decoration:none">valepalheiro.com</a> · +351 933 979 043`
@@ -396,7 +408,7 @@ export function toEmailHtml(body: string): string {
 
   return `<div style="background:${C.bg};padding:24px 12px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;background:${C.card};border:1px solid ${C.line};border-radius:14px;overflow:hidden">
-<div style="background:${C.anthracite};padding:22px 24px;text-align:center">${wordmarkHtml(C.offwhite, 18)}</div>
+<div style="background:${C.anthracite};padding:24px;text-align:center">${wordmarkHtml(C.offwhite, 200)}</div>
 <div style="padding:26px 24px;color:${C.ink};font-size:15px;line-height:1.6">${html}</div>
 ${signature}
 </div></div>`.replace(/\n/g, "");
