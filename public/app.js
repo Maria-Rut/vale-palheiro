@@ -1,4 +1,4 @@
-/* Terra dashboard — vanilla JS, no build step. Talks to the JSON API. */
+/* Vale Palheiro dashboard — vanilla JS, no build step. Talks to the JSON API. */
 
 const $ = (sel) => document.querySelector(sel);
 const api = {
@@ -136,7 +136,7 @@ const TAB_DESC = {
   pre_stay: "The welcome message, sent shortly before the guest arrives.",
   experiences: "Sent after check-in — activities matched to the day's weather and the guest's interests. Held for approval by default.",
   post_stay: "Sent after checkout — thanks and a gentle invitation to share feedback.",
-  needs_approval: "Uncertain messages waiting for your approval. Terra won't send these until you approve them.",
+  needs_approval: "Uncertain messages waiting for your approval. They won't be sent until you approve them.",
   sent: "Messages that have already been delivered.",
 };
 
@@ -202,7 +202,7 @@ async function renderMessages() {
     el.appendChild(card);
   }
   el.querySelectorAll("[data-approve]").forEach((b) => b.addEventListener("click", async () => {
-    await api.post(`/api/messages/${b.dataset.approve}/approve`); toast("Approved — Terra will send it at the right time"); renderMessages();
+    await api.post(`/api/messages/${b.dataset.approve}/approve`); toast("Approved — it will be sent at the right time"); renderMessages();
   }));
   el.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditor(b.dataset.edit, msgs)));
   el.querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", async () => {

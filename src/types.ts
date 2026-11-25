@@ -1,5 +1,5 @@
 /**
- * Core domain types for Terra — the guest messaging concierge.
+ * Core domain types for the Vale Palheiro guest messaging concierge.
  *
  * These describe reservations and the messages the system schedules and sends.
  * They are intentionally simple so the prototype can later map onto a real
@@ -72,7 +72,7 @@ export interface GuestPreferences {
 /**
  * Lifecycle of a scheduled message.
  *   - needs_approval : held because it's "uncertain" (e.g. weather-based, or a
- *                      staff member edited it). Terra will NOT send it until a
+ *                      staff member edited it). The system will NOT send it until a
  *                      staff member approves it.
  *   - scheduled      : approved / auto-approved; will send at its send time.
  *   - sent           : delivered.

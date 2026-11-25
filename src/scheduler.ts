@@ -41,7 +41,7 @@ export interface SchedulerConfig {
    */
   channelStrategy: "preferred" | "all";
   /**
-   * Which messages must be approved by staff before Terra will send them.
+   * Which messages must be approved by staff before they will send.
    *   - "uncertain" : hold only the less-predictable ones (experiences, which
    *                   depend on the forecast; and anything staff edited). The
    *                   rest send automatically. (default)
@@ -258,7 +258,7 @@ export class Scheduler {
     return true;
   }
 
-  /** Staff approves a held message so Terra may send it at its send time. */
+  /** Staff approves a held message so it may send at its send time. */
   approveMessage(id: string): boolean {
     const m = this.messages.get(id);
     if (!m || m.status !== "needs_approval") return false;

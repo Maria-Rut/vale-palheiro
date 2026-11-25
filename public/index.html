@@ -3,171 +3,165 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Terra · Vale Palheiro</title>
+  <title>Vale Palheiro · Guest Messaging</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
+    /*
+      Palette and type drawn from Vale Palheiro — Earth Resort:
+      rammed-earth ochre and old-terracotta tiles, bone-pale paper, valley
+      sage, and near-black for the dark pages. Light editorial serif
+      (Cormorant) for headings as in the brochure, a quiet sans (Jost) for text.
+    */
     :root {
-      --earth-900: #2b2117;
-      --earth-800: #3a2d1f;
-      --earth-700: #5a4632;
-      --earth-500: #8a6f4e;
-      --clay: #a87f54;
-      --clay-soft: #c3a079;
-      --sand: #e7dcc8;
-      --paper: #f4efe4;
-      --paper-2: #efe8d9;
-      --sage: #7c8a6a;
-      --sage-dark: #566049;
-      --white: #fffdf8;
-      --line: #ddceb5;
-      --line-soft: #e6dac4;
-      --muted: #9c8d75;
-      --shadow: 0 10px 30px rgba(43, 33, 23, 0.08);
-      --shadow-sm: 0 3px 12px rgba(43, 33, 23, 0.06);
-      --serif: "Cormorant Garamond", "Georgia", "Times New Roman", serif;
-      --sans: -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif;
+      --ink: #27201a;          /* near-black text */
+      --ink-soft: #5c5047;
+      --terracotta: #b5542f;   /* old terracotta tile / section pages */
+      --terracotta-deep: #9a4526;
+      --ochre: #c98a52;        /* rammed-earth ochre */
+      --ochre-soft: #d9a978;
+      --clay-line: #e2cdb4;
+      --bone: #f3ece0;         /* warm pale paper (brochure background) */
+      --bone-2: #ece2d2;
+      --card: #fbf6ec;
+      --sage: #7e8a6b;         /* valley vegetation */
+      --sage-deep: #5c6749;
+      --muted: #9a8b78;
+      --shadow: 0 14px 40px rgba(39, 32, 26, 0.10);
+      --shadow-sm: 0 3px 14px rgba(39, 32, 26, 0.07);
+      --serif: "Cormorant Garamond", Georgia, serif;
+      --sans: "Jost", -apple-system, "Segoe UI", sans-serif;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: var(--sans); background: var(--paper); color: var(--earth-900); line-height: 1.6; -webkit-font-smoothing: antialiased; }
-    h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: 0.3px; }
+    body { margin: 0; font-family: var(--sans); font-weight: 300; background: var(--bone); color: var(--ink); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: 0.2px; margin: 0; }
     .muted { color: var(--muted); }
 
-    header.topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; background: var(--earth-900); color: var(--sand); }
-    .brand { display: flex; flex-direction: column; line-height: 1.2; }
-    .brand .name { font-family: var(--serif); font-size: 24px; letter-spacing: 4px; text-transform: uppercase; }
-    .brand .sub { font-size: 11px; color: var(--clay-soft); letter-spacing: 3px; margin-top: 2px; }
-    .topbar button { background: transparent; color: var(--sand); border: 1px solid var(--earth-500); padding: 8px 16px; border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 13px; transition: background 0.2s; }
-    .topbar button:hover { background: var(--earth-700); }
+    /* ---- stacked wordmark, echoing the resort's hand-drawn logo ---- */
+    .logo { font-family: var(--serif); line-height: 0.92; text-transform: uppercase; letter-spacing: 3px; }
+    .logo .l1, .logo .l2 { display: block; font-size: 19px; font-weight: 600; }
+    .logo .tag { display: block; font-family: var(--sans); font-size: 9px; letter-spacing: 4px; font-weight: 400; margin-top: 4px; color: var(--ochre-soft); }
 
-    main { max-width: 1060px; margin: 0 auto; padding: 32px 28px 72px; }
-    .intro { margin: 8px 0 26px; }
-    .intro h1 { font-size: 34px; margin: 0 0 6px; color: var(--earth-800); }
-    .intro p { margin: 0; color: var(--earth-700); max-width: 680px; font-size: 15px; }
+    header.topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px 36px; background: var(--ink); color: var(--bone); }
+    .topbar .logo .tag { color: var(--ochre-soft); }
+    .topbar button { background: transparent; color: var(--bone); border: 1px solid #4a3f35; padding: 8px 18px; border-radius: 2px; cursor: pointer; font-family: var(--sans); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s; }
+    .topbar button:hover { background: #352c24; }
 
-    /* journey strip */
-    .journey { display: flex; gap: 0; margin: 0 0 26px; flex-wrap: wrap; }
-    .stage { flex: 1; min-width: 150px; background: var(--white); border: 1px solid var(--line-soft); padding: 14px 16px; position: relative; }
-    .stage:first-child { border-radius: 12px 0 0 12px; }
-    .stage:last-child { border-radius: 0 12px 12px 0; }
-    .stage .n { font-size: 11px; color: var(--clay); letter-spacing: 1px; }
-    .stage .t { font-family: var(--serif); font-size: 18px; color: var(--earth-800); margin: 2px 0; }
-    .stage .w { font-size: 12px; color: var(--muted); }
-
-    .panels { display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px; margin-bottom: 30px; }
-    @media (max-width: 820px) { .panels { grid-template-columns: 1fr; } }
-    .panel { background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px; padding: 20px 22px; box-shadow: var(--shadow-sm); }
-    .panel h3 { margin: 0 0 4px; font-size: 20px; color: var(--earth-800); }
-    .panel .hint { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
-    .panel.demo { background: var(--paper-2); border-style: dashed; border-color: var(--line); }
-    .demo-tag { display: inline-block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--clay); border: 1px solid var(--clay-soft); border-radius: 999px; padding: 2px 9px; margin-left: 8px; vertical-align: middle; }
-
-    .timing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 560px) { .timing-grid { grid-template-columns: 1fr; } }
-    .timing-item .lead { font-size: 14px; color: var(--earth-800); font-weight: 600; margin-bottom: 2px; }
-    .timing-item .explain { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; min-height: 30px; }
-    .stepper { display: flex; align-items: center; gap: 8px; }
-    .stepper input { width: 62px; text-align: center; font-family: var(--sans); font-size: 15px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
-    .stepper .unit { font-size: 12.5px; color: var(--earth-700); }
-
-    label.block { display: block; font-size: 13px; color: var(--earth-800); font-weight: 600; margin-bottom: 6px; }
-    select { font-family: var(--sans); font-size: 14px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--earth-900); width: 100%; }
-    .row-end { display: flex; justify-content: flex-end; margin-top: 16px; }
-
-    button.primary { background: var(--sage-dark); color: var(--white); border: none; padding: 11px 22px; border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 14px; letter-spacing: 0.3px; transition: background 0.2s; }
-    button.primary:hover { background: var(--sage); }
-    button.ghost { background: var(--white); border: 1px solid var(--line); color: var(--earth-700); padding: 9px 18px; border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 13px; transition: background 0.2s; }
-    button.ghost:hover { background: var(--sand); }
-    .demo-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-    .demo-controls .field { flex: 1; min-width: 150px; }
-
-    /* PRIMARY: four big step tabs, equal width, one per email time */
-    .steptabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 22px 28px 0; background: var(--paper); }
+    /* ---- the four step tabs: the primary navigation ---- */
+    .steptabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--clay-line); border-bottom: 1px solid var(--clay-line); }
     @media (max-width: 680px) { .steptabs { grid-template-columns: 1fr 1fr; } }
-    .steptab { display: flex; flex-direction: column; gap: 3px; text-align: left; background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; cursor: pointer; transition: all 0.15s; }
-    .steptab:hover { border-color: var(--clay-soft); }
-    .steptab.active { background: var(--earth-800); border-color: var(--earth-800); box-shadow: var(--shadow); }
-    .step-when { font-family: var(--sans); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--clay); }
-    .steptab.active .step-when { color: var(--clay-soft); }
-    .step-name { font-family: var(--serif); font-size: 21px; color: var(--earth-800); }
-    .steptab.active .step-name { color: var(--sand); }
-    .nav-count { opacity: 0.7; font-size: 13px; font-family: var(--sans); margin-left: 2px; }
+    .steptab { display: flex; flex-direction: column; gap: 4px; text-align: left; background: var(--bone-2); border: none; padding: 20px 24px; cursor: pointer; transition: background 0.2s; border-top: 3px solid transparent; }
+    .steptab:hover { background: var(--card); }
+    .steptab.active { background: var(--card); border-top-color: var(--terracotta); }
+    .step-when { font-family: var(--sans); font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--terracotta); }
+    .step-name { font-family: var(--serif); font-size: 23px; color: var(--ink); }
+    .steptab.active .step-name { color: var(--terracotta-deep); }
+    .nav-count { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-left: 3px; }
 
-    /* SECONDARY: small utility tabs */
-    .utilnav { display: flex; gap: 6px; flex-wrap: wrap; padding: 16px 28px 0; background: var(--paper); }
-    .utilbtn { background: transparent; border: 1px solid var(--line); color: var(--earth-700); font-family: var(--sans); font-size: 13px; padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
-    .utilbtn:hover { background: var(--sand); }
-    .utilbtn.active { background: var(--earth-700); color: var(--sand); border-color: var(--earth-700); }
+    /* ---- secondary utility tabs ---- */
+    .utilnav { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px 36px 0; }
+    .utilbtn { background: transparent; border: 1px solid var(--clay-line); color: var(--ink-soft); font-family: var(--sans); font-size: 12px; letter-spacing: 0.5px; padding: 7px 15px; border-radius: 2px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+    .utilbtn:hover { background: var(--bone-2); }
+    .utilbtn.active { background: var(--ink); color: var(--bone); border-color: var(--ink); }
 
-    .view-title { font-size: 28px; color: var(--earth-800); margin: 4px 0 4px; }
-    .view-desc { font-size: 14px; color: var(--muted); margin: 0 0 22px; max-width: 640px; }
+    main { max-width: 1000px; margin: 0 auto; padding: 30px 36px 80px; }
+    .view-title { font-size: 34px; color: var(--ink); margin: 6px 0 4px; font-weight: 500; }
+    .view-desc { font-size: 15px; color: var(--muted); margin: 0 0 26px; max-width: 640px; }
 
-    .grid { display: grid; gap: 16px; }
-    .msg-card { background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow 0.2s; }
-    .msg-card:hover { box-shadow: var(--shadow); }
-    .msg-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 16px 20px 12px; }
-    .msg-head .who { font-family: var(--serif); font-size: 20px; color: var(--earth-800); }
-    .msg-head .book { font-size: 12.5px; color: var(--muted); }
+    .grid { display: grid; gap: 18px; }
+
+    /* ---- message cards ---- */
+    .msg-card { background: var(--card); border: 1px solid var(--clay-line); border-radius: 4px; box-shadow: var(--shadow-sm); overflow: hidden; }
+    .msg-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 18px 22px 12px; }
+    .msg-head .who { font-family: var(--serif); font-size: 23px; color: var(--ink); }
+    .msg-head .book { font-size: 12.5px; color: var(--muted); letter-spacing: 0.3px; }
     .spacer { flex: 1; }
-    .pill { font-size: 11px; letter-spacing: 0.4px; padding: 3px 11px; border-radius: 999px; text-transform: capitalize; border: 1px solid transparent; white-space: nowrap; }
-    .pill.prefs { background: #efe7da; color: #8a6a3e; }
-    .pill.pre { background: #e6ecd9; color: var(--sage-dark); }
-    .pill.exp { background: #dfeaf0; color: #3a6a7a; }
-    .pill.post { background: var(--sand); color: var(--earth-700); }
-    .pill.email { background: #dfe8f0; color: #3a5a74; }
-    .pill.sms { background: #f0e4da; color: #7a4a36; }
+    .pill { font-family: var(--sans); font-size: 10.5px; letter-spacing: 0.6px; padding: 4px 11px; border-radius: 2px; text-transform: uppercase; }
+    .pill.prefs { background: #efe1cf; color: #8a5a2e; }
+    .pill.pre { background: #e7ecde; color: var(--sage-deep); }
+    .pill.exp { background: #e2ecef; color: #3a6775; }
+    .pill.post { background: var(--bone-2); color: var(--ink-soft); }
+    .pill.email { background: #e1e9f0; color: #3a5a74; }
+    .pill.sms { background: #f1e3d6; color: #8a4a30; }
     .pill.whatsapp { background: #dcefe0; color: #2e7d4f; }
-    .pill.lang { background: #ece6f0; color: #5a4a6a; text-transform: uppercase; }
-    .pill.scheduled { background: #efe8d7; color: var(--earth-700); }
-    .pill.needs_approval { background: #f3e2c9; color: #9a6a1e; }
-    .pill.sent { background: #d7e7d1; color: #3f6b36; }
-    .pill.cancelled { background: #eee; color: #999; text-decoration: line-through; }
-    .pill.weather { background: #eef1e8; color: #5a6a44; }
+    .pill.lang { background: #eae2ef; color: #5a4a6a; }
+    .pill.scheduled { background: #ecdcc6; color: var(--terracotta-deep); }
+    .pill.needs_approval { background: #f0d9b8; color: #96631a; }
+    .pill.sent { background: #d8e6cf; color: #3f6b36; }
+    .pill.cancelled { background: #e8e2d8; color: #998; text-decoration: line-through; }
+    .pill.weather { background: #eef0e6; color: var(--sage-deep); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-    .channel-note { font-size: 12.5px; color: var(--muted); padding: 0 20px 4px; }
-    .msg-body { padding: 8px 20px 4px; }
-    .msg-subject { font-family: var(--serif); font-size: 18px; color: var(--earth-800); margin-bottom: 8px; }
-    .msg-text { white-space: pre-wrap; font-size: 14.5px; color: var(--earth-900); }
-    .msg-meta { font-size: 12px; color: var(--muted); padding: 12px 20px 16px; margin-top: 8px; display: flex; gap: 18px; flex-wrap: wrap; border-top: 1px solid var(--line-soft); }
-    .msg-actions { display: flex; gap: 10px; padding: 0 20px 18px; }
-    .edit-area { padding: 4px 20px 16px; }
-    .edit-area input, .edit-area textarea { width: 100%; font-family: var(--sans); font-size: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); margin-bottom: 8px; }
-    .edit-area textarea { min-height: 170px; resize: vertical; line-height: 1.55; }
+    .channel-note { font-size: 12px; color: var(--muted); padding: 0 22px 4px; letter-spacing: 0.3px; }
+    .msg-body { padding: 10px 22px 6px; }
+    .msg-subject { font-family: var(--serif); font-size: 20px; color: var(--terracotta-deep); margin-bottom: 10px; }
+    .msg-text { white-space: pre-wrap; font-size: 14.5px; color: var(--ink); font-weight: 300; }
+    .msg-meta { font-size: 12px; color: var(--muted); padding: 14px 22px 18px; margin-top: 10px; display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--clay-line); }
+    .msg-actions { display: flex; gap: 10px; padding: 0 22px 20px; }
+    .edit-area { padding: 6px 22px 18px; }
+    .edit-area input, .edit-area textarea { width: 100%; font-family: var(--sans); font-size: 14px; padding: 11px 13px; border: 1px solid var(--clay-line); border-radius: 3px; background: var(--bone); margin-bottom: 8px; }
+    .edit-area textarea { min-height: 180px; resize: vertical; line-height: 1.6; }
 
-    /* CRM */
-    .crm-card { background: var(--white); border: 1px solid var(--line-soft); border-radius: 14px; box-shadow: var(--shadow-sm); margin-bottom: 16px; overflow: hidden; }
-    .crm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--line-soft); }
-    .crm-head .who { font-family: var(--serif); font-size: 21px; color: var(--earth-800); }
-    .crm-body { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 18px 20px; }
+    button.primary { background: var(--terracotta); color: #fff; border: none; padding: 11px 22px; border-radius: 2px; cursor: pointer; font-family: var(--sans); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; transition: background 0.2s; }
+    button.primary:hover { background: var(--terracotta-deep); }
+    button.ghost { background: var(--card); border: 1px solid var(--clay-line); color: var(--ink-soft); padding: 9px 18px; border-radius: 2px; cursor: pointer; font-family: var(--sans); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; transition: all 0.2s; }
+    button.ghost:hover { background: var(--bone-2); }
+
+    /* ---- CRM ---- */
+    .crm-card { background: var(--card); border: 1px solid var(--clay-line); border-radius: 4px; box-shadow: var(--shadow-sm); margin-bottom: 18px; overflow: hidden; }
+    .crm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--clay-line); }
+    .crm-head .who { font-family: var(--serif); font-size: 24px; color: var(--ink); }
+    .crm-body { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 22px; }
     @media (max-width: 680px) { .crm-body { grid-template-columns: 1fr; } }
-    .crm-sec h4 { margin: 0 0 8px; font-family: var(--sans); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--clay); }
-    .kv { font-size: 14px; margin-bottom: 5px; }
-    .kv b { color: var(--earth-700); font-weight: 600; }
+    .crm-sec h4 { margin: 0 0 10px; font-family: var(--sans); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--terracotta); font-weight: 500; }
+    .kv { font-size: 14px; margin-bottom: 5px; font-weight: 300; }
+    .kv b { color: var(--ink-soft); font-weight: 500; }
     .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-    .chip { font-size: 12px; background: var(--paper-2); border: 1px solid var(--line-soft); color: var(--earth-700); border-radius: 999px; padding: 3px 10px; }
+    .chip { font-size: 12px; background: var(--bone-2); border: 1px solid var(--clay-line); color: var(--ink-soft); border-radius: 2px; padding: 3px 10px; }
     .no-prefs { font-size: 13px; color: var(--muted); font-style: italic; }
-    .weather-pick { display: flex; gap: 6px; align-items: center; }
+    .weather-pick { display: flex; gap: 8px; align-items: center; }
     .weather-pick select { width: auto; }
 
-    /* login */
-    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(rgba(43,33,23,0.55), rgba(43,33,23,0.80)), radial-gradient(circle at 35% 25%, #a87f54, #3a2d1f 72%); padding: 20px; }
-    .login-card { background: var(--paper); padding: 44px 40px; border-radius: 16px; width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
-    .login-card .name { font-family: var(--serif); font-size: 28px; letter-spacing: 5px; text-transform: uppercase; color: var(--earth-800); }
-    .login-card .sub { font-size: 11px; color: var(--clay); letter-spacing: 3px; margin: 6px 0 28px; }
-    .login-card input { width: 100%; font-family: var(--sans); font-size: 14px; padding: 12px 14px; margin: 7px 0; border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--earth-900); }
-    .login-card .primary { width: 100%; margin-top: 6px; padding: 13px; }
+    /* ---- settings ---- */
+    .panel { background: var(--card); border: 1px solid var(--clay-line); border-radius: 4px; padding: 24px 26px; box-shadow: var(--shadow-sm); }
+    .panel h3 { font-size: 23px; color: var(--ink); margin-bottom: 4px; }
+    .panel .hint { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+    .panel.demo { background: var(--bone-2); border-style: dashed; }
+    .demo-tag { display: inline-block; font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--terracotta); border: 1px solid var(--ochre-soft); border-radius: 2px; padding: 2px 9px; margin-left: 8px; vertical-align: middle; }
+    .timing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 560px) { .timing-grid { grid-template-columns: 1fr; } }
+    .timing-item .lead { font-size: 14px; color: var(--ink); font-weight: 500; margin-bottom: 2px; }
+    .timing-item .explain { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; min-height: 28px; }
+    .stepper { display: flex; align-items: center; gap: 8px; }
+    .stepper input { width: 62px; text-align: center; font-family: var(--sans); font-size: 15px; padding: 8px; border: 1px solid var(--clay-line); border-radius: 3px; background: var(--bone); }
+    .stepper .unit { font-size: 12.5px; color: var(--ink-soft); }
+    label.block { display: block; font-size: 13px; color: var(--ink); font-weight: 500; margin-bottom: 6px; }
+    select { font-family: var(--sans); font-size: 14px; padding: 9px 12px; border: 1px solid var(--clay-line); border-radius: 3px; background: var(--bone); color: var(--ink); width: 100%; }
+    .row-end { display: flex; justify-content: flex-end; margin-top: 18px; }
+    .demo-controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .demo-controls .field { flex: 1; min-width: 150px; }
+
+    /* ---- login ---- */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(rgba(39,32,26,0.45), rgba(39,32,26,0.78)), radial-gradient(circle at 30% 20%, var(--ochre), var(--terracotta-deep) 78%); padding: 20px; }
+    .login-card { background: var(--bone); padding: 48px 42px; border-radius: 4px; width: 390px; box-shadow: 0 24px 70px rgba(0,0,0,0.35); text-align: center; }
+    .login-card .logo { margin-bottom: 30px; }
+    .login-card .logo .l1, .login-card .logo .l2 { font-size: 26px; color: var(--ink); }
+    .login-card .logo .tag { color: var(--terracotta); font-size: 10px; }
+    .login-card input { width: 100%; font-family: var(--sans); font-size: 14px; padding: 12px 14px; margin: 7px 0; border: 1px solid var(--clay-line); border-radius: 3px; background: var(--card); color: var(--ink); }
+    .login-card .primary { width: 100%; margin-top: 8px; padding: 13px; }
     .err { color: #9b3b2f; font-size: 13px; min-height: 18px; margin-top: 8px; }
-    .demo-creds { font-size: 12px; color: var(--muted); margin-top: 22px; line-height: 1.7; }
+    .demo-creds { font-size: 12px; color: var(--muted); margin-top: 24px; line-height: 1.8; }
 
     .hidden { display: none; }
-    .toast { position: fixed; bottom: 26px; right: 26px; background: var(--earth-900); color: var(--sand); padding: 13px 20px; border-radius: 10px; box-shadow: var(--shadow); font-size: 14px; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; }
+    .toast { position: fixed; bottom: 28px; right: 28px; background: var(--ink); color: var(--bone); padding: 14px 22px; border-radius: 3px; box-shadow: var(--shadow); font-size: 14px; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; }
     .toast.show { opacity: 1; transform: translateY(0); }
-    .empty { color: var(--muted); font-size: 14px; padding: 20px 0; }
+    .empty { color: var(--muted); font-size: 14px; padding: 24px 0; }
   </style>
 </head>
 <body>
   <div id="login" class="login-wrap">
     <form class="login-card" id="loginForm">
-      <div class="name">Vale Palheiro</div>
-      <div class="sub">EARTH RESORT · TERRA</div>
+      <div class="logo"><span class="l1">Vale</span><span class="l2">Palheiro</span><span class="tag">EARTH RESORT</span></div>
       <input id="username" placeholder="Staff username" autocomplete="username" />
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
       <button class="primary" type="submit">Enter</button>
@@ -178,14 +172,11 @@
 
   <div id="app" class="hidden">
     <header class="topbar">
-      <div class="brand">
-        <span class="name">Vale Palheiro</span>
-        <span class="sub">TERRA · GUEST MESSAGING & CRM</span>
-      </div>
+      <div class="logo"><span class="l1">Vale Palheiro</span><span class="tag">EARTH RESORT · GUEST MESSAGING</span></div>
       <button id="logoutBtn">Sign out</button>
     </header>
 
-    <!-- PRIMARY: the four email times, one tab each -->
+    <!-- PRIMARY: the four email times -->
     <nav class="steptabs" id="steptabs">
       <button class="steptab active" data-tab="preferences">
         <span class="step-when">1 week before</span>
@@ -205,7 +196,7 @@
       </button>
     </nav>
 
-    <!-- SECONDARY: utility views, kept out of the way -->
+    <!-- SECONDARY: utility views -->
     <nav class="utilnav" id="utilnav">
       <button class="utilbtn" data-tab="needs_approval">Needs approval <span class="nav-count" id="cnt-needs_approval"></span></button>
       <button class="utilbtn" data-tab="sent">Sent <span class="nav-count" id="cnt-sent"></span></button>
@@ -214,24 +205,21 @@
     </nav>
 
     <main>
-      <!-- MESSAGE STEP VIEWS (one per step) -->
       <section id="view-messages">
         <h2 class="view-title" id="viewTitle"></h2>
         <p class="view-desc" id="viewDesc"></p>
         <div class="grid" id="messages"></div>
       </section>
 
-      <!-- GUESTS / CRM -->
       <section id="view-crm" class="hidden">
         <h2 class="view-title">Guests &amp; preferences</h2>
-        <p class="view-desc">Each guest's booking, questionnaire answers, and the forecast that drives their After-check-in email.</p>
+        <p class="view-desc">Each guest's booking, questionnaire answers, and the forecast that shapes their After-check-in email.</p>
         <div id="crm"></div>
       </section>
 
-      <!-- SETTINGS -->
       <section id="view-settings" class="hidden">
         <h2 class="view-title">Settings</h2>
-        <div class="panel" style="max-width:620px">
+        <div class="panel" style="max-width:640px">
           <h3>When each message is sent</h3>
           <p class="hint">How far from the stay each message goes out. Applies to every guest.</p>
           <div class="timing-grid">
@@ -241,7 +229,7 @@
               <div class="stepper"><input id="prefDays" type="number" min="0" step="1" /><span class="unit">days before arrival</span></div>
             </div>
             <div class="timing-item">
-              <div class="lead">2h before</div>
+              <div class="lead">2 hours before</div>
               <div class="explain">The welcome message.</div>
               <div class="stepper"><input id="preHours" type="number" min="0" step="1" /><span class="unit">hours before arrival</span></div>
             </div>
@@ -251,7 +239,7 @@
               <div class="stepper"><input id="expHours" type="number" min="0" step="1" /><span class="unit">hours after arrival</span></div>
             </div>
             <div class="timing-item">
-              <div class="lead">Post-stay</div>
+              <div class="lead">After checkout</div>
               <div class="explain">Thanks and a note for feedback.</div>
               <div class="stepper"><input id="postHours" type="number" min="0" step="1" /><span class="unit">hours after departure</span></div>
             </div>
@@ -268,9 +256,9 @@
           <div class="row-end"><button class="primary" id="applyConfig">Save settings</button></div>
         </div>
 
-        <div class="panel demo" style="max-width:620px;margin-top:18px">
+        <div class="panel demo" style="max-width:640px;margin-top:18px">
           <h3>Demo tools <span class="demo-tag">demo only</span></h3>
-          <p class="hint">In real life Terra sends automatically at the right time, using a live weather forecast. Here you can jump the clock forward to watch it happen.</p>
+          <p class="hint">In real life messages send automatically at the right time, using a live weather forecast. Here you can jump the clock forward to watch it happen.</p>
           <div class="demo-controls">
             <div class="field">
               <label class="block">Pretend it is…</label>

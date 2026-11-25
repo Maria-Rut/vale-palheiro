@@ -9,7 +9,7 @@ import { EXPERIENCES } from "./experiences.ts";
 import type { GuestPreferences, Interest, WeatherKind } from "./types.ts";
 
 /**
- * HTTP layer for Terra. Serves the staff dashboard and a small JSON API.
+ * HTTP layer for the Vale Palheiro guest messaging app. Serves the staff dashboard and a small JSON API.
  *
  * Built on Node's standard library only — no Express, no npm install — so the
  * prototype runs anywhere Node 18+ is present. Each real integration (LLM,
@@ -58,7 +58,7 @@ function parseCookies(header?: string): Record<string, string> {
   return out;
 }
 function isAuthed(req: IncomingMessage): boolean {
-  const token = parseCookies(req.headers.cookie)["terra_session"];
+  const token = parseCookies(req.headers.cookie)["vp_session"];
   return !!token && sessions.has(token);
 }
 
@@ -152,15 +152,15 @@ const server = http.createServer(async (req, res) => {
       if (username === STAFF_USER && password === STAFF_PASS) {
         const token = newToken();
         sessions.add(token);
-        res.setHeader("Set-Cookie", `terra_session=${token}; HttpOnly; Path=/; SameSite=Lax`);
+        res.setHeader("Set-Cookie", `vp_session=${token}; HttpOnly; Path=/; SameSite=Lax`);
         return sendJson(res, 200, { ok: true });
       }
       return sendJson(res, 401, { ok: false, error: "Invalid credentials" });
     }
     if (pathname === "/api/logout" && method === "POST") {
-      const token = parseCookies(req.headers.cookie)["terra_session"];
+      const token = parseCookies(req.headers.cookie)["vp_session"];
       if (token) sessions.delete(token);
-      res.setHeader("Set-Cookie", "terra_session=; Path=/; Max-Age=0");
+      res.setHeader("Set-Cookie", "vp_session=; Path=/; Max-Age=0");
       return sendJson(res, 200, { ok: true });
     }
     if (pathname === "/api/session" && method === "GET") {
@@ -295,6 +295,6 @@ const PORT = Number(process.env.PORT ?? 3000);
 // Locally this is still reachable at http://localhost:PORT.
 const HOST = process.env.HOST ?? "0.0.0.0";
 server.listen(PORT, HOST, () => {
-  console.log(`Terra running on ${HOST}:${PORT} (locally: http://localhost:${PORT})`);
+  console.log(`Vale Palheiro guest messaging running on ${HOST}:${PORT} (locally: http://localhost:${PORT})`);
   console.log(`Staff login — user: ${STAFF_USER}  pass: ${STAFF_PASS}`);
 });

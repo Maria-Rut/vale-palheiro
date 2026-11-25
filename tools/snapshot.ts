@@ -66,31 +66,32 @@ function card(m: ScheduledMessage): string {
 const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Terra · output snapshot</title>
+<title>Vale Palheiro · output snapshot</title>
 <style>
-  body{margin:0;font-family:Georgia,serif;background:#f6f1e7;color:#2e241b;line-height:1.55}
-  header{background:#2e241b;color:#e9dfcf;padding:22px 28px}
-  header .name{font-size:22px;letter-spacing:3px;text-transform:uppercase}
-  header .sub{font-size:12px;color:#b08963;letter-spacing:2px}
-  .note{max-width:900px;margin:18px auto 0;padding:0 24px;color:#9a8c77;font-size:14px}
+  body{margin:0;font-family:"Jost",-apple-system,sans-serif;font-weight:300;background:#f3ece0;color:#27201a;line-height:1.6}
+  header{background:#27201a;color:#f3ece0;padding:24px 28px}
+  header .name{font-family:Georgia,serif;font-size:24px;letter-spacing:3px;text-transform:uppercase}
+  header .sub{font-size:11px;color:#d9a978;letter-spacing:3px}
+  .note{max-width:900px;margin:18px auto 0;padding:0 24px;color:#9a8b78;font-size:14px}
   main{max-width:900px;margin:0 auto;padding:16px 24px 60px}
-  h2{font-weight:normal;letter-spacing:1px;margin:30px 0 12px}
-  .card{background:#fffdf9;border:1px solid #ddd0bb;border-radius:10px;margin-bottom:14px;overflow:hidden;box-shadow:0 6px 24px rgba(46,36,27,.08)}
-  .head{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:13px 16px;border-bottom:1px solid #ddd0bb;background:linear-gradient(#fffdf9,#f6f1e7)}
-  .who{font-size:16px}.meta{font-size:12px;color:#9a8c77;font-family:sans-serif}
+  h2{font-family:Georgia,serif;font-weight:500;letter-spacing:.5px;margin:30px 0 12px;color:#9a4526}
+  .card{background:#fbf6ec;border:1px solid #e2cdb4;border-radius:4px;margin-bottom:14px;overflow:hidden;box-shadow:0 6px 24px rgba(39,32,26,.07)}
+  .head{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:14px 16px;border-bottom:1px solid #e2cdb4}
+  .who{font-family:Georgia,serif;font-size:19px}.meta{font-size:12px;color:#9a8b78}
   .spacer{flex:1}
-  .pill{font-family:sans-serif;font-size:11px;letter-spacing:.5px;padding:3px 9px;border-radius:999px;text-transform:uppercase}
-  .pre{background:#e3ead7;color:#5d6a4e}.post{background:#e9dfcf;color:#5a4632}
-  .ch{background:#dce6ef;color:#3a5a74}.lang{background:#ece6f0;color:#5a4a6a}
-  .st-sent{background:#d9e8d4;color:#3f6b36}.st-scheduled{background:#efe9dc;color:#5a4632}
-  .body{padding:15px 16px}.subject{font-weight:bold;margin-bottom:8px}
-  .text{white-space:pre-wrap;font-size:15px}
-  .foot{font-size:12px;color:#9a8c77;margin-top:10px;font-family:sans-serif}
-  .log{background:#fffdf9;border:1px solid #ddd0bb;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px}
-  .log .top{display:flex;gap:10px;align-items:center;margin-bottom:4px;font-family:sans-serif}
+  .pill{font-size:10.5px;letter-spacing:.6px;padding:3px 9px;border-radius:2px;text-transform:uppercase}
+  .pre{background:#e7ecde;color:#5c6749}.post{background:#ece2d2;color:#5c5047}
+  .prefs{background:#efe1cf;color:#8a5a2e}.exp{background:#e2ecef;color:#3a6775}
+  .ch{background:#e1e9f0;color:#3a5a74}.lang{background:#eae2ef;color:#5a4a6a}
+  .st-sent{background:#d8e6cf;color:#3f6b36}.st-scheduled{background:#ecdcc6;color:#9a4526}.st-needs_approval{background:#f0d9b8;color:#96631a}
+  .body{padding:15px 16px}.subject{font-family:Georgia,serif;font-size:18px;color:#9a4526;margin-bottom:8px}
+  .text{white-space:pre-wrap;font-size:14.5px}
+  .foot{font-size:12px;color:#9a8b78;margin-top:10px}
+  .log{background:#fbf6ec;border:1px solid #e2cdb4;border-radius:4px;padding:12px 14px;margin-bottom:8px;font-size:13px}
+  .log .top{display:flex;gap:10px;align-items:center;margin-bottom:4px}
 </style></head>
 <body>
-<header><div class="name">Vale Palheiro</div><div class="sub">TERRA · GUEST MESSAGING — OUTPUT SNAPSHOT</div></header>
+<header><div class="name">Vale Palheiro</div><div class="sub">EARTH RESORT · GUEST MESSAGING — OUTPUT SNAPSHOT</div></header>
 <div class="note">A frozen snapshot of what the system produces for the ${reservations.length} demo reservations.
 All messages shown as delivered because time was fast-forwarded one week. This file is static — it needs no server.</div>
 <main>

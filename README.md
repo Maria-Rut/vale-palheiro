@@ -1,14 +1,17 @@
-# Terra — guest messaging concierge for Vale Palheiro
+# Vale Palheiro — guest messaging
 
-A prototype that automates **personalised pre-stay and post-stay messages** for
-[Vale Palheiro — Earth Resort](https://www.valepalheiro.com), across **email,
+A prototype that automates **personalised guest messages across the whole stay**
+for [Vale Palheiro — Earth Resort](https://www.valepalheiro.com), across **email,
 SMS and WhatsApp**. Built for a hackathon pilot, with fictional reservations so
 it runs entirely offline — no access to the resort's real inbox, Booking.com or
 PMS required.
 
-The goal: take the repetitive, manual job of writing "we can't wait to welcome
-you" and "thank you for staying" messages off the team's plate, while keeping
-every message warm, personal, and unmistakably Vale Palheiro — never spam.
+The guest journey has four moments: a **preferences** request a week before,
+a **welcome** 2 hours before arrival, a weather-based **experiences** email after
+check-in, and a **thank-you** after checkout. The goal: take the repetitive,
+manual messaging off the team's plate while keeping every message warm,
+personal, and unmistakably Vale Palheiro — never spam. A CRM keeps each guest's
+preferences in one place.
 
 ---
 
@@ -39,7 +42,7 @@ Requires **Node.js 18+** (uses only the standard library — no `npm install`).
 
 ```bash
 npm start
-# → Terra running at http://localhost:3000
+# → Vale Palheiro guest messaging running at http://localhost:3000
 ```
 
 Open <http://localhost:3000> and log in:
