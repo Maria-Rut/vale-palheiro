@@ -145,27 +145,6 @@
     .ppill.call { background: #f3e1d3; color: #8a4b2b; }
     .ppill.past { background: #eee; color: #888; }
 
-    /* ---------- primary step tabs + secondary utility row ---------- */
-    .steptabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin: 0 0 14px; }
-    @media (max-width: 760px) { .steptabs { grid-template-columns: 1fr 1fr; } }
-    .steptab { display: flex; flex-direction: column; gap: 3px; text-align: left; background: var(--paper-2); border: none; border-top: 3px solid transparent; padding: 14px 16px 16px; cursor: pointer; font: inherit; color: inherit; transition: background .2s; min-width: 0; }
-    .steptab:hover { background: var(--card); }
-    .steptab.active { background: var(--card); border-top-color: var(--terracotta); }
-    .steptab .n { font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--terracotta); }
-    .steptab .name { font-family: var(--serif); font-size: 20px; line-height: 1.2; color: var(--ink); }
-    .steptab.active .name { color: var(--terracotta-ink); }
-    .steptab .sub { font-size: 12px; color: var(--muted); }
-    .utilnav { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 26px; }
-    .utilbtn { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); font: 12px var(--sans); letter-spacing: .5px; text-transform: uppercase; padding: 7px 13px; border-radius: 2px; cursor: pointer; }
-    .utilbtn:hover { background: var(--paper-2); }
-    .utilbtn.active { background: var(--ink); color: var(--offwhite); border-color: var(--ink); }
-    .utilbtn.active .nav-count { color: var(--offwhite); }
-    .nav-count { font-size: 11.5px; color: var(--muted); margin-left: 2px; }
-    .nav-count.warn { color: var(--terracotta); font-weight: 600; }
-    .step-section { margin-top: 34px; border-top: 1px solid var(--line); padding-top: 4px; }
-    .step-section h3 { font-size: 22px; margin: 18px 0 4px; color: var(--ink); }
-    .step-section > p { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; }
-
     /* ---------- emails tab ---------- */
     .steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
     .step-btn {
@@ -420,25 +399,28 @@
     <main>
       <div class="intro">
         <h1>Guest emails</h1>
-        <p>Every guest hears from us at five moments of their stay, in their own language and at a good hour where they live. Pick a moment to read, edit and preview its email.</p>
+        <p>
+          We email every guest at the right moments of their stay, in their own language
+          and at a good hour where they live. Click a step to read and edit its email.
+        </p>
       </div>
 
-      <!-- PRIMARY: one tab per moment in the guest journey -->
-      <nav class="steptabs" id="steptabs"></nav>
+      <div class="journey" id="journey"></div>
+      <div class="stats" id="stats"></div>
 
-      <!-- SECONDARY: everything else -->
-      <nav class="utilnav" id="utilnav">
-        <button class="utilbtn" data-tab="messages" data-filter="held">Needs approval <span class="nav-count" id="cnt-held"></span></button>
-        <button class="utilbtn" data-tab="messages" data-filter="all">Outbox <span class="nav-count" id="msgCount"></span></button>
-        <button class="utilbtn" data-tab="prefs">Guests <span class="nav-count" id="prefCount"></span></button>
-        <button class="utilbtn" data-tab="tasks">Team tasks <span class="nav-count" id="taskCount"></span></button>
-        <button class="utilbtn" data-tab="events">Events</button>
-        <button class="utilbtn" data-tab="weather">Weather &amp; activities</button>
-        <button class="utilbtn" data-tab="property">Resort details <span class="nav-count" id="cnt-sample"></span></button>
-        <button class="utilbtn" data-tab="settings">Settings</button>
-      </nav>
+      <div class="tabs">
+        <button class="tabbtn active" data-tab="emails">Email templates</button>
+        <button class="tabbtn" data-tab="messages">Outbox <span class="tab-count" id="msgCount"></span></button>
+        <button class="tabbtn" data-tab="prefs">Guests <span class="tab-count" id="prefCount"></span></button>
+        <button class="tabbtn" data-tab="tasks">Team tasks <span class="tab-count" id="taskCount"></span></button>
+        <button class="tabbtn" data-tab="events">Events</button>
+        <button class="tabbtn" data-tab="weather">Weather &amp; activities</button>
+        <button class="tabbtn" data-tab="property">Resort details</button>
+        <button class="tabbtn" data-tab="settings">Settings</button>
+      </div>
 
       <section id="tab-emails">
+        <div class="steps" id="steps"></div>
         <div id="stepView"></div>
       </section>
 

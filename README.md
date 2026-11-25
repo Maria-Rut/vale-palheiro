@@ -28,14 +28,10 @@ resort's real systems.
 
 All timings, quiet hours and anti-spam limits are editable in **Settings**.
 
-## The dashboard
+## Email templates (the first tab)
 
-Five large tabs across the top, one per moment in the guest journey
-(**Getting ready · Arrival details · Welcome + ideas · Thank you · Event
-invites**). A small row underneath holds everything else: Needs approval,
-Outbox, Guests, Team tasks, Events, Weather & activities, Resort details,
-Settings. Each moment opens on its template, **in English first**, and below it
-the real emails it has written for upcoming bookings.
+The dashboard opens on **Email templates**: one step at a time, in journey
+order, **in English first**.
 
 - **Left: the template.** Plain wording you can edit, with fields in
   `{{double brackets}}` that the system fills in for each guest (`{{first_name}}`,
@@ -186,7 +182,7 @@ Open <http://localhost:3000> and log in:
 
 ### Demo script (≈3 minutes)
 
-1. Log in → **Getting ready** (3 days before): the English template
+1. Log in → **Email templates**, step 1 (3 days before): the English template
    beside Emma's email with its *personalise your stay* button. Change a
    sentence, **Save**, and watch the preview change.
 2. Step 4, **Welcome** → **Show 4 more example guests**: same week, same
