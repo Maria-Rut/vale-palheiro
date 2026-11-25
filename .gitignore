@@ -6,3 +6,4 @@ dist/
 
 # Kiro local workspace config (not part of the project)
 .kiro/
+.claude/

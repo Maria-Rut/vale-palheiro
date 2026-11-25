@@ -46,12 +46,26 @@ const RENDER = {
   emails: renderEmails, messages: renderMessages, tasks: renderTasks, prefs: renderPrefs, events: renderEvents,
   weather: renderWeather, property: renderProperty, settings: loadConfig,
 };
+/** Step tabs map to the Emails view; the arrival text lives under "3 hours before". */
+const STEP_TAB = { pre_arrival: "pre_arrival", arrival_day: "arrival_day", arrival_text: "arrival_day", in_stay: "in_stay", post_stay: "post_stay", event_invite: "event_invite" };
+function setActiveNav(tab) {
+  document.querySelectorAll(".steptab").forEach((b) => b.classList.toggle("active", tab === "emails" && STEP_TAB[currentStep] === b.dataset.step));
+  document.querySelectorAll(".utilbtn").forEach((b) => b.classList.toggle("active",
+    b.dataset.tab === tab && (tab !== "messages" || (b.dataset.filter === "held") === (filter === "held"))));
+}
 function openTab(tab) {
-  document.querySelectorAll(".tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   for (const t of TABS) $(`#tab-${t}`).classList.toggle("hidden", t !== tab);
+  setActiveNav(tab);
   RENDER[tab]();
 }
-document.querySelectorAll(".tabbtn").forEach((btn) => btn.addEventListener("click", () => openTab(btn.dataset.tab)));
+function openStep(key) {
+  currentStep = key;
+  openTab("emails");
+}
+document.querySelectorAll(".utilbtn").forEach((btn) => btn.addEventListener("click", () => {
+  if (btn.dataset.filter) filter = btn.dataset.filter;
+  openTab(btn.dataset.tab);
+}));
 
 // --- labels ---
 const KIND_LABEL = {
@@ -98,31 +112,25 @@ function esc(s) {
 }
 function escAttr(s) { return esc(s).replaceAll('"', "&quot;"); }
 
-// --- overview ---
+// --- overview: the step tabs and the counts ---
 async function renderOverview() {
   const [o, cfg] = await Promise.all([api.get("/api/overview"), api.get("/api/config")]);
-  const stages = [
-    ["1", "We're getting ready", `${cfg.preArrivalDaysBefore} days before arrival`, "", "pre_arrival"],
-    ["2", "Arrival details", `${cfg.arrivalHoursBefore}h before arrival`, "", "arrival_day"],
-    ["3", "Welcome + suggestions", `${cfg.inStayHoursAfterCheckIn}h after check-in`, "", "in_stay"],
-    ["4", "Thank you + review", `${cfg.postStayHoursAfterCheckOut}h after check-out`, "post", "post_stay"],
-    ["5", "Event invites", "opted-in past guests", "evt", "event_invite"],
+  const steps = [
+    ["pre_arrival", "1 · Before arrival", "Getting ready", `${cfg.preArrivalDaysBefore} days before`],
+    ["arrival_day", "2 · Arrival day", "Arrival details", `${cfg.arrivalHoursBefore} hours before`],
+    ["in_stay", "3 · After check-in", "Welcome + ideas", `${cfg.inStayHoursAfterCheckIn} hours after arriving`],
+    ["post_stay", "4 · After check-out", "Thank you", `${cfg.postStayHoursAfterCheckOut} hours after leaving`],
+    ["event_invite", "5 · Past guests", "Event invites", "only if they opted in"],
   ];
-  $("#journey").innerHTML = stages.map(([n, t, w, c, k]) =>
-    `<button class="stage ${c}" data-step="${k}" title="Read this email"><div class="dot">${n}</div><div class="t">${t}</div><div class="w">${w}</div></button>`).join("");
-  $("#journey").querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
-    currentStep = b.dataset.step;
-    openTab("emails");
-    $("#tab-emails").scrollIntoView({ behavior: "smooth", block: "start" });
-  }));
-  const stat = (n, l, warn) => `<div class="stat ${warn ? "warn" : ""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  $("#stats").innerHTML =
-    stat(o.scheduled, "scheduled") +
-    stat(o.held, "need your approval", o.held > 0) +
-    stat(o.sent, "sent") +
-    stat(o.tasksOpen, "team tasks open", o.tasksOpen > 0) +
-    stat(o.sampleFields, "property details to confirm", o.sampleFields > 0);
-  $("#taskCount").textContent = o.tasksOpen ? `(${o.tasksOpen})` : "";
+  $("#steptabs").innerHTML = steps.map(([k, n, name, sub]) =>
+    `<button class="steptab" data-step="${k}"><span class="n">${n}</span><span class="name">${name}</span><span class="sub">${sub}</span></button>`).join("");
+  $("#steptabs").querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => openStep(b.dataset.step)));
+  const active = TABS.find((t) => !$(`#tab-${t}`).classList.contains("hidden")) ?? "emails";
+  setActiveNav(active);
+  const count = (id, n, warn) => { const el = $(id); el.textContent = n ? `(${n})` : ""; el.classList.toggle("warn", !!warn && n > 0); };
+  count("#cnt-held", o.held, true);
+  count("#taskCount", o.tasksOpen, true);
+  count("#cnt-sample", o.sampleFields, false);
 }
 
 // --- messages ---
@@ -140,13 +148,19 @@ function renderFilters() {
 
 async function renderMessages() {
   renderFilters();
+  setActiveNav("messages");
   const all = await api.get("/api/messages");
   $("#msgCount").textContent = `(${all.length})`;
   const msgs = all.filter((m) =>
     filter === "all" ? true : filter === "held" || filter === "sent" ? m.status === filter : m.kind === filter);
-  const el = $("#messages");
+  renderMessageList($("#messages"), msgs, refreshMessages,
+    filter === "held" ? "Nothing waiting for approval — everything will go out on time." : "Nothing here.");
+}
+
+/** Message cards, used by the Outbox and under each step's template. */
+function renderMessageList(el, msgs, onChange, emptyText = "Nothing here.") {
   el.innerHTML = "";
-  if (!msgs.length) { el.innerHTML = `<p class="empty">Nothing here.</p>`; return; }
+  if (!msgs.length) { el.innerHTML = `<p class="empty">${esc(emptyText)}</p>`; return; }
 
   for (const m of msgs) {
     const g = m.guest ?? {};
@@ -190,18 +204,18 @@ async function renderMessages() {
   }
 
   el.querySelectorAll("[data-edit]").forEach((b) =>
-    b.addEventListener("click", () => openEditor(b, msgs.find((x) => x.id === b.dataset.edit))));
+    b.addEventListener("click", () => openEditor(b, msgs.find((x) => x.id === b.dataset.edit), onChange)));
   el.querySelectorAll("[data-cancel]").forEach((b) =>
     b.addEventListener("click", async () => {
       await api.post(`/api/messages/${b.dataset.cancel}/cancel`);
       toast("Message won't be sent");
-      refreshMessages();
+      onChange();
     }));
   el.querySelectorAll("[data-approve]").forEach((b) =>
     b.addEventListener("click", async () => {
       await api.post(`/api/messages/${b.dataset.approve}/approve`);
       toast("Approved — it will go out on time");
-      refreshMessages();
+      onChange();
     }));
 }
 
@@ -229,7 +243,7 @@ function messageView(m) {
     </details>` : ""}`;
 }
 
-function openEditor(btn, m) {
+function openEditor(btn, m, onChange = refreshMessages) {
   if (!m) return;
   const card = btn.closest(".msg-card");
   const body = card.querySelector(".msg-body");
@@ -252,9 +266,9 @@ function openEditor(btn, m) {
     if (subEl) patch.subject = subEl.value;
     await api.post(`/api/messages/${m.id}/edit`, patch);
     toast("Wording saved");
-    renderMessages();
+    onChange();
   });
-  body.querySelector(".cancelEdit").addEventListener("click", renderMessages);
+  body.querySelector(".cancelEdit").addEventListener("click", onChange);
 }
 
 function refreshMessages() { renderMessages(); renderOverview(); }
@@ -314,9 +328,7 @@ function fieldsHtml(step) {
 
 async function renderEmails() {
   templatesCache = await api.get("/api/templates");
-  $("#steps").innerHTML = templatesCache.map((s, i) =>
-    `<button class="step-btn ${s.key === currentStep ? "on" : ""}" data-key="${s.key}"><span class="n">${i + 1}</span>${STEP_SHORT[s.key]}</button>`).join("");
-  $("#steps").querySelectorAll("[data-key]").forEach((b) => b.addEventListener("click", () => { currentStep = b.dataset.key; renderEmails(); }));
+  setActiveNav("emails");
   await renderStep();
 }
 
@@ -327,6 +339,9 @@ async function renderStep() {
   const [first, ...rest] = previews;
   view.innerHTML = `
     <div class="step-head"><h2>${esc(step.title)}</h2><p>${esc(step.when)}</p></div>
+    ${STEP_TAB[step.key] === "arrival_day" ? `<div class="toolbar" style="margin:-6px 0 16px">
+      <button class="chip ${step.key === "arrival_day" ? "on" : ""}" data-sub="arrival_day">Email</button>
+      <button class="chip ${step.key === "arrival_text" ? "on" : ""}" data-sub="arrival_text">WhatsApp / SMS</button></div>` : ""}
     <div class="tpl-grid">
       <div>
         <p class="preview-label">Template · English</p>
@@ -350,7 +365,15 @@ async function renderStep() {
             <div><p class="preview-label">How a ${LANG_NAME[l]}-speaking guest sees it</p><div class="pv-lang" data-lang="${l}"><p class="muted">Loading…</p></div></div>
           </div>
         </div>`).join("")}
+    </div>
+    <div class="step-section">
+      <h3>For guests staying with us</h3>
+      <p>The real emails this template has written for upcoming bookings. Approve, edit or stop any of them.</p>
+      <div class="grid" id="stepReal"><p class="muted">Loading…</p></div>
     </div>`;
+
+  view.querySelectorAll("[data-sub]").forEach((b) => b.addEventListener("click", () => { currentStep = b.dataset.sub; renderStep(); }));
+  renderStepReal(step);
 
   $("#moreBtn").addEventListener("click", () => {
     const open = $("#moreList").classList.toggle("hidden");
@@ -394,6 +417,18 @@ async function renderStep() {
       if (langOpen) $("#langBtn").click();
     });
   });
+}
+
+async function renderStepReal(step) {
+  const kind = step.key === "arrival_text" ? "arrival_day" : step.key;
+  const channelOk = (m) => step.key === "arrival_text" ? m.channel !== "email" : step.key === "arrival_day" ? m.channel === "email" : true;
+  const all = await api.get("/api/messages");
+  const order = { held: 0, scheduled: 1, sent: 2, skipped: 3, cancelled: 4 };
+  const msgs = all.filter((m) => m.kind === kind && channelOk(m))
+    .sort((a, b) => order[a.status] - order[b.status] || Date.parse(a.sendAt) - Date.parse(b.sendAt));
+  const el = $("#stepReal");
+  if (!el) return;
+  renderMessageList(el, msgs, () => { renderStepReal(step); renderOverview(); }, "No bookings need this email right now.");
 }
 
 async function loadLangPreviews(step) {
@@ -503,7 +538,12 @@ async function renderPrefs() {
 
 // Refresh when coming back to the dashboard (e.g. after answering as a guest in another tab).
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && !$("#app").classList.contains("hidden")) refreshAll();
+  // Coming back from a guest page: refresh counts and lists, but never redraw a
+  // template someone may be in the middle of editing.
+  if (document.visibilityState !== "visible" || $("#app").classList.contains("hidden")) return;
+  renderOverview(); renderPrefs(); renderTasks();
+  const active = TABS.find((t) => !$(`#tab-${t}`).classList.contains("hidden"));
+  if (active && active !== "emails") RENDER[active]();
 });
 
 // --- events ---
@@ -628,9 +668,11 @@ $("#applyConfig").addEventListener("click", async () => {
 });
 
 function refreshAll() {
-  renderOverview(); renderPrefs(); renderTasks();
-  const active = document.querySelector(".tabbtn.active")?.dataset.tab ?? "emails";
-  if (active === "emails") renderEmails(); else { renderEmails(); RENDER[active](); }
+  renderOverview().then(() => {
+    const active = TABS.find((t) => !$(`#tab-${t}`).classList.contains("hidden")) ?? "emails";
+    RENDER[active]();
+  });
+  renderPrefs(); renderTasks();
   api.get("/api/messages").then((all) => { $("#msgCount").textContent = `(${all.length})`; });
 }
 
