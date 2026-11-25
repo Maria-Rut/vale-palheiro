@@ -330,7 +330,24 @@ function inline(s: string): string {
   return esc(s).replace(/https?:\/\/[^\s<]+[^\s<.,;:)]/g, (u) => `<a href="${u}" target="_blank" rel="noopener" style="color:#7a5c3e">${u}</a>`);
 }
 
-const C = { ink: "#2a241f", muted: "#7b7067", accent: "#7a5c3e", bg: "#f4efe6", card: "#fffdf8", line: "#e6ddcf" };
+// Exact brand colours (guide p.18): Terracota #934d3f, Off-white #f2eee8, Antracite #2f2f2f.
+const C = { ink: "#2f2f2f", muted: "#938a7c", accent: "#934d3f", bg: "#f2eee8", card: "#f8f5ef", line: "#e0d8ca", terracotta: "#934d3f", offwhite: "#f2eee8", anthracite: "#2f2f2f" };
+
+/**
+ * The editorial wordmark as inline HTML for email — "VALE PALHΞIRO" with the
+ * brand's three-bar E, and a small "EARTH RESORT" beneath. Colour configurable
+ * so it reads on both the dark header and the light signature.
+ */
+function wordmarkHtml(color: string, size = 17): string {
+  const bar = `display:inline-block;width:0.5em;height:0.09em;background:${color};border-radius:1px;vertical-align:middle;margin:0 1px`;
+  // three stacked bars approximating the Ξ-style E
+  const E = `<span style="display:inline-block;width:0.52em;height:0.6em;position:relative;vertical-align:middle">`
+    + `<span style="${bar};position:absolute;left:0;top:0.08em;width:100%"></span>`
+    + `<span style="${bar};position:absolute;left:0;top:0.28em;width:82%"></span>`
+    + `<span style="${bar};position:absolute;left:0;top:0.48em;width:100%"></span></span>`;
+  return `<span style="font-family:Georgia,serif;letter-spacing:.34em;color:${color};font-size:${size}px">VALE&nbsp;PALH${E}IRO</span>`
+    + `<div style="font-family:Georgia,serif;letter-spacing:.3em;color:${color};font-size:${Math.round(size * 0.52)}px;margin-top:6px;opacity:.9">EARTH&nbsp;RESORT</div>`;
+}
 
 /**
  * The email as the guest sees it: a simple, inline-styled HTML email that
@@ -369,10 +386,18 @@ export function toEmailHtml(body: string): string {
     return out.join("");
   }).join("");
 
+  // Brand email signature (guide pp.42–44): editorial wordmark + contact.
+  const signature = `<div style="border-top:1px solid ${C.line};margin-top:8px;padding:20px 24px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${C.muted};font-size:12px;line-height:1.55">`
+    + `<div style="margin-bottom:10px">${wordmarkHtml(C.terracotta, 16)}</div>`
+    + `<div style="color:${C.ink};font-weight:600">Vale Palheiro — Earth Resort</div>`
+    + `Rua Vale Palheiro, 8670-016 Aljezur · Costa Vicentina<br>`
+    + `<a href="https://www.valepalheiro.com" style="color:${C.ink};font-weight:600;text-decoration:none">valepalheiro.com</a> · +351 933 979 043`
+    + `</div>`;
+
   return `<div style="background:${C.bg};padding:24px 12px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;background:${C.card};border:1px solid ${C.line};border-radius:14px;overflow:hidden">
-<div style="background:#2a241f;color:#f4efe6;padding:18px 24px;font-family:Georgia,serif;letter-spacing:.18em;font-size:15px">VALE PALHEIRO</div>
-<div style="padding:24px;color:${C.ink};font-size:15px;line-height:1.55">${html}</div>
-<div style="padding:14px 24px;border-top:1px solid ${C.line};color:${C.muted};font-size:12px">Vale Palheiro — Earth Resort · Aljezur, Costa Vicentina</div>
+<div style="background:${C.anthracite};padding:22px 24px;text-align:center">${wordmarkHtml(C.offwhite, 18)}</div>
+<div style="padding:26px 24px;color:${C.ink};font-size:15px;line-height:1.6">${html}</div>
+${signature}
 </div></div>`.replace(/\n/g, "");
 }
