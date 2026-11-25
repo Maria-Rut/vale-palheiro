@@ -23,7 +23,7 @@ import type {
  *   - the arrival-day email ("we've prepared everything the way you asked"),
  *   - the thank-you email, if they asked us to remember them.
  *
- * Host stays the source of truth for bookings, so answers are kept in Terra's
+ * Host stays the source of truth for bookings, so answers are kept in the app's
  * own store, keyed by reservation id. In production this would be a small
  * database table; here it is in memory like the rest of the prototype.
  */

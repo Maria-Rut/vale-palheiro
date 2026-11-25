@@ -1,4 +1,4 @@
-/* Terra dashboard — vanilla JS, no build step. Talks to the JSON API. */
+/* Vale Palheiro dashboard — vanilla JS, no build step. Talks to the JSON API. */
 
 const $ = (sel) => document.querySelector(sel);
 const api = {
@@ -308,7 +308,7 @@ function fieldsHtml(step) {
     <p class="how">Words in <code>{{double brackets}}</code> are filled in for each guest. Click one to add it where your cursor is; hover to see what it becomes.
     ${step.key === "arrival_text" ? "" : "A line like <code>[Button text](link)</code> becomes a button."}</p>
     <div>${simple.map(chip).join("")}</div>
-    ${smart.length ? `<p class="how" style="margin-top:8px">Green ones are written by Terra and only appear when they apply (a returning guest, a birthday, events that week, the weather plan…):</p><div>${smart.map(chip).join("")}</div>` : ""}
+    ${smart.length ? `<p class="how" style="margin-top:8px">Green ones are written automatically and only appear when they apply (a returning guest, a birthday, events that week, the weather plan…):</p><div>${smart.map(chip).join("")}</div>` : ""}
   </div>`;
 }
 

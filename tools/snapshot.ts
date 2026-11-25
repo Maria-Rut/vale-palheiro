@@ -64,7 +64,7 @@ function card(m: ScheduledMessage): string {
 const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Terra · output snapshot</title>
+<title>Vale Palheiro · output snapshot</title>
 <style>
   body{margin:0;font-family:Georgia,serif;background:#f6f1e7;color:#2e241b;line-height:1.55}
   header{background:#2e241b;color:#e9dfcf;padding:22px 28px}
@@ -88,7 +88,7 @@ const html = `<!DOCTYPE html>
   .log .top{display:flex;gap:10px;align-items:center;margin-bottom:4px;font-family:sans-serif}
 </style></head>
 <body>
-<header><div class="name">Vale Palheiro</div><div class="sub">TERRA · GUEST MESSAGING — OUTPUT SNAPSHOT</div></header>
+<header><div class="name">Vale Palheiro</div><div class="sub">EARTH RESORT · GUEST MESSAGING — OUTPUT SNAPSHOT</div></header>
 <div class="note">A frozen snapshot of what the system produces for the ${scheduler.getReservations().length} demo reservations.
 All messages shown as delivered because time was fast-forwarded one week. This file is static — it needs no server.</div>
 <main>

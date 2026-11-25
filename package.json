@@ -1,7 +1,7 @@
 {
-  "name": "terra-vale-palheiro",
+  "name": "vale-palheiro-guest-messaging",
   "version": "0.1.0",
-  "description": "Terra — guest messaging concierge for Vale Palheiro Earth Resort. Automates personalised guest emails across the whole stay (pre-arrival, arrival day, in-stay, post-stay, event invites) in EN/PT/FR, timed to each guest's time zone.",
+  "description": "Guest messaging for Vale Palheiro — Earth Resort. Personalised emails across the whole stay (pre-arrival, arrival day, in-stay, post-stay, event invites) in EN/PT/FR, timed to each guest timezone.",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"

@@ -26,7 +26,7 @@ import { exampleGuests } from "./examples.ts";
 import { conditionsFor } from "./recommender.ts";
 
 /**
- * HTTP layer for Terra. Serves the staff dashboard and a small JSON API.
+ * HTTP layer for the Vale Palheiro guest messaging app. Serves the staff dashboard and a small JSON API.
  *
  * Built on Node's standard library only — no Express, no npm install — so the
  * prototype runs anywhere Node 22+ is present. Each real integration (LLM,
@@ -54,7 +54,7 @@ for (const [id, prefs] of Object.entries(preferenceSeeds)) setPreferences(id, pr
 await scheduler.plan();
 await scheduler.runDue();
 
-// In real use Terra runs on its own: re-read bookings + events every 15 minutes
+// In real use the system runs on its own: re-read bookings + events every 15 minutes
 // (new reservations, changed dates, new events) and send what's due every minute.
 setInterval(() => void scheduler.plan(), 15 * 60_000);
 setInterval(() => void scheduler.runDue(), 60_000);
@@ -475,6 +475,6 @@ const PORT = Number(process.env.PORT ?? 3000);
 // Locally this is still reachable at http://localhost:PORT.
 const HOST = process.env.HOST ?? "0.0.0.0";
 server.listen(PORT, HOST, () => {
-  console.log(`Terra running on ${HOST}:${PORT} (locally: http://localhost:${PORT})`);
+  console.log(`Vale Palheiro guest messaging running on ${HOST}:${PORT} (locally: http://localhost:${PORT})`);
   console.log(`Staff login — user: ${STAFF_USER}  pass: ${STAFF_PASS}`);
 });

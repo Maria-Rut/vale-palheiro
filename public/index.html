@@ -3,28 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Terra · Vale Palheiro</title>
+  <title>Vale Palheiro · Guest Messaging</title>
+  <!-- Vale Palheiro brand fonts: Sud (display) + General Sans (body) via Fontshare, Recoleta (serif) via cdnfonts -->
+  <link href="https://api.fontshare.com/v2/css?f[]=sud@400,500,600&f[]=general-sans@300,400,500,600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.cdnfonts.com/css/recoleta" rel="stylesheet" />
   <style>
     :root {
-      --earth-900: #2b2117;
-      --earth-800: #3a2d1f;
-      --earth-700: #5a4632;
-      --earth-500: #8a6f4e;
-      --clay: #a87f54;
-      --clay-soft: #c3a079;
-      --sand: #e7dcc8;
-      --paper: #f4efe4;
-      --paper-2: #efe8d9;
-      --sage: #7c8a6a;
-      --sage-dark: #566049;
-      --white: #fffdf8;
-      --line: #ddceb5;
-      --line-soft: #e6dac4;
-      --muted: #9c8d75;
-      --shadow: 0 10px 30px rgba(43, 33, 23, 0.08);
-      --shadow-sm: 0 3px 12px rgba(43, 33, 23, 0.06);
-      --serif: "Cormorant Garamond", "Georgia", "Times New Roman", serif;
-      --sans: -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif;
+      /*
+        Vale Palheiro — Earth Resort palette, from the brand sheet:
+        terracotta / rust as the signature, over warm bone-pale paper, with
+        earth-brown ink. The old --earth-*/--clay/--sage tokens are kept as
+        aliases so the existing layout keeps working, just recoloured.
+      */
+      --rust: #a85538;            /* primary terracotta / rust (logo colour) */
+      --rust-deep: #8a4329;
+      --rust-soft: #c07a5c;
+      --ink: #3a2a20;             /* warm earth-brown text */
+      --paper: #f3ece0;           /* warm bone paper */
+      --paper-2: #ece2d2;
+      --card: #fbf6ec;
+      --line: #e4d5c0;
+      --line-soft: #ece0cd;
+      --muted: #9c8b78;
+
+      /* aliases mapped onto the brand palette (layout references these) */
+      --earth-900: #2e221a;
+      --earth-800: #3a2a20;
+      --earth-700: #5a4536;
+      --earth-500: #8a6a50;
+      --clay: #a85538;            /* was tan; now the brand rust */
+      --clay-soft: #c07a5c;
+      --sand: #ecdfca;
+      --sage: #8a8358;            /* warmer, earthier green-gold */
+      --sage-dark: #6a5f3c;
+      --white: #fbf6ec;
+
+      --shadow: 0 12px 34px rgba(46, 34, 26, 0.10);
+      --shadow-sm: 0 3px 14px rgba(46, 34, 26, 0.07);
+
+      --display: "Sud", "Recoleta", Georgia, serif;
+      --serif: "Recoleta", "Georgia", "Times New Roman", serif;
+      --sans: "General Sans", -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif;
     }
     * { box-sizing: border-box; }
     body {
@@ -41,8 +60,8 @@
       padding: 20px 32px; background: var(--earth-900); color: var(--sand);
     }
     .brand { display: flex; flex-direction: column; line-height: 1.2; }
-    .brand .name { font-family: var(--serif); font-size: 24px; letter-spacing: 4px; text-transform: uppercase; }
-    .brand .sub { font-size: 11px; color: var(--clay-soft); letter-spacing: 3px; margin-top: 2px; }
+    .brand .name { font-family: var(--display); font-size: 25px; letter-spacing: 5px; text-transform: uppercase; color: var(--sand); }
+    .brand .sub { font-family: var(--sans); font-size: 10px; color: var(--rust-soft); letter-spacing: 4px; margin-top: 3px; text-transform: uppercase; }
     .topbar button {
       background: transparent; color: var(--sand); border: 1px solid var(--earth-500);
       padding: 8px 16px; border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 13px;
@@ -268,7 +287,7 @@
       background: var(--paper); padding: 44px 40px; border-radius: 16px; width: 380px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
     }
-    .login-card .name { font-family: var(--serif); font-size: 28px; letter-spacing: 5px; text-transform: uppercase; color: var(--earth-800); }
+    .login-card .name { font-family: var(--display); font-size: 30px; letter-spacing: 5px; text-transform: uppercase; color: var(--rust); }
     .login-card .sub { font-size: 11px; color: var(--clay); letter-spacing: 3px; margin: 6px 0 28px; }
     .login-card input {
       width: 100%; font-family: var(--sans); font-size: 14px; padding: 12px 14px; margin: 7px 0;
@@ -367,7 +386,7 @@
   <div id="login" class="login-wrap">
     <form class="login-card" id="loginForm">
       <div class="name">Vale Palheiro</div>
-      <div class="sub">EARTH RESORT · TERRA</div>
+      <div class="sub">EARTH RESORT</div>
       <input id="username" placeholder="Staff username" autocomplete="username" />
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
       <button class="primary" type="submit">Enter</button>
@@ -384,7 +403,7 @@
     <header class="topbar">
       <div class="brand">
         <span class="name">Vale Palheiro</span>
-        <span class="sub">TERRA · GUEST MESSAGING</span>
+        <span class="sub">EARTH RESORT · GUEST MESSAGING</span>
       </div>
       <button id="logoutBtn">Sign out</button>
     </header>
@@ -393,7 +412,7 @@
       <div class="intro">
         <h1>Guest emails</h1>
         <p>
-          Terra emails every guest at the right moments of their stay, in their own language
+          We email every guest at the right moments of their stay, in their own language
           and at a good hour where they live. Click a step to read and edit its email.
         </p>
       </div>
@@ -418,10 +437,10 @@
       </section>
 
       <section id="tab-messages" class="hidden">
-        <p class="hint muted" style="margin-top:0">Every email Terra has planned for real bookings, and what it already sent. Shown in English; open "what the guest receives" to see their language.</p>
+        <p class="hint muted" style="margin-top:0">Every email planned for real bookings, and what has already been sent. Shown in English; open "what the guest receives" to see their language.</p>
         <div class="panel demo" style="margin-bottom:18px">
           <h3>Demo tools <span class="demo-tag">demo only</span></h3>
-          <p class="hint" style="margin-bottom:10px">Terra sends on its own at the right time. Jump the clock forward to watch it happen.</p>
+          <p class="hint" style="margin-bottom:10px">Messages send on their own at the right time. Jump the clock forward to watch it happen.</p>
           <div class="demo-controls">
             <div class="field">
               <label class="block">Pretend it is…</label>
@@ -442,7 +461,7 @@
       </section>
 
       <section id="tab-tasks" class="hidden">
-        <p class="hint muted" style="margin-top:0">Things Terra can't (and shouldn't) do on its own — a gift for a returning guest, a handwritten note, someone waiting for a late arrival.</p>
+        <p class="hint muted" style="margin-top:0">Things the system can't (and shouldn't) do on its own — a gift for a returning guest, a handwritten note, someone waiting for a late arrival.</p>
         <div id="tasks"></div>
       </section>
 

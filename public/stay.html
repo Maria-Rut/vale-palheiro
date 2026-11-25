@@ -6,28 +6,35 @@
   <meta name="robots" content="noindex" />
   <meta name="color-scheme" content="light" />
   <title>Prepare your stay · Vale Palheiro</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=sud@400,500,600&f[]=general-sans@300,400,500,600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.cdnfonts.com/css/recoleta" rel="stylesheet" />
   <style>
     :root {
-      --earth-900: #2b2117;
-      --earth-800: #3a2d1f;
-      --earth-700: #5a4632;
-      --earth-500: #8a6f4e;
-      --clay: #a87f54;
-      --clay-soft: #c3a079;
-      --terracotta: #b8673f;
-      --sand: #e7dcc8;
-      --paper: #f4efe4;
-      --paper-2: #efe8d9;
-      --sage: #7c8a6a;
-      --sage-dark: #566049;
-      --white: #fffdf8;
-      --line: #ddceb5;
-      --line-soft: #e6dac4;
-      --muted: #8f806a;
+      /* Vale Palheiro — Earth Resort palette (terracotta/rust on warm paper). */
+      --rust: #a85538;
+      --rust-deep: #8a4329;
+      --rust-soft: #c07a5c;
+      --earth-900: #2e221a;
+      --earth-800: #3a2a20;
+      --earth-700: #5a4536;
+      --earth-500: #8a6a50;
+      --clay: #a85538;
+      --clay-soft: #c07a5c;
+      --terracotta: #a85538;
+      --sand: #ecdfca;
+      --paper: #f3ece0;
+      --paper-2: #ece2d2;
+      --sage: #8a8358;
+      --sage-dark: #6a5f3c;
+      --white: #fbf6ec;
+      --line: #e4d5c0;
+      --line-soft: #ece0cd;
+      --muted: #9c8b78;
       --danger: #9b3b2f;
-      --shadow-sm: 0 3px 12px rgba(43, 33, 23, 0.06);
-      --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-      --sans: -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif;
+      --shadow-sm: 0 3px 14px rgba(46, 34, 26, 0.07);
+      --display: "Sud", "Recoleta", Georgia, serif;
+      --serif: "Recoleta", Georgia, "Times New Roman", serif;
+      --sans: "General Sans", -apple-system, "Segoe UI", Roboto, Helvetica, sans-serif;
     }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
@@ -48,7 +55,7 @@
     }
     .hero-inner { max-width: 560px; margin: 0 auto; }
     .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 34px; }
-    .wordmark { font-family: var(--serif); letter-spacing: 4px; text-transform: uppercase; font-size: 15px; }
+    .wordmark { font-family: var(--display); letter-spacing: 5px; text-transform: uppercase; font-size: 16px; color: var(--rust); }
     .langs { display: flex; gap: 2px; }
     .langs button {
       background: none; border: none; color: var(--clay-soft); font-size: 12px; letter-spacing: 1px;

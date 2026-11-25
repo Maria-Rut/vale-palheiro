@@ -4,7 +4,7 @@ import { reservations as mockReservations, events as mockEvents } from "./mockDa
 /**
  * Connector seams for live data.
  *
- * Terra needs two feeds:
+ * The system needs two feeds:
  *   1. Reservations — guest, email, language, dates, villa/unit, party size,
  *      occasion. Vale Palheiro treats Host (the PMS) as its single source of
  *      truth: direct bookings are entered there, and Booking.com / Expedia /
@@ -20,7 +20,7 @@ import { reservations as mockReservations, events as mockEvents } from "./mockDa
  */
 
 export interface BookingSource {
-  /** All reservations Terra should know about, including past stays (history). */
+  /** All reservations the system should know about, including past stays (history). */
   listReservations(): Promise<Reservation[]>;
 }
 

@@ -4,10 +4,10 @@ import type { Language, MessageKind } from "./types.ts";
  * Editable email templates.
  *
  * Each moment in the guest journey has one template per language. Staff edit
- * the wording in the dashboard (Emails tab); Terra fills in the {{fields}} for
+ * the wording in the dashboard (Emails tab); the system fills in the {{fields}} for
  * each guest. Two kinds of field:
  *   - simple facts: {{first_name}}, {{villa}}, {{wifi_password}}…
- *   - smart blocks that Terra writes in the guest's language and leaves out
+ *   - smart blocks that the system writes in the guest's language and leaves out
  *     when they don't apply: {{occasion_line}}, {{events_block}},
  *     {{suggestions}}… A line that ends up empty is removed.
  *
@@ -28,7 +28,7 @@ export interface FieldInfo {
   token: string;
   /** What staff see in the legend. */
   help: string;
-  /** Smart blocks are written by Terra and can disappear. */
+  /** Smart blocks are written by the system and can disappear. */
   smart?: boolean;
 }
 

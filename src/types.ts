@@ -1,8 +1,8 @@
 /**
- * Core domain types for Terra — the guest messaging concierge.
+ * Core domain types for the Vale Palheiro guest messaging concierge.
  *
  * These describe guests, reservations, the resort's event calendar and the
- * messages Terra schedules. They are shaped so the prototype can later map onto
+ * messages the system schedules. They are shaped so the prototype can later map onto
  * Vale Palheiro's real systems — Host (the PMS, which the team treats as the
  * single source of truth) and the events calendar — without reshaping the rest
  * of the app. See `sources.ts` for the connector seams.
@@ -24,7 +24,7 @@ export type Motive = "business" | "leisure" | "both";
 export type Occasion = "birthday" | "anniversary" | "honeymoon" | "celebration";
 
 /**
- * The moments in the guest journey Terra writes for.
+ * The moments in the guest journey the system writes for.
  *   pre_arrival  — 3 days before: "your villa is being prepared, we can't wait"
  *   arrival_day  — 3 hours before: where to go, where we'll meet you, your villa
  *   in_stay      — after check-in: Wi-Fi, contacts, activities, events this stay
@@ -45,7 +45,7 @@ export type MessageKind =
  *   sent      — delivered
  *   cancelled — staff chose not to send
  *   skipped   — its moment passed before it could go (e.g. a last-minute
- *               booking), so Terra deliberately didn't send a stale message
+ *               booking), so the system deliberately didn't send a stale message
  */
 export type MessageStatus = "scheduled" | "held" | "sent" | "cancelled" | "skipped";
 
@@ -66,7 +66,7 @@ export interface Guest {
   preferredChannels: Channel[];
   /**
    * Whether the guest agreed to hear about events and news after their stay.
-   * Without it Terra never sends them event invites — only stay messages.
+   * Without it the system never sends them event invites — only stay messages.
    */
   marketingConsent: boolean;
 }
@@ -120,7 +120,7 @@ export interface ResortEvent {
   inviteLeadDays: number;
 }
 
-/** Something the team should do by hand — Terra prompts, people deliver. */
+/** Something the team should do by hand — the system prompts, people deliver. */
 export interface StaffTask {
   id: string;
   reservationId: string;

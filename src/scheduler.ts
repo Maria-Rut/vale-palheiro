@@ -25,7 +25,7 @@ import { createWeather, type CachedWeather, type Forecast } from "./weather.ts";
 import { recommend } from "./recommender.ts";
 
 /**
- * The scheduler is Terra's brain. For every reservation and every event it:
+ * The scheduler is the scheduler is the brain. For every reservation and every event it:
  *   1. decides *which* messages a guest should get (and which they shouldn't),
  *   2. decides *when*, in the guest's own time zone, avoiding awkward hours,
  *   3. renders the copy up front so staff can preview, edit or hold it,
@@ -340,7 +340,7 @@ export class Scheduler {
     return out;
   }
 
-  /** Small manual touches Terra asks the team to do. */
+  /** Small manual touches the system asks the team to do. */
   private planTasks(now: Date): void {
     const keep = new Map<string, StaffTask>();
     for (const r of this.reservations) {
@@ -392,7 +392,7 @@ export class Scheduler {
     for (const p of plans) {
       const existing = [...this.messages.values()].find((m) => m.key === p.key);
       if (existing && ["sent", "cancelled", "skipped"].includes(existing.status)) continue;
-      // A moment that had already passed before Terra first saw the booking
+      // A moment that had already passed before the system first saw the booking
       // (e.g. a last-minute reservation) is simply not planned.
       if (!existing && p.expiresAt.getTime() <= now.getTime()) continue;
 
@@ -522,7 +522,7 @@ export class Scheduler {
   // ------------------------------------------------------------ sending
 
   /**
-   * Demo helper: fast-forward the clock to `target` as if Terra had been
+   * Demo helper: fast-forward the clock to `target` as if the system had been
    * running the whole time — stepping an hour at a time so each message goes
    * out at its own moment instead of being judged stale on arrival.
    */

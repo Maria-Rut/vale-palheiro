@@ -11,7 +11,7 @@
  *     commercial use, so production should use a paid key (OPEN_METEO_API_KEY),
  *     which switches to the customer endpoints automatically.
  *
- * Switch with WEATHER_SOURCE=open-meteo. If the live call fails, Terra never
+ * Switch with WEATHER_SOURCE=open-meteo. If the live call fails, the system never
  * invents weather: recommendations simply drop the forecast wording.
  */
 

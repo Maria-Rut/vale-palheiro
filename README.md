@@ -1,4 +1,4 @@
-# Terra — guest messaging concierge for Vale Palheiro
+# Vale Palheiro — guest messaging
 
 A prototype that automates **personalised guest emails across the whole stay**
 for [Vale Palheiro — Earth Resort](https://www.valepalheiro.com): before
@@ -8,7 +8,7 @@ and arrives at a good hour **in the guest's own time zone**.
 
 Today the resort sends an automatic booking confirmation and then does the rest
 by hand (front-office emails 1–2 weeks out, manual invites for Fado nights and
-guest-chef dinners). Terra takes the repetitive part off the team, and keeps
+guest-chef dinners). The system takes the repetitive part off the team, and keeps
 the personal part — a handwritten note, a welcome-back gift — with people.
 
 The prototype runs on fictional reservations and needs no access to the
@@ -34,9 +34,9 @@ The dashboard opens on **Email templates**: one step at a time, in journey
 order, **in English first**.
 
 - **Left: the template.** Plain wording you can edit, with fields in
-  `{{double brackets}}` that Terra fills in for each guest (`{{first_name}}`,
+  `{{double brackets}}` that the system fills in for each guest (`{{first_name}}`,
   `{{villa}}`, `{{wifi_password}}`…). Click a field to insert it. Green fields
-  are written by Terra and only appear when they apply: a returning guest, a
+  are written automatically and only appear when they apply: a returning guest, a
   birthday, events that week, the weather-based suggestions. A line like
   `[Click here to personalise your stay]({{personalise_link}})` becomes a
   button.
@@ -119,7 +119,7 @@ the dashboard shows the guest-local time it lands, and why it moved if it did.
   welcome email with suggestions, every email, or none. A message mentioning a
   birthday or anniversary waits for someone to add a personal line and press
   *Approve*.
-- **Team tasks**: Terra prompts, people deliver. Welcome-back gift for a
+- **Team tasks**: the system prompts, people deliver. Welcome-back gift for a
   returning guest, a handwritten note for a celebration, someone to meet a
   guest arriving after reception closes (20:00).
 - Every message can be **edited** or **stopped** before it goes. Edited wording
@@ -169,7 +169,7 @@ Requires **Node.js 22+** (uses only the standard library — no `npm install`).
 
 ```bash
 npm start
-# → Terra running at http://localhost:3000
+# → Vale Palheiro guest messaging running at http://localhost:3000
 ```
 
 Open <http://localhost:3000> and log in:
