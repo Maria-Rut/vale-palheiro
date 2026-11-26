@@ -205,9 +205,9 @@ export const events: ResortEvent[] = [
   {
     id: "evt_002",
     title: {
-      en: "Sunrise yoga in the valley",
-      pt: "Yoga ao nascer do sol no vale",
-      fr: "Yoga au lever du soleil dans la vallée",
+      en: "Sunrise yoga at Vale Palheiro",
+      pt: "Yoga ao nascer do sol em Vale Palheiro",
+      fr: "Yoga au lever du soleil à Vale Palheiro",
     },
     description: {
       en: "A gentle morning session outdoors. All levels welcome.",
@@ -215,7 +215,7 @@ export const events: ResortEvent[] = [
       fr: "Une séance douce en plein air. Tous niveaux bienvenus.",
     },
     start: day(1, 8),
-    place: "The valley",
+    place: "Vale Palheiro",
     audience: "in_house",
     inviteLeadDays: 0,
   },

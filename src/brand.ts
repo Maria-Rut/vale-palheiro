@@ -58,9 +58,9 @@ export const OCCASION: Record<Occasion, Record<Language, string>> = {
 /** One personal line for the thank-you, keyed by the real "motive of stay" field. */
 export const POST_STAY_LINE: Record<Motive, Record<Language, string>> = {
   business: {
-    en: "We hope the valley gave you some space to think.",
-    pt: "Esperamos que o vale lhe tenha dado espaço para pensar.",
-    fr: "Nous espérons que la vallée vous a offert un peu d'espace pour réfléchir.",
+    en: "We hope Vale Palheiro gave you some space to think.",
+    pt: "Esperamos que Vale Palheiro lhe tenha dado espaço para pensar.",
+    fr: "Nous espérons que Vale Palheiro vous a offert un peu d'espace pour réfléchir.",
   },
   leisure: {
     en: "We hope you took a little of its calm home with you.",

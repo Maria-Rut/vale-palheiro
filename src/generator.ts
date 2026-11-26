@@ -195,6 +195,7 @@ function fieldValues(input: GenerationInput): Record<string, string> {
     wellness_line: !p.wellnessInfo ? "" : `• ${pick({ en: "Wellness", pt: "Bem-estar", fr: "Bien-être" })}: ${p.wellnessInfo}${p.wellnessMenuLink ? ` — ${absolute(p.wellnessMenuLink)}` : ""}`,
     brochure_link: absolute(p.brochureLink),
     wellness_link: absolute(p.wellnessMenuLink || `${p.brochureLink}#page=11`),
+    newsletter_link: absolute(p.newsletterLink),
     today_line: input.kind === "morning" ? renderTodayPick(stayPlan, l) : "",
     tripadvisor_link: p.tripadvisorLink,
     checkout: `${p.checkOutTime}, ${shortDay(r.checkOut, l)}`,

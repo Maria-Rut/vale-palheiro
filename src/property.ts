@@ -45,7 +45,7 @@ export type PropertyKey =
   | "wifiNetwork" | "wifiPassword" | "checkOutTime"
   | "brochureLink" | "wellnessInfo" | "wellnessMenuLink"
   | "minibarStandard" | "minibarExtras" | "villasWithoutMinibar"
-  | "tripadvisorLink" | "reviewLink";
+  | "tripadvisorLink" | "reviewLink" | "newsletterLink";
 
 export type PropertyInfo = Record<PropertyKey, PropertyField>;
 
@@ -71,16 +71,16 @@ const initial: PropertyInfo = {
   mapsLink: { group: "arrival", label: "Google Maps link", value: "https://maps.google.com/?q=Rua+Vale+Palheiro+8670-016+Aljezur", sample: true },
   directions: {
     group: "arrival", long: true, label: "Directions & access road (English)", sample: true,
-    value: "From Aljezur, take the road towards the valley. There are few signs in the village, so follow the map link rather than the signposts. The last stretch is an unpaved road — drive slowly; any car can make it.",
+    value: "From Aljezur, take the road towards Vale Palheiro. There are few signs in the village, so follow the map link rather than the signposts. The last stretch is an unpaved road — drive slowly; any car can make it.",
     help: "Which road to take, where the signs are missing, what the last stretch is like.",
   },
   directionsPt: {
     group: "arrival", long: true, label: "Directions & access road (Portuguese)", sample: true,
-    value: "A partir de Aljezur, siga a estrada em direção ao vale. Há poucas placas na vila, por isso siga o link do mapa em vez das indicações. O último troço é em terra batida — conduza devagar; qualquer carro passa.",
+    value: "A partir de Aljezur, siga a estrada em direção a Vale Palheiro. Há poucas placas na vila, por isso siga o link do mapa em vez das indicações. O último troço é em terra batida — conduza devagar; qualquer carro passa.",
   },
   directionsFr: {
     group: "arrival", long: true, label: "Directions & access road (French)", sample: true,
-    value: "Depuis Aljezur, prenez la route vers la vallée. Il y a peu de panneaux dans le village : suivez plutôt le lien du plan. Le dernier tronçon est une piste non goudronnée — roulez doucement, toute voiture passe.",
+    value: "Depuis Aljezur, prenez la route vers Vale Palheiro. Il y a peu de panneaux dans le village : suivez plutôt le lien du plan. Le dernier tronçon est une piste non goudronnée — roulez doucement, toute voiture passe.",
   },
 
   // ---- restaurant & bar
@@ -117,6 +117,7 @@ const initial: PropertyInfo = {
   // ---- reviews
   tripadvisorLink: { group: "reviews", label: "TripAdvisor review page", value: "https://www.tripadvisor.com/Search?q=Vale%20Palheiro%20Earth%20Resort", sample: true, help: "Paste the resort's direct \"write a review\" link." },
   reviewLink: { group: "reviews", label: "Google review link (optional)", value: "https://g.page/r/vale-palheiro/review", sample: true, help: "Shown under the TripAdvisor button. Leave empty to hide." },
+  newsletterLink: { group: "menus", label: "Newsletter / stay-in-touch sign-up", value: "https://www.valepalheiro.com/newsletter", sample: true, help: "Where guests subscribe for events, Fado nights and updates. Shown as the \"Stay in touch\" button in the good-morning message." },
 };
 
 let info: PropertyInfo = structuredClone(initial);

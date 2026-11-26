@@ -335,7 +335,7 @@ export function welcomePreferencesLine(r: Reservation, lang: Language): string {
 /** For the thank-you email, when the guest asked us to remember them. */
 export function postStayPreferencesLine(r: Reservation, lang: Language): string {
   if (!store.get(r.id)?.rememberForNextTime) return "";
-  if (lang === "pt") return "Guardámos as suas preferências, por isso da próxima vez o vale estará pronto à sua maneira.";
-  if (lang === "fr") return "Nous avons gardé vos préférences : la prochaine fois, la vallée sera prête à votre façon.";
-  return "We've kept your preferences, so next time the valley will be ready just the way you like it.";
+  if (lang === "pt") return "Guardámos as suas preferências, por isso da próxima vez Vale Palheiro estará pronto à sua maneira.";
+  if (lang === "fr") return "Nous avons gardé vos préférences : la prochaine fois, Vale Palheiro sera prêt à votre façon.";
+  return "We've kept your preferences, so next time Vale Palheiro will be ready just the way you like it.";
 }
