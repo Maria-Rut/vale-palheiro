@@ -111,11 +111,31 @@ export class OpenMeteoWeather implements WeatherSource {
   }
 
   private async daily(url: string): Promise<Daily> {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
-    const json = (await res.json()) as { daily?: Daily };
-    if (!json.daily) throw new Error("Open-Meteo: no daily data");
-    return json.daily;
+    // Some hosts/APIs reject the default Node fetch; send a UA + JSON accept.
+    // One retry smooths over a cold-start or transient network blip.
+    const opts: RequestInit = {
+      signal: AbortSignal.timeout(12_000),
+      headers: { "User-Agent": "ValePalheiro-GuestMessaging/1.0", Accept: "application/json" },
+    };
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          throw new Error(`Open-Meteo HTTP ${res.status}${body ? ` — ${body.slice(0, 160)}` : ""}`);
+        }
+        const json = (await res.json()) as { daily?: Daily };
+        if (!json.daily) throw new Error("Open-Meteo: response had no daily data");
+        return json.daily;
+      } catch (e) {
+        lastErr = e;
+        const reason = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+        console.error(`[weather] fetch attempt ${attempt + 1} failed for ${url} — ${reason}`);
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   }
 
   async getForecast(): Promise<Forecast> {
