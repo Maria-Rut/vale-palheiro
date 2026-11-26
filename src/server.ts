@@ -413,6 +413,17 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, ok ? 200 : 400, { ok });
     }
 
+    // Guest replied to the good-morning events opt-in (EVENTS = yes, STOP = no).
+    // Records consent so the event-invite scheduler includes/excludes them.
+    const consentMatch = pathname.match(/^\/api\/reservations\/([^/]+)\/events-optin$/);
+    if (consentMatch && method === "POST") {
+      const b = await readBody(req);
+      const consent = b.consent !== false; // default true (opting in)
+      const result = scheduler.setMarketingConsent(decodeURIComponent(consentMatch[1]), consent);
+      if (result === undefined) return sendJson(res, 404, { ok: false, error: "Reservation not found" });
+      return sendJson(res, 200, { ok: true, marketingConsent: result });
+    }
+
     if (pathname === "/api/events" && method === "GET") {
       return sendJson(res, 200, { events: scheduler.getEvents(), suppressions: scheduler.getSuppressions() });
     }

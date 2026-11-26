@@ -556,8 +556,8 @@ async function renderPrefs() {
         <span><b>Stay</b> ${fmtDate(r.checkIn)} → ${fmtDate(r.checkOut)}</span>
         <span><b>Channels</b> ${esc(r.guest.preferredChannels.map((c) => CHANNEL_LABEL[c]).join(", "))}</span>
         <span>${r.guest.marketingConsent
-          ? `<span class="consent-chip yes">Marketing: subscribed</span>`
-          : `<span class="consent-chip no">Not subscribed to marketing communications</span>`}</span>
+          ? `<span class="consent-chip yes">Events: subscribed</span> <button class="consent-toggle" data-optout="${r.id}">Remove</button>`
+          : `<span class="consent-chip no">Not subscribed to events</span> <button class="consent-toggle" data-optin="${r.id}">Guest replied — subscribe</button>`}</span>
       </div>
       ${prepGrid(r.preferences)}
       ${r.open ? `
@@ -571,6 +571,13 @@ async function renderPrefs() {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast("Guest link copied"); }
     catch { toast(b.dataset.copy); }
   }));
+  const setConsent = async (id, consent) => {
+    await api.post(`/api/reservations/${id}/events-optin`, { consent });
+    toast(consent ? "Subscribed — they'll receive event invitations" : "Removed from the events list");
+    renderPrefs();
+  };
+  el.querySelectorAll("[data-optin]").forEach((b) => b.addEventListener("click", () => setConsent(b.dataset.optin, true)));
+  el.querySelectorAll("[data-optout]").forEach((b) => b.addEventListener("click", () => setConsent(b.dataset.optout, false)));
 }
 
 // Refresh when coming back to the dashboard (e.g. after answering as a guest in another tab).

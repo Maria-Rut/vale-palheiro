@@ -195,7 +195,17 @@ function fieldValues(input: GenerationInput): Record<string, string> {
     wellness_line: !p.wellnessInfo ? "" : `• ${pick({ en: "Wellness", pt: "Bem-estar", fr: "Bien-être" })}: ${p.wellnessInfo}${p.wellnessMenuLink ? ` — ${absolute(p.wellnessMenuLink)}` : ""}`,
     brochure_link: absolute(p.brochureLink),
     wellness_link: absolute(p.wellnessMenuLink || `${p.brochureLink}#page=11`),
-    newsletter_link: absolute(p.newsletterLink),
+    events_optin_line: r.guest.marketingConsent
+      ? pick({
+          en: "You're on our list for Vale Palheiro events — Fado nights, chef dinners and gatherings. We'll be in touch; reply STOP any time to leave the list.",
+          pt: "Está na nossa lista para os eventos de Vale Palheiro — noites de Fado, jantares de chef e encontros. Manteremos o contacto; responda PARAR a qualquer momento para sair da lista.",
+          fr: "Vous êtes sur notre liste pour les événements de Vale Palheiro — soirées Fado, dîners de chef et rendez-vous. Nous reviendrons vers vous ; répondez STOP à tout moment pour vous désinscrire.",
+        })
+      : pick({
+          en: "Would you like to hear about our events — Fado nights, chef dinners and gatherings? Just reply EVENTS and we'll add you to the list and send you the next invitations.",
+          pt: "Gostaria de saber dos nossos eventos — noites de Fado, jantares de chef e encontros? Basta responder EVENTOS e adicionamo-lo à lista, enviando-lhe os próximos convites.",
+          fr: "Souhaitez-vous être informé de nos événements — soirées Fado, dîners de chef et rendez-vous ? Répondez simplement ÉVÉNEMENTS et nous vous ajoutons à la liste pour vous envoyer les prochaines invitations.",
+        }),
     today_line: input.kind === "morning" ? renderTodayPick(stayPlan, l) : "",
     tripadvisor_link: p.tripadvisorLink,
     checkout: `${p.checkOutTime}, ${shortDay(r.checkOut, l)}`,

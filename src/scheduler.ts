@@ -170,6 +170,18 @@ export class Scheduler {
   setConfig(patch: Partial<SchedulerConfig>): void { this.config = { ...this.config, ...patch }; }
   getReservations(): Reservation[] { return this.reservations; }
   getReservation(id: string) { return this.reservations.find((r) => r.id === id); }
+  /**
+   * Record a guest's reply to the good-morning events opt-in. When they say
+   * yes, marketingConsent flips to true, so the event-invite scheduler starts
+   * including them (Fado nights, chef dinners, gatherings). A "no"/STOP sets
+   * it false. Returns the new consent value, or undefined if not found.
+   */
+  setMarketingConsent(reservationId: string, consent: boolean): boolean | undefined {
+    const r = this.getReservation(reservationId);
+    if (!r) return undefined;
+    r.guest.marketingConsent = consent;
+    return consent;
+  }
   getEvents(): ResortEvent[] { return this.events; }
   getSuppressions(): Suppression[] { return this.suppressions; }
   getEventSource(): EventSource { return this.calendar; }
