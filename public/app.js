@@ -661,6 +661,24 @@ const COND_LABEL = {
   sunny: "sunny", cloudy: "cloudy", showers: "showers", rainy: "rain", windy: "windy", calm: "calm",
   big_sea: "big swell", surf_sea: "surfable", flat_sea: "flat sea", warm: "warm",
 };
+
+/**
+ * A weather symbol for a day, from the WMO weather_code (Open-Meteo):
+ *   0 clear · 1-2 mainly/partly clear · 3 overcast · 45/48 fog ·
+ *   51-57 drizzle · 61-67 rain · 71-77 snow · 80-82 showers · 95-99 thunder.
+ */
+function weatherIcon(code) {
+  if (code === 0) return "☀️";
+  if (code === 1 || code === 2) return "🌤️";
+  if (code === 3) return "☁️";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 57) return "🌦️";
+  if (code >= 61 && code <= 67) return "🌧️";
+  if (code >= 71 && code <= 77) return "🌨️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code >= 95) return "⛈️";
+  return "🌤️";
+}
 async function renderWeather() {
   const [wx, acts] = await Promise.all([api.get("/api/weather"), api.get("/api/activities")]);
   const live = wx.source === "open-meteo";
@@ -671,7 +689,8 @@ async function renderWeather() {
   $("#forecast").innerHTML = wx.days.length ? wx.days.map((d) => `
     <div class="wx">
       <div class="d">${esc(resortDate(d.date + "T12:00:00Z"))}</div>
-      <div class="t">${Math.round(d.tempMax)}° <span class="muted" style="font-size:13px">${Math.round(d.tempMin)}°</span></div>
+      <div class="wx-icon" title="${esc(d.conditions.map((c) => COND_LABEL[c] ?? c).join(", "))}">${weatherIcon(d.weatherCode)}</div>
+      <div class="t">${Math.round(d.tempMax)}°C <span class="muted" style="font-size:13px">/ ${Math.round(d.tempMin)}°C</span></div>
       <div>Rain ${Math.round(d.rainChance)}% · gusts ${Math.round(d.gustMaxKmh)} km/h</div>
       <div>Waves ${d.waveHeightM.toFixed(1)} m</div>
       <div class="chips">${d.conditions.map((c) => `<span class="cond ${c}">${COND_LABEL[c] ?? c}</span>`).join("")}</div>
