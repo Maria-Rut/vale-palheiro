@@ -499,22 +499,20 @@
       body.side-collapsed .main-wrap main { margin: 0 auto; }
     }
 
-    /* login: split like the website menu — form on off-white, logo on anthracite */
-    .login-wrap { background: var(--side-bg); padding: 0; display: grid; grid-template-columns: minmax(340px, 42%) 1fr; align-items: stretch; }
-    .login-side { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
-    .login-art { background: var(--anthracite); display: flex; align-items: center; justify-content: center; }
-    .login-art img { width: min(240px, 40%); opacity: .92; }
-    .login-card { background: transparent; box-shadow: none; padding: 0; width: 100%; max-width: 340px; }
-    .login-card .login-logo { width: 84px; margin: 0 auto 10px; display: block; }
-    .login-card .login-title { font-family: var(--label); text-transform: uppercase; letter-spacing: .32em; font-size: 11px; color: var(--muted); margin-bottom: 30px; }
-    @media (max-width: 760px) { .login-wrap { grid-template-columns: 1fr; } .login-art { display: none; } }
+    /* login: one large off-white card on the brand terracotta */
+    .login-wrap { background: var(--rust); padding: 24px 16px; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-card { background: #f2eee8; box-shadow: 0 30px 80px rgba(60,20,12,.35); border-radius: 20px; padding: 56px 56px 44px; width: 100%; max-width: 480px; }
+    .login-card .login-logo { width: 120px; height: auto; margin: 0 auto 18px; display: block; }
+    .login-card .login-title { font-family: var(--label); text-transform: uppercase; letter-spacing: .32em; font-size: 12px; color: var(--muted); margin-bottom: 34px; }
+    .login-card input { font-size: 16px; padding: 15px 18px; margin: 8px 0; }
+    .login-card .primary { padding: 16px; font-size: 16px; margin-top: 10px; }
+    @media (max-width: 520px) { .login-card { padding: 40px 24px 32px; } .login-card .login-logo { width: 96px; } }
     .login-wrap.hidden, aside.side.hidden { display: none; }
   </style>
 </head>
 <body>
   <!-- LOGIN -->
   <div id="login" class="login-wrap">
-    <div class="login-side">
     <form class="login-card" id="loginForm">
       <img class="login-logo" src="/brand/logo-stacked-terracotta.png" alt="Vale Palheiro — Earth Resort" />
       <div class="login-title">Guest messaging</div>
@@ -527,8 +525,6 @@
         user <b>palheiro</b> · pass <b>costa-vicentina</b>
       </div>
     </form>
-    </div>
-    <div class="login-art"><img src="/brand/logo-stacked-offwhite.png" alt="" /></div>
   </div>
 
   <!-- APP -->
