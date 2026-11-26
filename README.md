@@ -23,8 +23,12 @@ resort's real systems.
 | 1 | **We're getting ready** | 3 days before arrival, 10:00 guest time | Stay summary; **Getting here** (access road, few signs in the village, unpaved last stretch) with a Google Maps button; check-in time, front-office hours and the late check-in note; **Dining at The Barn**; **Experiences** with the brochure button; events during the stay; the **"Click here to personalise your stay"** button. |
 | 2 | **Arrival details** | 3 hours before the arrival time the guest gave us | Villa / unit, where we meet them (Casa da Ribeira), check-in time, directions + map, contacts, late check-in note. Short WhatsApp version for guests who agreed to WhatsApp. |
 | 3 | **Welcome & settling in** | 2 hours after arrival | Wi-Fi, breakfast, The Barn, bar, minibar, wellness, reception, check-out, the Experiences Menu, what's on — and day-by-day suggestions from the weather and sea forecast. |
+| 3b | **Good morning** (WhatsApp) | Every morning of the stay, 08:30 resort time | Short and warm, like a message from the front office: today's forecast and the agent's suggestion for today (from the Experiences Menu, with price), an invitation to book ahead, and **Wellness menu** / **Experiences** link buttons. Only to guests who agreed to WhatsApp. |
 | 4 | **Thank you + review** | 24 hours after check-out, guest time (editable) | Thank-you, one personal line, **TripAdvisor** button (Google optional). |
 | 5 | **Event invites** | N days before each event, 10:00 guest time | To opted-in past guests only, with a welcome-back gift if they come to stay. |
+
+The 3-days-before message and the thank-you also have **short WhatsApp
+versions** (ask for the arrival time + personalise button; TripAdvisor button).
 
 All timings, quiet hours, anti-spam limits and the **channel for each message
 (Email / WhatsApp / both)** are editable in **Settings**. WhatsApp goes only to

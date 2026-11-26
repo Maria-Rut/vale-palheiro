@@ -11,7 +11,7 @@ import { expectedArrival, getPreferences, hasMinibar, postStayPreferencesLine, p
 import { zonedParts } from "./timezone.ts";
 import { fill, getTemplate, toPlainText, type TemplateKey } from "./templates.ts";
 import { RESORT_TZ } from "./timezone.ts";
-import { renderStayPlan, type StayPlan } from "./recommender.ts";
+import { renderStayPlan, renderTodayPick, type StayPlan } from "./recommender.ts";
 
 /**
  * Message generation.
@@ -183,6 +183,8 @@ function fieldValues(input: GenerationInput): Record<string, string> {
     }),
     wellness_line: !p.wellnessInfo ? "" : `• ${pick({ en: "Wellness", pt: "Bem-estar", fr: "Bien-être" })}: ${p.wellnessInfo}${p.wellnessMenuLink ? ` — ${absolute(p.wellnessMenuLink)}` : ""}`,
     brochure_link: absolute(p.brochureLink),
+    wellness_link: absolute(p.wellnessMenuLink || `${p.brochureLink}#page=11`),
+    today_line: input.kind === "morning" ? renderTodayPick(stayPlan, l) : "",
     tripadvisor_link: p.tripadvisorLink,
     checkout: `${p.checkOutTime}, ${shortDay(r.checkOut, l)}`,
     reception_hours: p.receptionHours,
@@ -257,11 +259,15 @@ function fieldValues(input: GenerationInput): Record<string, string> {
 export class TemplateGenerator implements Generator {
   async generate(input: GenerationInput): Promise<GeneratedMessage> {
     const short = input.channel !== "email";
-    const key: TemplateKey = input.kind === "arrival_day" && short ? "arrival_text" : input.kind;
+    // WhatsApp has its own short versions; others fall back to the email's text.
+    const TEXT: Partial<Record<MessageKind, TemplateKey>> = { pre_arrival: "pre_arrival_text", arrival_day: "arrival_text", post_stay: "post_stay_text" };
+    const key: TemplateKey = short ? (TEXT[input.kind] ?? input.kind) : input.kind;
     if (input.kind === "event_invite" && !input.event) throw new Error("event_invite needs an event");
     const out = fill(getTemplate(key, input.language), fieldValues(input));
+    // WhatsApp bodies keep [Button](link) lines: they show as link buttons,
+    // and become "Button: link" in the text that is actually sent.
     return short
-      ? { body: toPlainText(out.body), generatedBy: "template" }
+      ? { body: key === input.kind && input.kind !== "morning" ? toPlainText(out.body) : out.body, generatedBy: "template" }
       : { subject: out.subject, body: out.body, generatedBy: "template" };
   }
 }

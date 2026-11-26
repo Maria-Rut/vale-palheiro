@@ -223,6 +223,19 @@ function weatherPhrase(p: DayPick, lang: Language): string {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The "Our suggestions for your stay" block for the welcome email. */
+/** One line for the good-morning message: today's weather and the pick for today. */
+export function renderTodayPick(plan: StayPlan | undefined, lang: Language): string {
+  const p = plan?.days[0];
+  if (!p) return "";
+  const w = weatherPhrase(p, lang);
+  const what = `${cap(p.activity.pitch[lang])} — ${priceLabel(p.activity, lang)}.`;
+  const sug = { en: "Our suggestion for today", pt: "A nossa sugestão para hoje", fr: "Notre suggestion du jour" }[lang];
+  const colon = lang === "fr" ? " :" : ":";
+  if (!w) return `${sug}${colon} ${what}`;
+  const fc = { en: "Today's forecast", pt: "Previsão para hoje", fr: "Météo du jour" }[lang];
+  return `${fc}${colon} ${w}. ${sug}${colon} ${what}`;
+}
+
 export function renderStayPlan(plan: StayPlan, lang: Language, phone: string): string {
   const head = {
     en: "Our suggestions for your stay",

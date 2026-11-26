@@ -184,6 +184,10 @@
     .inbox-head .subj { font-size: 15.5px; color: var(--earth-900); font-weight: 600; margin-top: 2px; }
     .inbox-body > div { padding: 0 !important; }
     .inbox-body > div > div { border: 0 !important; border-radius: 0 !important; max-width: none !important; }
+    .bubble.wa { padding-bottom: 0; overflow: hidden; }
+    .wa-btns { margin: 12px -14px 0; border-top: 1px solid rgba(0,0,0,.08); }
+    .wa-btns a { display: block; text-align: center; padding: 10px; color: #1f8a4c; font-weight: 600; text-decoration: none; border-bottom: 1px solid rgba(0,0,0,.08); white-space: normal; }
+    .wa-btns a:last-child { border-bottom: none; }
     .bubble { background: #dcf8c6; color: #1f2d1b; padding: 12px 14px; border-radius: 12px 12px 12px 2px; margin: 16px; max-width: 420px; font-size: 14px; white-space: pre-wrap; }
     .more-btn {
       display: block; width: 100%; margin: 14px 0 0; padding: 11px; border-radius: 12px; cursor: pointer;
@@ -588,7 +592,7 @@
           </div>
           <div class="panel">
             <h3>Channel for each message</h3>
-            <p class="hint">WhatsApp only goes to guests who agreed to it; the others get the email. The WhatsApp Business API isn't connected yet, so due WhatsApps wait in the Outbox under "To send by hand".</p>
+            <p class="hint">WhatsApp only goes to guests who agreed to it; the others get the email (the daily good-morning is WhatsApp only). The WhatsApp Business API isn't connected yet, so due WhatsApps wait in the Outbox under "To send by hand".</p>
             <div class="form-grid" id="channelGrid"></div>
           </div>
           <div class="panel">

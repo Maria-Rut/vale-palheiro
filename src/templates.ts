@@ -17,7 +17,10 @@ import type { Language, MessageKind } from "./types.ts";
  * In a WhatsApp / SMS text they become "Button text: link" and plain text.
  */
 
-export type TemplateKey = Exclude<MessageKind, "arrival_day"> | "arrival_day" | "arrival_text";
+export type TemplateKey = MessageKind | "arrival_text" | "pre_arrival_text" | "post_stay_text";
+
+/** Templates written for WhatsApp: short, no subject; buttons become link buttons. */
+export const TEXT_TEMPLATES: TemplateKey[] = ["pre_arrival_text", "arrival_text", "morning", "post_stay_text"];
 
 export interface Template {
   subject: string;
@@ -64,6 +67,8 @@ const F = {
   brochure_link: { token: "brochure_link", help: "The Experiences brochure (Resort settings)" },
   minibar_line: { token: "minibar_line", help: "What's in the minibar — or nothing for villas without one", smart: true },
   arrival_line: { token: "arrival_line", help: "The arrival time they told us — or a request to tell us", smart: true },
+  today_line: { token: "today_line", help: "Today's weather and the agent's pick for today (from the Experiences Menu)", smart: true },
+  wellness_link: { token: "wellness_link", help: "Wellness menu (Resort settings) — for now the wellbeing pages of the brochure" },
   late_arrival_line: { token: "late_arrival_line", help: "If they arrive after the front office closes: late check-in note and fee", smart: true },
   personalise_link: { token: "personalise_link", help: "The guest's own \"prepare your stay\" page" },
   personalise_intro: { token: "personalise_intro", help: "Invites them to personalise their stay — or thanks them if they already did", smart: true },
@@ -89,6 +94,9 @@ export const FIELDS: Record<TemplateKey, FieldInfo[]> = {
   arrival_text: [F.first_name, F.villa, F.meeting_point, F.map_link, F.whatsapp, F.arrival_time],
   in_stay: [F.first_name, F.villa, F.journey_line, F.wifi_network, F.wifi_password, F.breakfast_line, F.dinner_hours, F.bar_line, F.minibar_line, F.wellness_line, F.brochure_link, F.reception_phone, F.reception_hours, F.out_of_hours_phone, F.email, F.checkout, F.events_block, F.suggestions],
   post_stay: [F.first_name, F.villa, F.returning_thanks, F.motive_line, F.tripadvisor_link, F.review_link, F.remember_line],
+  pre_arrival_text: [F.first_name, F.villa, F.stay_dates, F.personalise_link, F.check_in_time],
+  morning: [F.first_name, F.villa, F.today_line, F.wellness_link, F.brochure_link],
+  post_stay_text: [F.first_name, F.villa, F.tripadvisor_link],
   event_invite: [F.first_name, F.event_title, F.event_when, F.event_date_short, F.event_place, F.event_description],
 };
 
@@ -210,6 +218,66 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, Record<Language, Template>> 
     en: t("", "Hi {{first_name}}, see you today around {{arrival_time}}. We'll meet you at {{meeting_point}} and walk you to {{villa}}. Map: {{map_link}} · Questions: {{whatsapp}} — Vale Palheiro"),
     pt: t("", "Olá {{first_name}}, até hoje por volta das {{arrival_time}}. Esperamo-lo na {{meeting_point}} e acompanhamo-lo até à {{villa}}. Mapa: {{map_link}} · Dúvidas: {{whatsapp}} — Vale Palheiro"),
     fr: t("", "Bonjour {{first_name}}, à aujourd'hui vers {{arrival_time}}. Nous vous attendons à {{meeting_point}} et vous accompagnerons jusqu'à {{villa}}. Plan : {{map_link}} · Questions : {{whatsapp}} — Vale Palheiro"),
+  },
+  pre_arrival_text: {
+    en: t("", "Hello {{first_name}},", "",
+      "We're so looking forward to welcoming you to Vale Palheiro, {{stay_dates}}.", "",
+      "Let us know your expected arrival time so we can have everything ready for you — just reply here, or tell us on your page, where you can also personalise your stay (check-in from {{check_in_time}}).", "",
+      "Need a transfer, or help planning your days — from the trails to the sea? We'll gladly help.", "",
+      "See you soon,", "The Vale Palheiro team", "",
+      "[Personalise your stay]({{personalise_link}})"),
+    pt: t("", "Olá {{first_name}},", "",
+      "Estamos entusiasmados por recebê-lo no Vale Palheiro, {{stay_dates}}.", "",
+      "Indique-nos a sua hora prevista de chegada, para que possamos ter tudo preparado para si — responda aqui ou diga-nos na sua página, onde pode também personalizar a sua estadia (check-in a partir das {{check_in_time}}).", "",
+      "Precisa de transporte ou de ajuda para planear os seus dias — dos trilhos ao mar? Teremos todo o gosto em ajudar.", "",
+      "Até breve,", "Equipa Vale Palheiro", "",
+      "[Personalizar a estadia]({{personalise_link}})"),
+    fr: t("", "Bonjour {{first_name}},", "",
+      "Nous avons hâte de vous accueillir à Vale Palheiro, {{stay_dates}}.", "",
+      "Indiquez-nous votre heure d'arrivée prévue pour que tout soit prêt — répondez simplement ici ou sur votre page, où vous pouvez aussi personnaliser votre séjour (arrivée à partir de {{check_in_time}}).", "",
+      "Besoin d'un transfert ou d'aide pour organiser vos journées — des sentiers à l'océan ? Avec plaisir.", "",
+      "À très bientôt,", "L'équipe de Vale Palheiro", "",
+      "[Personnaliser mon séjour]({{personalise_link}})"),
+  },
+  morning: {
+    en: t("Good morning from the valley, {{first_name}}", "Good morning, {{first_name}}!", "",
+      "We hope you slept well in {{villa}} and are ready for a new day in the valley.", "",
+      "{{today_line}}", "",
+      "Still deciding how to spend your day? Take some time for yourself with a massage in your villa or a yoga class, or discover the Costa Vicentina with one of our experiences — from the trails to the sea.", "",
+      "Places are limited, so we recommend booking ahead. Just reply here and our team will happily plan and book it for you.", "",
+      "Enjoy your day,", "The Vale Palheiro team", "",
+      "[Wellness menu]({{wellness_link}})", "[Experiences]({{brochure_link}})"),
+    pt: t("Bom dia do vale, {{first_name}}", "Bom dia, {{first_name}}!", "",
+      "Esperamos que tenha tido uma boa noite de sono na {{villa}} e que esteja pronto para um novo dia no vale.", "",
+      "{{today_line}}", "",
+      "Ainda a decidir como aproveitar o dia? Reserve algum tempo para si com uma massagem na sua casa ou uma aula de yoga, ou descubra a Costa Vicentina com uma das nossas experiências — dos trilhos ao mar.", "",
+      "A disponibilidade é limitada, pelo que recomendamos a reserva antecipada. Responda aqui e a nossa equipa terá todo o gosto em planear e reservar por si.", "",
+      "Desfrute do seu dia,", "Equipa Vale Palheiro", "",
+      "[Bem-estar]({{wellness_link}})", "[Experiências]({{brochure_link}})"),
+    fr: t("Bonjour de la vallée, {{first_name}}", "Bonjour {{first_name}} !", "",
+      "Nous espérons que vous avez bien dormi à {{villa}} et que vous êtes prêt pour une nouvelle journée dans la vallée.", "",
+      "{{today_line}}", "",
+      "Vous hésitez encore ? Prenez du temps pour vous avec un massage dans votre villa ou un cours de yoga, ou découvrez la Costa Vicentina avec l'une de nos expériences — des sentiers à l'océan.", "",
+      "Les places sont limitées : nous vous conseillons de réserver à l'avance. Répondez simplement ici et notre équipe s'occupe de tout.", "",
+      "Belle journée,", "L'équipe de Vale Palheiro", "",
+      "[Bien-être]({{wellness_link}})", "[Expériences]({{brochure_link}})"),
+  },
+  post_stay_text: {
+    en: t("", "Hello {{first_name}},", "",
+      "Thank you for staying with us in {{villa}}. We hope you had a wonderful time in the valley!", "",
+      "We'd love to hear about your stay on TripAdvisor — it means a great deal to a small, independent place like ours.", "",
+      "Safe travels home, and we hope to welcome you back soon.", "The Vale Palheiro team", "",
+      "[Review us on TripAdvisor]({{tripadvisor_link}})"),
+    pt: t("", "Olá {{first_name}},", "",
+      "Obrigado por ter ficado connosco na {{villa}}. Esperamos que a sua estadia no vale tenha sido muito agradável!", "",
+      "Gostaríamos muito que partilhasse a sua opinião no TripAdvisor — significa muito para um lugar pequeno e independente como o nosso.", "",
+      "Desejamos-lhe uma boa viagem de regresso e esperamos voltar a recebê-lo em breve.", "Equipa Vale Palheiro", "",
+      "[Avaliar no TripAdvisor]({{tripadvisor_link}})"),
+    fr: t("", "Bonjour {{first_name}},", "",
+      "Merci d'avoir séjourné à {{villa}}. Nous espérons que vous avez passé un merveilleux moment dans la vallée !", "",
+      "Votre avis sur TripAdvisor compte beaucoup pour une petite maison indépendante comme la nôtre.", "",
+      "Bon retour, et au plaisir de vous accueillir à nouveau.", "L'équipe de Vale Palheiro", "",
+      "[Laisser un avis sur TripAdvisor]({{tripadvisor_link}})"),
   },
   in_stay: {
     en: t("Welcome to the valley, {{first_name}}",

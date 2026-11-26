@@ -30,13 +30,16 @@ export type Occasion = "birthday" | "anniversary" | "honeymoon" | "celebration";
  *   in_stay      — after check-in: Wi-Fi, contacts, activities, events this stay
  *   post_stay    — after check-out: thank you + a quick review
  *   event_invite — to opted-in past guests, about an upcoming resort event
+ *   morning      — a short "good morning" WhatsApp each day of the stay, with
+ *                  the day's suggestion and the wellness / experiences links
  */
 export type MessageKind =
   | "pre_arrival"
   | "arrival_day"
   | "in_stay"
   | "post_stay"
-  | "event_invite";
+  | "event_invite"
+  | "morning";
 
 /**
  * Lifecycle of a scheduled message.

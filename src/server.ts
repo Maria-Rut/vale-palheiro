@@ -8,7 +8,7 @@ import { MockBookingSource, InMemoryEventSource } from "./sources.ts";
 import { preferenceSeeds } from "./mockData.ts";
 import { GROUP_LABEL, getPropertyInfo, propList, updatePropertyInfo, sampleFieldCount } from "./property.ts";
 import { placeLabel } from "./generator.ts";
-import type { Language, Reservation, ResortEvent } from "./types.ts";
+import type { Language, MessageKind, Reservation, ResortEvent } from "./types.ts";
 import { RESORT_TZ, zonedTime } from "./timezone.ts";
 import {
   defaultPreferences,
@@ -22,7 +22,7 @@ import {
 } from "./preferences.ts";
 import { prop } from "./property.ts";
 import { addActivity, getActivities, setActivityEnabled, type Category, type Condition } from "./activities.ts";
-import { DEFAULT_TEMPLATES, FIELDS, getTemplate, isEdited, isTemplateKey, resetTemplate, setTemplate, toEmailHtml, type TemplateKey } from "./templates.ts";
+import { TEXT_TEMPLATES, toPlainText, DEFAULT_TEMPLATES, FIELDS, getTemplate, isEdited, isTemplateKey, resetTemplate, setTemplate, toEmailHtml, type TemplateKey } from "./templates.ts";
 import { exampleGuests } from "./examples.ts";
 import { conditionsFor, recommend } from "./recommender.ts";
 
@@ -159,7 +159,7 @@ function withReservationContext() {
       html: m.channel === "email" ? toEmailHtml(m.body) : undefined,
       // WhatsApp isn't connected yet: staff send it by hand from a pre-filled chat.
       whatsappLink: m.channel === "whatsapp" && r?.guest.phone
-        ? `https://wa.me/${r.guest.phone.replace(/\D/g, "")}?text=${encodeURIComponent(m.body)}`
+        ? `https://wa.me/${r.guest.phone.replace(/\D/g, "")}?text=${encodeURIComponent(toPlainText(m.body))}`
         : undefined,
       englishHtml: m.channel === "email" && m.english ? toEmailHtml(m.english.body) : undefined,
     };
@@ -171,17 +171,20 @@ const CONFIG_NUMBERS: (keyof SchedulerConfig)[] = [
   "postStayHoursAfterCheckOut", "sendWindowStart", "sendWindowEnd",
   "inviteMinDaysBetween", "inviteQuietDaysAroundStay", "inviteMaxPerYear",
 ];
-const CHANNEL_CHOICES = ["email", "whatsapp", "both"];
-const KINDS = ["pre_arrival", "arrival_day", "in_stay", "post_stay", "event_invite"] as const;
+const CHANNEL_CHOICES = ["email", "whatsapp", "both", "off"];
+const KINDS = ["pre_arrival", "arrival_day", "in_stay", "morning", "post_stay", "event_invite"] as const;
 const APPROVAL_POLICIES = ["personal", "personal_and_suggestions", "all", "none"];
 
 /** The journey, in order, as the Emails tab shows it. */
 const STEPS: { key: TemplateKey; title: string; when: string }[] = [
   { key: "pre_arrival", title: "3 days before arrival", when: "10:00 in the guest's own time zone: directions, The Barn, experiences, and the link to personalise their stay" },
+  { key: "pre_arrival_text", title: "3 days before — WhatsApp", when: "The short version: asks for their arrival time, with the personalise button" },
   { key: "arrival_day", title: "3 hours before arrival", when: "Timed from the arrival time the guest gave us: where we meet them, their villa, contacts" },
   { key: "arrival_text", title: "Arrival-day WhatsApp", when: "The short version, for guests who agreed to WhatsApp (channel set in Settings)" },
   { key: "in_stay", title: "Welcome, after check-in", when: "2 hours after they arrive: Wi-Fi, reception, restaurant, bar, wellness, check-out, and ideas from the weather forecast" },
+  { key: "morning", title: "Good morning (WhatsApp)", when: "Every morning of the stay at 08:30: today's weather and suggestion, with Wellness and Experiences buttons" },
   { key: "post_stay", title: "Thank you, after check-out", when: "24 hours after they leave (timing in Settings), with the TripAdvisor button" },
+  { key: "post_stay_text", title: "Thank you — WhatsApp", when: "The short version, with the TripAdvisor button" },
   { key: "event_invite", title: "Event invitation", when: "To past guests who agreed to hear from us, before each event" },
 ];
 const LANGS: Language[] = ["en", "pt", "fr"];
@@ -193,8 +196,9 @@ const turndownEdits = new Map<string, string>();
 const exampleReservations = exampleGuests().map((e) => e.reservation);
 
 async function templatePreviews(key: TemplateKey, lang: Language | "own") {
-  const kind = key === "arrival_text" ? "arrival_day" : key;
-  const channel = key === "arrival_text" ? "whatsapp" : "email";
+  const KIND: Partial<Record<TemplateKey, MessageKind>> = { arrival_text: "arrival_day", pre_arrival_text: "pre_arrival", post_stay_text: "post_stay" };
+  const kind: MessageKind = KIND[key] ?? (key as MessageKind);
+  const channel = TEXT_TEMPLATES.includes(key) ? "whatsapp" : "email";
   return Promise.all(exampleGuests().map(async (e, i) => {
     // Same booking (so the guest-page link and any answers stay put), dates kept fresh.
     Object.assign(exampleReservations[i], { checkIn: e.reservation.checkIn, checkOut: e.reservation.checkOut });

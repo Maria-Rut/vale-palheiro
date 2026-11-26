@@ -60,7 +60,22 @@ const KIND_LABEL = {
   in_stay: "Welcome",
   post_stay: "Thank you",
   event_invite: "Event invite",
+  morning: "Good morning",
 };
+
+/** A WhatsApp message as the guest sees it: text, then [Button](link) lines as link buttons. */
+const TEXT_KEYS = ["pre_arrival_text", "arrival_text", "morning", "post_stay_text"];
+function waBubble(body) {
+  const lines = String(body ?? "").split("\n");
+  const btns = [];
+  while (lines.length && /^\s*$/.test(lines[lines.length - 1])) lines.pop();
+  while (lines.length && /^\[[^\]]+\]\(\S*\)$/.test(lines[lines.length - 1].trim())) btns.unshift(lines.pop().trim());
+  const text = lines.join("\n").replace(/^##\s+/gm, "").replace(/\[([^\]]+)\]\((\S+)\)/g, "$1: $2").trim();
+  return `<div class="bubble wa">${esc(text)}${btns.length ? `<div class="wa-btns">${btns.map((b) => {
+    const [, label, link] = b.match(/^\[([^\]]+)\]\((\S*)\)$/);
+    return `<a href="${escAttr(link)}" target="_blank" rel="noopener">↗ ${esc(label)}</a>`;
+  }).join("")}</div>` : ""}</div>`;
+}
 const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
 const LANG_NAME = { en: "English", pt: "Portuguese", fr: "French" };
@@ -132,7 +147,7 @@ const FILTERS = [
   ["all", "All"], ["held", "Awaiting approval"], ["sched_email", "Scheduled email"], ["sched_whatsapp", "Scheduled WhatsApp"],
   ["manual", "To send by hand"], ["sent", "Sent"], ["failed", "Failed"],
   ["pre_arrival", "3 days before"], ["arrival_day", "Arrival day"],
-  ["in_stay", "During the stay"], ["post_stay", "Thank you"], ["event_invite", "Event invites"],
+  ["in_stay", "During the stay"], ["morning", "Good morning"], ["post_stay", "Thank you"], ["event_invite", "Event invites"],
 ];
 function matchesFilter(m) {
   if (filter === "all") return true;
@@ -229,7 +244,7 @@ async function renderMessages() {
 function messageView(m) {
   const lang = LANG_NAME[m.language];
   if (m.channel !== "email") {
-    return `<div class="bubble">${esc(m.body)}</div>`;
+    return `<div class="inbox"><div class="inbox-head">WhatsApp to ${esc(m.guest?.firstName)} ${esc(m.guest?.lastName)} · ${esc(m.guest?.phone)}</div>${waBubble(m.body)}</div>${m.english ? `<details class="orig-toggle"><summary>English copy for the team</summary>${waBubble(m.english.body)}</details>` : ""}`;
   }
   const en = m.english ?? { subject: m.subject, body: m.body };
   const enHtml = m.englishHtml ?? m.html;
@@ -292,13 +307,13 @@ let currentStep = "pre_arrival";
 let templatesCache = null;
 
 const STEP_SHORT = {
-  pre_arrival: "3 days before", arrival_day: "3 hours before", arrival_text: "Arrival text",
-  in_stay: "Welcome", post_stay: "Thank you", event_invite: "Event invite",
+  pre_arrival: "3 days before", pre_arrival_text: "3 days · WhatsApp", arrival_day: "3 hours before", arrival_text: "Arrival · WhatsApp",
+  in_stay: "Welcome", morning: "Good morning · WhatsApp", post_stay: "Thank you", post_stay_text: "Thank you · WhatsApp", event_invite: "Event invite",
 };
 
 function inboxCard(ex, kind) {
   const who = `<p class="guest-line"><b>${esc(ex.name)}</b> — ${esc(ex.about)}</p>`;
-  if (kind === "arrival_text") return `${who}<div class="inbox"><div class="inbox-head">WhatsApp to ${esc(ex.name)}</div><div class="bubble">${esc(ex.text)}</div></div>`;
+  if (TEXT_KEYS.includes(kind)) return `${who}<div class="inbox"><div class="inbox-head">WhatsApp to ${esc(ex.name)}</div>${waBubble(ex.text)}</div>`;
   return `${who}<div class="inbox">
       <div class="inbox-head">From Vale Palheiro · to ${esc(ex.email)}<div class="subj">${esc(ex.subject)}</div></div>
       <div class="inbox-body">${ex.html}</div>
@@ -307,7 +322,7 @@ function inboxCard(ex, kind) {
 
 function editorHtml(step, lang) {
   const t = step.templates[lang];
-  const isText = step.key === "arrival_text";
+  const isText = TEXT_KEYS.includes(step.key);
   return `
     <div class="tpl-edit" data-lang="${lang}">
       ${isText ? "" : `<label>Subject</label><input class="tSubject" value="${escAttr(t.subject)}" />`}
@@ -326,7 +341,7 @@ function fieldsHtml(step) {
   const chip = (f) => `<span class="field-chip ${f.smart ? "smart" : ""}" data-token="{{${f.token}}}" title="${escAttr(f.help)}">{{${f.token}}}</span>`;
   return `<div class="fields">
     <p class="how">Words in <code>{{double brackets}}</code> are filled in for each guest. Click one to add it where your cursor is; hover to see what it becomes.
-    ${step.key === "arrival_text" ? "" : "A line like <code>[Button text](link)</code> becomes a button."}</p>
+    A line like <code>[Button text](link)</code> becomes a button${TEXT_KEYS.includes(step.key) ? " (in WhatsApp, a link button under the message)" : ""}.</p>
     <div>${simple.map(chip).join("")}</div>
     ${smart.length ? `<p class="how" style="margin-top:8px">Green ones are written automatically and only appear when they apply (a returning guest, a birthday, events that week, the weather plan…):</p><div>${smart.map(chip).join("")}</div>` : ""}
   </div>`;
@@ -730,6 +745,7 @@ const NUM_KEYS = [
 ];
 const CHANNEL_KINDS = [
   ["pre_arrival", "3 days before arrival"], ["arrival_day", "Arrival day"], ["in_stay", "Welcome, after check-in"],
+  ["morning", "Good morning, each day of the stay"],
   ["post_stay", "Thank you, after check-out"], ["event_invite", "Event invitations"],
 ];
 
@@ -740,7 +756,7 @@ async function loadConfig() {
   $("#channelGrid").innerHTML = CHANNEL_KINDS.map(([k, l]) => `
     <div><div class="field-lbl">${l}</div>
       <select data-channel="${k}">
-        ${[["email", "Email"], ["whatsapp", "WhatsApp"], ["both", "Email + WhatsApp"]].map(([v, t]) =>
+        ${[["email", "Email"], ["whatsapp", "WhatsApp"], ["both", "Email + WhatsApp"], ["off", "Off"]].map(([v, t]) =>
           `<option value="${v}" ${cfg.channels[k] === v ? "selected" : ""}>${t}</option>`).join("")}
       </select></div>`).join("");
   $("#integrations").innerHTML = integ.map((i) => `

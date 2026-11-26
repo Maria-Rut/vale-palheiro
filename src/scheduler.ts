@@ -53,7 +53,7 @@ import { recommend } from "./recommender.ts";
  */
 export type ApprovalPolicy = "personal" | "personal_and_suggestions" | "all" | "none";
 
-export type ChannelChoice = "email" | "whatsapp" | "both";
+export type ChannelChoice = "email" | "whatsapp" | "both" | "off";
 
 export interface SchedulerConfig {
   preArrivalDaysBefore: number;
@@ -68,6 +68,8 @@ export interface SchedulerConfig {
    * agreed to it at booking; "whatsapp" falls back to email for the others.
    */
   channels: Record<MessageKind, ChannelChoice>;
+  /** Resort time of the daily good-morning message (8.5 = 08:30). */
+  morningHour: number;
   approvalPolicy: ApprovalPolicy;
   inviteMinDaysBetween: number;
   inviteQuietDaysAroundStay: number;
@@ -82,12 +84,14 @@ export const DEFAULT_CONFIG: SchedulerConfig = {
   sendWindowStart: 9,
   sendWindowEnd: 20,
   channels: {
-    pre_arrival: "email",
+    pre_arrival: "both",
     arrival_day: "both",
     in_stay: "email",
-    post_stay: "email",
+    post_stay: "whatsapp",
     event_invite: "email",
+    morning: "whatsapp",
   },
+  morningHour: 8.5,
   approvalPolicy: "personal",
   inviteMinDaysBetween: 30,
   inviteQuietDaysAroundStay: 7,
@@ -107,6 +111,11 @@ function staffOccasion(r: Reservation): string {
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
+
+/** The morning message only talks about today. */
+function todayOnly<T extends { days: unknown[] }>(plan: T | undefined): T | undefined {
+  return plan && plan.days.length ? { ...plan, days: plan.days.slice(0, 1) } : undefined;
+}
 
 let seq = 0;
 function newId(prefix: string): string {
@@ -197,7 +206,10 @@ export class Scheduler {
   /** The channels a message of this kind goes out on, for this guest. */
   private channelsFor(kind: MessageKind, g: Guest): Channel[] {
     const choice = this.config.channels[kind] ?? "email";
+    if (choice === "off") return [];
     const canWhatsApp = !!g.phone && g.preferredChannels.includes("whatsapp");
+    // The daily good-morning is a WhatsApp habit: no daily email instead.
+    if (kind === "morning" && choice === "whatsapp" && !canWhatsApp) return [];
     if (choice === "email" || !canWhatsApp) return ["email"];
     return choice === "whatsapp" ? ["whatsapp"] : ["email", "whatsapp"];
   }
@@ -263,6 +275,26 @@ export class Scheduler {
           timingNote: fit.note ?? `${c.inStayHoursAfterCheckIn}h after check-in`,
           expiresAt: new Date(checkOut.getTime() - 12 * HOUR),
         });
+      }
+    }
+
+    // 3b. Good morning — each full day of the stay, early on the resort's clock,
+    //     with the day's suggestion. Never on arrival or departure day.
+    {
+      const h = Math.floor(c.morningHour), m = Math.round((c.morningHour - h) * 60);
+      for (let d = 1; ; d++) {
+        const day = new Date(checkIn.getTime() + d * DAY);
+        const sendAt = atLocalTime(day, RESORT_TZ, h, m);
+        if (sendAt.getTime() >= atLocalTime(checkOut, RESORT_TZ, 0).getTime()) break;
+        const date = zonedParts(sendAt, RESORT_TZ);
+        const tag = `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+        for (const ch of this.channelsFor("morning", g)) {
+          plans.push({
+            ...base, key: `morning:${r.id}:${tag}:${ch}`, kind: "morning", channel: ch,
+            sendAt, timeZone: RESORT_TZ, timingNote: `Good morning, ${localLabel(sendAt, RESORT_TZ)} resort time`,
+            expiresAt: atLocalTime(day, RESORT_TZ, 12),
+          });
+        }
       }
     }
 
@@ -447,7 +479,8 @@ export class Scheduler {
         continue;
       }
 
-      const stayPlan = p.kind === "in_stay" ? recommend(p.reservation, p.sendAt, this.forecast) : undefined;
+      const stayPlan = p.kind === "in_stay" ? recommend(p.reservation, p.sendAt, this.forecast)
+        : p.kind === "morning" ? todayOnly(recommend(p.reservation, p.sendAt, this.forecast)) : undefined;
       const generated = await this.generator.generate({
         reservation: p.reservation,
         kind: p.kind,
@@ -512,8 +545,10 @@ export class Scheduler {
    * scheduling it — used by the Emails tab to show how a template reads.
    */
   async preview(r: Reservation, kind: MessageKind, language: Language, opts: { returning?: boolean; channel?: Channel; event?: ResortEvent } = {}) {
-    const sendAt = kind === "in_stay" ? new Date(Date.parse(r.checkIn) + this.config.inStayHoursAfterCheckIn * HOUR) : new Date();
-    const stayPlan = kind === "in_stay" ? recommend(r, sendAt, this.forecast) : undefined;
+    const sendAt = kind === "in_stay" ? new Date(Date.parse(r.checkIn) + this.config.inStayHoursAfterCheckIn * HOUR)
+      : kind === "morning" ? atLocalTime(new Date(Date.parse(r.checkIn) + DAY), RESORT_TZ, 8, 30) : new Date();
+    const stayPlan = kind === "in_stay" ? recommend(r, sendAt, this.forecast)
+      : kind === "morning" ? todayOnly(recommend(r, sendAt, this.forecast)) : undefined;
     const a = Date.parse(r.checkIn), b = Date.parse(r.checkOut);
     return this.generator.generate({
       reservation: r, kind, channel: opts.channel ?? "email", language,

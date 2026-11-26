@@ -108,7 +108,7 @@ const initial: PropertyInfo = {
   // ---- brochure, minibar, wellness
   brochureLink: { group: "menus", label: "Experiences brochure (link or file)", value: "/brochure.pdf", sample: false, help: "The Experiences Menu (v4). Replace with a new PDF link when it changes." },
   wellnessInfo: { group: "menus", label: "Wellness (one line)", value: "Massages in your villa, yoga, Pilates and barre", sample: true, help: "Shown in the welcome message. From the Experiences Menu." },
-  wellnessMenuLink: { group: "menus", label: "Wellness menu link", value: "", sample: true, help: "Add when the wellness menu is available. Empty = the brochure is used." },
+  wellnessMenuLink: { group: "menus", label: "Wellness menu link", value: "/brochure.pdf#page=11", sample: true, help: "For now: the Body, movement & wellbeing pages of the Experiences Menu (p. 11–13). Replace with the wellness menu when it exists." },
   minibarStandard: { group: "menus", label: "Standard minibar (already in the villa)", value: "Still water, sparkling water, Coca-Cola, Fanta", sample: true, help: "Comma-separated. Shown to guests as information — not something they need to ask for." },
   minibarExtras: { group: "menus", label: "Extras guests can ask for", value: "A bottle of regional wine, Sparkling wine, Local craft beer, Alcohol-free drinks, Fresh fruit", sample: true, help: "Comma-separated. Placeholder until the minibar menu arrives. Guests can also write their own request." },
   villasWithoutMinibar: { group: "menus", label: "Villas without a minibar", value: "Casita 1, Casita 2, Casita 3", sample: true, help: "Comma-separated, as written in the booking (e.g. Casita 2)." },
