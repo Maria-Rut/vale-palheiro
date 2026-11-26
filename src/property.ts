@@ -109,7 +109,7 @@ const initial: PropertyInfo = {
   // ---- brochure, minibar, wellness
   brochureLink: { group: "menus", label: "Experiences brochure (link or file)", value: "/brochure.pdf", sample: false, help: "The Experiences Menu (v4). Replace with a new PDF link when it changes." },
   wellnessInfo: { group: "menus", label: "Wellness (one line)", value: "Wellness da Ribeira — massages and treatments, in the spa or the privacy of your villa", sample: false, help: "Shown in the welcome message. Book at least 24h ahead." },
-  wellnessMenuLink: { group: "menus", label: "Wellness menu link", value: "/wellness.html", sample: false, help: "The Wellness da Ribeira massages menu." },
+  wellnessMenuLink: { group: "menus", label: "Wellness menu (link or file)", value: "/wellness.pdf", sample: false, help: "The Wellness da Ribeira massages menu PDF. Upload the file to public/wellness.pdf (like the Experiences brochure)." },
   minibarStandard: { group: "menus", label: "Standard minibar (already in the villa)", value: "Still water, sparkling water, Coca-Cola, Fanta", sample: false, help: "Comma-separated. Shown to guests as information — not something they need to ask for." },
   minibarExtras: { group: "menus", label: "Extras guests can ask for", value: "A bottle of regional wine, Sparkling wine, Local craft beer, Alcohol-free drinks, Fresh fruit", sample: false, help: "Comma-separated. Guests can also write their own request." },
   villasWithoutMinibar: { group: "menus", label: "Villas without a minibar", value: "Casita Jasmim, Casita Lavanda, Casita Alecrim", sample: false, help: "All villas have a minibar except the Casitas. Comma-separated, as written in the booking." },
