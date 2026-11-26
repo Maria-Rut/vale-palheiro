@@ -52,22 +52,28 @@ const scheduler = new Scheduler(new MockBookingSource(), new InMemoryEventSource
 // Demo: one guest has already filled in their "prepare your stay" page.
 for (const [id, prefs] of Object.entries(preferenceSeeds)) setPreferences(id, prefs);
 
-// If Supabase is configured, load persisted preferences + consent so they
-// survive restarts (overriding the demo seeds above). No-op without Supabase.
-if (supabaseEnabled) {
-  const [prefCount, consentCount] = await Promise.all([loadPreferences(), scheduler.loadConsent()]);
-  console.log(`[supabase] loaded ${prefCount} saved preferences, ${consentCount} consent records`);
+/**
+ * Startup work — runs AFTER the HTTP server is listening (see bottom of file),
+ * so the port opens immediately and the host's health check passes right away.
+ * A slow or unreachable Supabase can delay this, but can never delay boot.
+ */
+async function initData(): Promise<void> {
+  if (supabaseEnabled) {
+    try {
+      const [prefCount, consentCount] = await Promise.all([loadPreferences(), scheduler.loadConsent()]);
+      console.log(`[supabase] loaded ${prefCount} saved preferences, ${consentCount} consent records`);
+    } catch (e) {
+      console.error(`[supabase] startup load failed (continuing in-memory): ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  // Build the initial plan, then send anything already due.
+  await scheduler.plan();
+  await scheduler.runDue();
+
+  // Ongoing: re-read bookings + events every 15 minutes, send what's due every minute.
+  setInterval(() => void scheduler.plan(), 15 * 60_000);
+  setInterval(() => void scheduler.runDue(), 60_000);
 }
-
-// Build the initial plan, then send anything already due so the demo opens
-// with a realistic mix of sent / scheduled / held / skipped.
-await scheduler.plan();
-await scheduler.runDue();
-
-// In real use the system runs on its own: re-read bookings + events every 15 minutes
-// (new reservations, changed dates, new events) and send what's due every minute.
-setInterval(() => void scheduler.plan(), 15 * 60_000);
-setInterval(() => void scheduler.runDue(), 60_000);
 
 // --- tiny cookie-based session (no external deps) ---
 const sessions = new Set<string>();
@@ -601,4 +607,6 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 server.listen(PORT, HOST, () => {
   console.log(`Vale Palheiro guest messaging running on ${HOST}:${PORT} (locally: http://localhost:${PORT})`);
   console.log(`Staff login — user: ${STAFF_USER}  pass: ${STAFF_PASS}`);
+  // Load data and start the schedulers once we're listening — never blocks boot.
+  void initData();
 });
