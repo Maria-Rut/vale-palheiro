@@ -476,6 +476,29 @@
       .intro h1 { font-size: 30px; }
     }
 
+    /* laptop: the side panel can be put away and brought back (state remembered) */
+    @media (min-width: 901px) {
+      aside.side { transition: transform .3s ease; }
+      .main-wrap { transition: margin-left .3s ease; }
+      .side-close { display: block; position: absolute; top: 16px; left: 16px; background: none; border: none; cursor: pointer; width: 30px; height: 30px; color: var(--nav-ink); opacity: .7; }
+      .side-close:hover { opacity: 1; color: var(--terracotta); }
+      .side-close svg { width: 22px; height: 22px; }
+      body.side-collapsed aside.side { transform: translateX(-100%); }
+      body.side-collapsed .main-wrap { margin-left: 0; }
+      body.side-collapsed .mobile-bar {
+        display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20;
+        background: var(--side-bg); padding: 16px 32px; border-bottom: 1px solid #ddd6ca;
+      }
+      body.side-collapsed .mobile-bar img { height: 34px; display: block; }
+      body.side-collapsed .menu-btn {
+        background: none; border: none; display: flex; align-items: center; gap: 10px; cursor: pointer;
+        font-family: var(--label); text-transform: uppercase; letter-spacing: .25em; font-size: 11px; color: var(--nav-ink); padding: 6px 0;
+      }
+      body.side-collapsed .menu-btn .bars { width: 22px; height: 10px; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+      body.side-collapsed .menu-btn:hover { color: var(--terracotta); }
+      body.side-collapsed .main-wrap main { margin: 0 auto; }
+    }
+
     /* login: split like the website menu — form on off-white, logo on anthracite */
     .login-wrap { background: var(--side-bg); padding: 0; display: grid; grid-template-columns: minmax(340px, 42%) 1fr; align-items: stretch; }
     .login-side { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }

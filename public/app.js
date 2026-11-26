@@ -66,8 +66,16 @@ function openTab(tab) {
   window.scrollTo(0, 0);
   RENDER[tab]();
 }
-$("#menuOpen").addEventListener("click", () => document.body.classList.add("menu-open"));
-$("#menuClose").addEventListener("click", () => document.body.classList.remove("menu-open"));
+// Phones: full-screen menu. Laptops: the side panel slides away and back,
+// and the choice is remembered on this computer.
+const isWide = () => window.matchMedia("(min-width: 901px)").matches;
+function setCollapsed(on) {
+  document.body.classList.toggle("side-collapsed", on);
+  try { localStorage.setItem("vp-side-collapsed", on ? "1" : "0"); } catch {}
+}
+try { if (localStorage.getItem("vp-side-collapsed") === "1") document.body.classList.add("side-collapsed"); } catch {}
+$("#menuOpen").addEventListener("click", () => (isWide() ? setCollapsed(false) : document.body.classList.add("menu-open")));
+$("#menuClose").addEventListener("click", () => (isWide() ? setCollapsed(true) : document.body.classList.remove("menu-open")));
 document.querySelector("[data-home]").addEventListener("click", (e) => { e.preventDefault(); openTab("emails"); });
 document.querySelectorAll(".tabbtn").forEach((btn) => btn.addEventListener("click", () => openTab(btn.dataset.tab)));
 
