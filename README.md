@@ -20,13 +20,17 @@ resort's real systems.
 
 | # | Moment | Default timing | What it says |
 |---|--------|----------------|--------------|
-| 1 | **We're getting ready** | 3 days before arrival, 10:00 guest time | Your villa is being prepared, we can't wait; stay summary; events during the stay (with priority booking); a **"Click here to personalise your stay" button** to the guest's own page (below). Returning guests hear about a welcome-back gift. |
-| 2 | **Arrival details** | 3 hours before arrival | Villa / unit, where we'll meet you (Casa da Ribeira), directions + map, reception hours, late-arrival number. Plus a short WhatsApp/SMS if the guest opted in. |
-| 3 | **Welcome & settling in** | 2 hours after check-in | A line about their journey from their home town, Wi-Fi, breakfast and dinner hours, reception, email and out-of-hours numbers, check-out time, what's on, additional services — and **our suggestions for your stay**, day by day, based on the weather and sea forecast (see below). |
-| 4 | **Thank you + review** | 24 hours after check-out, guest time | Thank-you, one personal line, a **Leave a review** button. |
+| 1 | **We're getting ready** | 3 days before arrival, 10:00 guest time | Stay summary; **Getting here** (access road, few signs in the village, unpaved last stretch) with a Google Maps button; check-in time, front-office hours and the late check-in note; **Dining at The Barn**; **Experiences** with the brochure button; events during the stay; the **"Click here to personalise your stay"** button. |
+| 2 | **Arrival details** | 3 hours before the arrival time the guest gave us | Villa / unit, where we meet them (Casa da Ribeira), check-in time, directions + map, contacts, late check-in note. Short WhatsApp version for guests who agreed to WhatsApp. |
+| 3 | **Welcome & settling in** | 2 hours after arrival | Wi-Fi, breakfast, The Barn, bar, minibar, wellness, reception, check-out, the Experiences Menu, what's on — and day-by-day suggestions from the weather and sea forecast. |
+| 4 | **Thank you + review** | 24 hours after check-out, guest time (editable) | Thank-you, one personal line, **TripAdvisor** button (Google optional). |
 | 5 | **Event invites** | N days before each event, 10:00 guest time | To opted-in past guests only, with a welcome-back gift if they come to stay. |
 
-All timings, quiet hours and anti-spam limits are editable in **Settings**.
+All timings, quiet hours, anti-spam limits and the **channel for each message
+(Email / WhatsApp / both)** are editable in **Settings**. WhatsApp goes only to
+guests who agreed to it. The WhatsApp Business API is **not connected yet**:
+due WhatsApps wait in the Outbox under *To send by hand* (open in WhatsApp,
+send, mark as sent). See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Email templates (the first tab)
 
@@ -131,34 +135,41 @@ The 3-days-before email links each guest to a **personal page** (`/stay/<token>`
 no login) where their stay is **already set up the way most guests like it** —
 so a happy guest just taps *Looks perfect*, and nobody faces a questionnaire.
 
-- **Pre-filled:** fireplace laid and ready to light, still water in the fridge,
-  beds as booked, a plug adapter guessed from the guest's country (Portugal
-  uses EU sockets), arrival time.
-- **Easy to change:** regional wine, bubbles, beer or alcohol-free drinks in the
-  fridge (staff confirm prices); separate beds or one more bed (staff confirm
-  it's possible).
+- **Arrival:** the exact time they expect to arrive (shows check-in time and
+  front-office hours; after closing it explains the late check-in and fee),
+  plus an **early check-in** request (subject to availability).
+- **Minibar:** the standard minibar is shown as information (the villas
+  without one say so); guests can pick extras from a list the team edits in
+  Resort settings, or write their own request. Staff confirm prices.
+- **Pre-filled:** fireplace, beds as booked, a plug adapter guessed from the
+  guest's country (Portugal uses EU sockets).
 - **Optional, folded away:** food & allergies, a celebration (including
   *"Do we need a reason?"*), experiences from the resort's own Experiences
   Menu with three "picked for you" ideas, and a note for the team.
 - **"Remember my preferences for future stays."**
 - **Allergies need an explicit consent box** and are **deleted automatically
   after check-out**.
-- Wi-Fi and contact details come from **Resort details**.
+- Wi-Fi and contact details come from **Resort settings**.
 - EN / PT / FR. The page closes 24 hours before arrival; bookings made later
   than that get the usual personal call.
 
 Their answers become a **prep sheet** (dashboard → *Guests*),
-**team tasks** (wine to stock, extra bed to check, experiences to arrange),
+**team tasks** — created automatically: late check-in (*"Guest Emma Smith
+arriving at 23:00 – Arrange late check-in"*, with the fee), early check-in,
+minibar request, extra bed, adapter, kitchen notes, celebration, experiences —
 **priority in the welcome email's suggestions** for experiences they ticked,
 a line in the **arrival-day email** ("we've prepared everything the way you
 asked…"), and a line in the **thank-you** if they asked us to remember them.
 Sophie's answers are pre-filled in the demo.
 
-## Resort details
+## Resort settings
 
-Wi-Fi, phone numbers, directions (EN/PT/FR), meal hours, check-out time and the
-review link are edited in the **Resort details** tab and flow straight into
-upcoming messages. Placeholder values are marked **sample** and counted on the
+Contacts, front-office hours, check-in time, early check-in policy, late-arrival
+fee, directions and access road (EN/PT/FR), restaurant introduction, breakfast,
+dinner and bar hours, Wi-Fi, check-out, the Experiences brochure, wellness,
+minibar (standard, extras, villas without one), TripAdvisor and Google links —
+edited in one place in the **Resort settings** tab, grouped by topic, and used
+by every email, WhatsApp and the guest page. Placeholder values are marked **sample** and counted on the
 dashboard, so nothing made-up reaches a real guest unnoticed.
 
 ---
@@ -194,7 +205,7 @@ Open <http://localhost:3000> and log in:
    who is held back by the anti-spam rules and why.
 6. **Weather & activities** → the 7-day forecast and what the agent sees;
    switch off "Massage" and watch the welcome emails' suggestions change.
-7. **Resort details** → change the Wi-Fi password; every unsent message updates.
+7. **Resort settings** → change the Wi-Fi password; every unsent message updates.
 8. **Outbox → Demo tools → In 3 days → Send anything due**.
 
 `public/snapshot.html` is a static export of the output (regenerate with
@@ -202,12 +213,24 @@ Open <http://localhost:3000> and log in:
 
 ---
 
+## Weather & turndown cards
+
+The *Weather & activities* tab shows the forecast, and **the suggestion for each
+guest for each day**. Staff can rewrite any card and print the day's cards for
+the evening turndown. Experiences can be switched off, and new ones added — the
+agent only ever suggests experiences on this list.
+
+## Events
+
+Add, **edit** or remove events. Invitations go ~1 week before (editable per
+event), personalised, only to guests subscribed to marketing communications.
+
 ## How it's built
 
 ```
 src/
   types.ts      Domain model (Guest, Reservation, ResortEvent, ScheduledMessage, StaffTask)
-  sources.ts    Connector seams: BookingSource (Host PMS) + EventSource (calendar)
+  sources.ts    Connector seams: BookingSource (GuestCentric, planned) + EventSource (calendar)
   mockData.ts   Fictional guests, stays and events (dates relative to "now")
   property.ts   Wi-Fi, phones, directions… edited by staff, flagged until confirmed
   timezone.ts   Guest-local timing and quiet hours (Intl, no dependencies)
@@ -219,7 +242,7 @@ src/
   templates.ts  The editable email templates (EN / PT / FR), fields, buttons, HTML email
   examples.ts   Five made-up guests for the template previews
   generator.ts  Fills the templates for each guest (+ LLM seam)
-  channels.ts   Email / SMS / WhatsApp adapters behind one interface
+  channels.ts   Email (simulated) / WhatsApp (manual; Business API seam) behind one interface
   scheduler.ts  Who gets what, when; anti-spam; tasks; send-if-due
   server.ts     Zero-dependency HTTP server + JSON API
 public/
@@ -231,23 +254,9 @@ public/
 
 ## From prototype to pilot
 
-1. **Booking data** — implement `BookingSource` against **Host**, the PMS the
-   team already treats as the single source of truth (direct bookings are
-   entered there; Booking.com / Expedia / website bookings arrive via
-   GuestCentric). Needed fields: guest name, email, language, country / time
-   zone, dates and expected arrival time, villa + unit, adults / children,
-   occasion, and the guest's opt-in for news.
-2. **Events calendar** — implement `EventSource` against the calendar the team
-   uses (e.g. Google Calendar), including buy-outs so no invites go out for
-   closed dates.
-3. **Sending** — swap the mock adapters for an email provider (and Twilio for
-   SMS / WhatsApp; WhatsApp needs Meta-approved templates).
-4. **Resort details** — confirm every field marked *sample*.
-5. **Weather** — `WEATHER_SOURCE=open-meteo` + `OPEN_METEO_API_KEY`.
-6. **Hosting** — `render.yaml` deploys to Render. State is in memory today; a
-   pilot needs a small database so approvals, edits and sent history survive a
-   restart.
-7. **Consent** — honour opt-ins and unsubscribe replies (GDPR).
+See **[ARCHITECTURE.md](ARCHITECTURE.md)**: the four layers, what is simulated,
+the GuestCentric questions for Carmine, WhatsApp Business API, the Mac Mini +
+local AI option, and the list of information still needed.
 
 The approval policy and perfume workshop come from Maria's `terra-crm-weather`
 branch; the "prepare your stay" page from Arantxa's work.

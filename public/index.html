@@ -101,6 +101,8 @@
       transition: background 0.2s;
     }
     button.primary:hover { background: var(--sage); }
+    a.btnlink { display: inline-block; background: var(--sage-dark); color: var(--white); padding: 9px 18px; border-radius: 999px; font-size: 13px; text-decoration: none; }
+    .row-end { gap: 10px; }
     button.ghost {
       background: var(--white); border: 1px solid var(--line); color: var(--earth-700);
       padding: 9px 18px; border-radius: 999px; cursor: pointer; font-family: var(--sans); font-size: 13px;
@@ -318,6 +320,40 @@
     .pill.held { background: #fbe9c9; color: #8a5a12; }
     .pill.pre_arrival, .pill.arrival_day, .pill.in_stay, .pill.post_stay, .pill.event_invite, .pill.held { text-transform: none; }
     .pill.skipped { background: #eee; color: #888; }
+    .pill.manual { background: #dcefe0; color: #2e7d4f; text-transform: none; }
+    .pill.failed { background: #f6dcd6; color: #9b3b2f; }
+    .profile { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); padding: 0 20px 10px; }
+    .profile b { color: var(--earth-800); font-weight: 600; }
+    .consent-chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+    .consent-chip.yes { background: #d7e7d1; color: #3f6b36; }
+    .consent-chip.no { background: #f1e4d6; color: #8a5a12; }
+    .settings-group { font-family: var(--serif); font-size: 18px; color: var(--earth-800); margin: 8px 0 2px; grid-column: 1 / -1; border-top: 1px solid var(--line-soft); padding-top: 14px; }
+    .settings-group:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+    .integ { display: flex; gap: 12px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--earth-700); flex-wrap: wrap; }
+    .integ:first-of-type { border-top: none; }
+    .integ b { min-width: 190px; color: var(--earth-800); }
+    .integ .st { font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }
+    .integ .st.live, .integ .st.configured { background: #d7e7d1; color: #3f6b36; }
+    .integ .st.simulated, .integ .st.templates { background: #efe8d7; color: var(--earth-700); }
+    .integ .st.planned, .integ .st.manual { background: #e3e9ee; color: #44607a; }
+    .integ .d { flex: 1; min-width: 220px; color: var(--muted); }
+    .td-day { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .td-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .td-card { background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px; padding: 14px 16px; }
+    .td-card .who { font-family: var(--serif); font-size: 17px; color: var(--earth-800); }
+    .td-card .meta { font-size: 12px; color: var(--muted); margin: 2px 0 8px; }
+    .td-card textarea { width: 100%; font-family: var(--sans); font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; min-height: 70px; resize: vertical; }
+    .td-card .why { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .td-card .row-btns { display: flex; gap: 8px; margin-top: 8px; }
+    .cond-pick { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; }
+    #printCards { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #printCards, #printCards * { visibility: visible; }
+      #printCards { display: block; position: absolute; inset: 0; }
+      .print-card { page-break-after: always; font-family: Georgia, serif; padding: 40px; text-align: center; }
+      .print-card h2 { font-size: 24px; margin: 0 0 18px; } .print-card p { font-size: 17px; line-height: 1.6; }
+    }
     .note { margin: 0 20px 6px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: #fbf3e4; color: #7a5420; }
     .note.info { background: var(--paper-2); color: var(--earth-700); }
     .task { display: flex; gap: 12px; align-items: flex-start; background: var(--white); border: 1px solid var(--line-soft); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
@@ -415,7 +451,7 @@
         <button class="tabbtn" data-tab="tasks">Team tasks <span class="tab-count" id="taskCount"></span></button>
         <button class="tabbtn" data-tab="events">Events</button>
         <button class="tabbtn" data-tab="weather">Weather &amp; activities</button>
-        <button class="tabbtn" data-tab="property">Resort details</button>
+        <button class="tabbtn" data-tab="property">Resort settings</button>
         <button class="tabbtn" data-tab="settings">Settings</button>
       </div>
 
@@ -449,7 +485,7 @@
       </section>
 
       <section id="tab-tasks" class="hidden">
-        <p class="hint muted" style="margin-top:0">Things the system can't (and shouldn't) do on its own — a gift for a returning guest, a handwritten note, someone waiting for a late arrival.</p>
+        <p class="hint muted" style="margin-top:0">Created automatically from bookings and guest answers — late check-in, minibar requests, extra beds, adapters, celebrations, kitchen notes. Things the system can't (and shouldn't) do on its own.</p>
         <div id="tasks"></div>
       </section>
 
@@ -457,7 +493,7 @@
         <p class="prefs-intro">
           Everyone arriving soon, staying now or just left. The 3-days-before email has a button to the guest's
           own "prepare your stay" page; what they choose shows up here, and anything that needs a person
-          (extra bed, drinks, experiences) becomes a team task.
+          (late arrival, minibar request, extra bed, adapter, celebration, experiences) becomes a team task.
         </p>
         <div id="prefs"></div>
       </section>
@@ -470,7 +506,7 @@
         <div id="events"></div>
         <div class="section-title">Who won't be invited, and why</div>
         <div id="suppressions"></div>
-        <div class="section-title">Add an event</div>
+        <div class="section-title" id="eventFormTitle">Add an event</div>
         <form class="panel" id="eventForm">
           <div class="form-grid">
             <div><div class="field-lbl">Title (English)</div><input name="titleEn" required placeholder="Fado night at The Barn" /></div>
@@ -484,9 +520,10 @@
             <div><div class="field-lbl">Who hears about it</div>
               <select name="audience"><option value="everyone">Guests staying + opted-in past guests</option><option value="in_house">Only guests staying at the time</option></select>
             </div>
-            <div><div class="field-lbl">Invite past guests … days before</div><input name="inviteLeadDays" type="number" min="1" value="14" /></div>
+            <div><div class="field-lbl">Invite past guests … days before</div><input name="inviteLeadDays" type="number" min="0" value="7" /></div>
           </div>
-          <div class="row-end"><button class="primary" type="submit">Add event</button></div>
+          <input type="hidden" name="id" />
+          <div class="row-end"><button class="ghost hidden" type="button" id="eventCancelEdit">Cancel</button><button class="primary" type="submit" id="eventSubmit">Add event</button></div>
         </form>
       </section>
 
@@ -497,13 +534,32 @@
         </p>
         <div id="wxSource"></div>
         <div class="wx-grid" id="forecast"></div>
+        <div class="section-title">Suggestions day by day · turndown cards</div>
+        <p class="hint muted" style="margin-top:0">What the agent suggests to each guest staying in the next days, based on that day's forecast. Change the wording of any card, then print the day's cards for the evening turndown.</p>
+        <div class="td-day" id="tdDays"></div>
+        <div class="td-cards" id="tdCards"></div>
+        <div class="row-end"><button class="ghost" id="tdPrint" type="button">Print this day's cards</button></div>
+        <div id="printCards"></div>
         <div class="section-title">Experiences the agent can suggest</div>
-        <p class="hint muted" style="margin-top:0">From the Experiences Menu. Switch one off (out of season, partner unavailable) and it won't be suggested.</p>
+        <p class="hint muted" style="margin-top:0">From the Experiences Menu. Switch one off (out of season, partner unavailable) and it won't be suggested. The agent only suggests what is on this list.</p>
         <div id="activities"></div>
+        <div class="section-title">Add an experience</div>
+        <form class="panel" id="actForm">
+          <div class="form-grid">
+            <div><div class="field-lbl">Name</div><input name="name" required placeholder="e.g. Sunset at Arrifana" /></div>
+            <div><div class="field-lbl">Type</div><select name="category"><option value="land">Land &amp; trails</option><option value="sea">Sea &amp; coast</option><option value="wellbeing">Body &amp; wellbeing</option><option value="table">At the table</option><option value="craft">Workshops &amp; crafts</option></select></div>
+            <div class="full"><div class="field-lbl">One line for guests</div><input name="pitch" placeholder="What it is, in our own words" /></div>
+            <div><div class="field-lbl">Price from (€) — empty = on request, 0 = free</div><input name="priceFrom" type="number" min="0" step="0.5" /></div>
+            <div><div class="field-lbl">Good for</div><label class="check"><input type="checkbox" name="family" /> Families with children</label><label class="check"><input type="checkbox" name="indoor" /> Works indoors / in the rain</label></div>
+            <div class="full"><div class="field-lbl">Best in this weather</div><div class="cond-pick" id="actGood"></div></div>
+            <div class="full"><div class="field-lbl">Never in this weather</div><div class="cond-pick" id="actNot"></div></div>
+          </div>
+          <div class="row-end"><button class="primary" type="submit">Add experience</button></div>
+        </form>
       </section>
 
       <section id="tab-property" class="hidden">
-        <p class="hint muted" style="margin-top:0">These details go straight into guest messages. Fields marked <span class="badge">sample</span> are placeholders — confirm or replace them before going live.</p>
+        <p class="hint muted" style="margin-top:0">One place for the resort's practical information: it goes straight into emails, WhatsApps and the guest page. Fields marked <span class="badge">sample</span> are placeholders — confirm or replace them before going live.</p>
         <form class="panel" id="propForm"><div class="form-grid" id="propFields"></div>
           <div class="row-end"><button class="primary" type="submit">Save details</button></div>
         </form>
@@ -521,7 +577,6 @@
               <div><div class="field-lbl">Thank-you &amp; review</div><div class="stepper"><input id="c_postStayHoursAfterCheckOut" type="number" min="0" /><span class="unit">hours after check-out</span></div></div>
               <div class="full"><div class="field-lbl">Good hours to receive a message (guest's local time)</div>
                 <div class="stepper"><input id="c_sendWindowStart" type="number" min="0" max="23" /><span class="unit">to</span><input id="c_sendWindowEnd" type="number" min="1" max="24" /><span class="unit">h — anything outside moves into this window</span></div></div>
-              <label class="check full"><input type="checkbox" id="c_arrivalTextReminder" /> Also send a short WhatsApp / SMS on arrival day, if the guest opted in</label>
               <div class="full"><div class="field-lbl">Which emails wait for someone on the team to approve them</div>
                 <select id="c_approvalPolicy">
                   <option value="personal">Only personal ones (birthday, anniversary…)</option>
@@ -530,6 +585,11 @@
                   <option value="none">None — everything goes out on time</option>
                 </select></div>
             </div>
+          </div>
+          <div class="panel">
+            <h3>Channel for each message</h3>
+            <p class="hint">WhatsApp only goes to guests who agreed to it; the others get the email. The WhatsApp Business API isn't connected yet, so due WhatsApps wait in the Outbox under "To send by hand".</p>
+            <div class="form-grid" id="channelGrid"></div>
           </div>
           <div class="panel">
             <h3>Keeping it personal, not spam</h3>
@@ -542,6 +602,9 @@
           </div>
         </div>
         <div class="row-end"><button class="primary" id="applyConfig">Save settings</button></div>
+        <div class="section-title">Connections</div>
+        <div class="panel"><div id="integrations"></div>
+          <p class="hint" style="margin-top:10px">See ARCHITECTURE.md in the code for how each connection goes live and what we need for it.</p></div>
       </section>
 
 

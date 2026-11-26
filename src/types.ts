@@ -46,8 +46,11 @@ export type MessageKind =
  *   cancelled — staff chose not to send
  *   skipped   — its moment passed before it could go (e.g. a last-minute
  *               booking), so the system deliberately didn't send a stale message
+ *   manual    — due now, to be sent by hand (WhatsApp while the Business API
+ *               isn't connected): the team opens it in WhatsApp and marks it sent
+ *   failed    — the provider refused it; shown in the Outbox to retry
  */
-export type MessageStatus = "scheduled" | "held" | "sent" | "cancelled" | "skipped";
+export type MessageStatus = "scheduled" | "held" | "sent" | "cancelled" | "skipped" | "manual" | "failed";
 
 export interface Guest {
   id: string;
@@ -124,7 +127,7 @@ export interface ResortEvent {
 export interface StaffTask {
   id: string;
   reservationId: string;
-  kind: "welcome_back_package" | "occasion" | "late_arrival" | "guest_request";
+  kind: "welcome_back_package" | "occasion" | "late_arrival" | "early_check_in" | "guest_request";
   /** When it should be done by (ISO). */
   dueBy: string;
   text: string;
@@ -179,10 +182,6 @@ export interface DeliveryResult {
 
 // ---------------------------------------------------------------- preferences
 
-/** Roughly when the guest expects to arrive. */
-export type ArrivalWindow = "early" | "afternoon" | "evening" | "late";
-/** What we stock in the villa fridge before arrival. */
-export type Drink = "still_water" | "sparkling_water" | "wine" | "sparkling_wine" | "beer" | "alcohol_free";
 /** Sleeping set-up: as booked, split into separate beds, or one extra bed. */
 export type Beds = "as_booked" | "separate" | "extra";
 /** Portugal uses EU (type F) sockets; guests from elsewhere may need an adapter. */
@@ -205,11 +204,19 @@ export type Experience =
  * with everything submits in one tap — they only change what matters to them.
  */
 export interface GuestPreferences {
-  arrival: ArrivalWindow;
+  /** Estimated arrival time, "HH:MM" on the resort's clock. */
+  arrivalTime: string;
+  /** Guest would like to check in before the standard time (subject to availability). */
+  earlyCheckIn: boolean;
   /** Fireplace laid and ready to light on arrival. */
   fireplace: boolean;
-  /** Drinks waiting in the fridge. Anything beyond water is confirmed (and priced) by staff. */
-  drinks: Drink[];
+  /**
+   * Minibar extras on top of the standard minibar (which is already in most
+   * villas and isn't asked about). Values are the labels from Resort settings.
+   */
+  minibarExtras: string[];
+  /** Anything else they'd like waiting in the villa, in their own words. */
+  minibarRequest?: string;
   beds: Beds;
   adapter: Adapter;
   dietary: Dietary[];

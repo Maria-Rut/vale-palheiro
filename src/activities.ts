@@ -48,7 +48,7 @@ export interface Activity {
   indoor?: boolean;
   /** Good with children. */
   family?: boolean;
-  source: "brochure" | "team idea";
+  source: "brochure" | "team idea" | "added by the team";
   enabled: boolean;
 }
 
@@ -261,6 +261,23 @@ export function setActivityEnabled(id: string, enabled: boolean): boolean {
   if (!a) return false;
   a.enabled = enabled;
   return true;
+}
+
+let addSeq = 0;
+/** An experience the team adds from the dashboard (never invented by the system). */
+export function addActivity(input: {
+  name: string; pitch: string; category: Category; goodIn: Condition[]; notIn: Condition[];
+  price: Activity["price"]; indoor?: boolean; family?: boolean;
+}): Activity {
+  const a: Activity = {
+    id: `team_${++addSeq}`, category: input.category, source: "added by the team", enabled: true,
+    name: { en: input.name, pt: input.name, fr: input.name },
+    pitch: { en: input.pitch, pt: input.pitch, fr: input.pitch },
+    price: input.price, goodIn: input.goodIn, notIn: input.notIn,
+    indoor: input.indoor, family: input.family,
+  };
+  catalogue.push(a);
+  return a;
 }
 
 export function priceLabel(a: Activity, lang: Language): string {

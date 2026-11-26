@@ -65,7 +65,8 @@ const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 const LANG_LABEL = { en: "EN", pt: "PT", fr: "FR" };
 const LANG_NAME = { en: "English", pt: "Portuguese", fr: "French" };
 const STATUS_LABEL = {
-  scheduled: "scheduled", held: "needs approval", sent: "sent", cancelled: "not sending", skipped: "skipped",
+  scheduled: "scheduled", held: "awaiting approval", sent: "sent", cancelled: "not sending", skipped: "skipped",
+  manual: "to send by hand", failed: "failed",
 };
 
 function fmt(iso) {
@@ -128,9 +129,18 @@ async function renderOverview() {
 // --- messages ---
 let filter = "all";
 const FILTERS = [
-  ["all", "All"], ["held", "Needs approval"], ["pre_arrival", "3 days before"], ["arrival_day", "Arrival day"],
-  ["in_stay", "During the stay"], ["post_stay", "Thank you"], ["event_invite", "Event invites"], ["sent", "Sent"],
+  ["all", "All"], ["held", "Awaiting approval"], ["sched_email", "Scheduled email"], ["sched_whatsapp", "Scheduled WhatsApp"],
+  ["manual", "To send by hand"], ["sent", "Sent"], ["failed", "Failed"],
+  ["pre_arrival", "3 days before"], ["arrival_day", "Arrival day"],
+  ["in_stay", "During the stay"], ["post_stay", "Thank you"], ["event_invite", "Event invites"],
 ];
+function matchesFilter(m) {
+  if (filter === "all") return true;
+  if (filter === "sched_email") return m.status === "scheduled" && m.channel === "email";
+  if (filter === "sched_whatsapp") return m.status === "scheduled" && m.channel === "whatsapp";
+  if (["held", "sent", "manual", "failed"].includes(filter)) return m.status === filter;
+  return m.kind === filter;
+}
 function renderFilters() {
   $("#filters").innerHTML = FILTERS.map(([k, l]) =>
     `<button class="chip ${filter === k ? "on" : ""}" data-f="${k}">${l}</button>`).join("");
@@ -142,8 +152,7 @@ async function renderMessages() {
   renderFilters();
   const all = await api.get("/api/messages");
   $("#msgCount").textContent = `(${all.length})`;
-  const msgs = all.filter((m) =>
-    filter === "all" ? true : filter === "held" || filter === "sent" ? m.status === filter : m.kind === filter);
+  const msgs = all.filter(matchesFilter);
   const el = $("#messages");
   el.innerHTML = "";
   if (!msgs.length) { el.innerHTML = `<p class="empty">Nothing here.</p>`; return; }
@@ -155,7 +164,7 @@ async function renderMessages() {
     const editable = m.status === "scheduled" || m.status === "held";
     const when = m.status === "sent"
       ? `Sent ${fmt(m.sentAt)}`
-      : `${m.status === "skipped" || m.status === "cancelled" ? "Was due" : "Sends"} ${relative(m.sendAt)} · lands ${esc(m.localSendTime)} ${esc(m.timeZone)}`;
+      : `${["skipped", "cancelled", "manual", "failed"].includes(m.status) ? "Was due" : "Sends"} ${relative(m.sendAt)} · lands ${esc(m.localSendTime)} ${esc(m.timeZone)}`;
     const stay = m.kind === "event_invite"
       ? `About: ${esc(m.eventTitle)}`
       : `${esc(m.place)} · ${fmtDate(m.checkIn)} → ${fmtDate(m.checkOut)} · ${esc(m.reference)}`;
@@ -171,7 +180,7 @@ async function renderMessages() {
         <span class="pill ${m.status}">${STATUS_LABEL[m.status]}</span>
       </div>
       ${m.status === "held" && m.statusNote ? `<div class="note">${esc(m.statusNote)}</div>` : ""}
-      ${m.status === "skipped" && m.statusNote ? `<div class="note info">${esc(m.statusNote)}</div>` : ""}
+      ${(m.status === "skipped" || m.status === "manual" || m.status === "failed") && m.statusNote ? `<div class="note info">${esc(m.statusNote)}</div>` : ""}
       ${m.suggestions?.length ? `<div class="picks"><b>Recommendation agent</b>${m.suggestions.map((x) => `<div>${esc(resortDate(x.date + "T12:00:00Z"))}: ${esc(x.reason)}</div>`).join("")}</div>` : ""}
       <div class="msg-body">${messageView(m)}</div>
       <div class="msg-meta">
@@ -185,6 +194,11 @@ async function renderMessages() {
         <button class="ghost" data-edit="${m.id}">Edit wording</button>
         <button class="ghost" data-cancel="${m.id}">Don't send</button>
       </div>` : ""}
+      ${m.status === "manual" || m.status === "failed" ? `
+      <div class="msg-actions">
+        ${m.whatsappLink ? `<a class="primary btnlink" href="${escAttr(m.whatsappLink)}" target="_blank" rel="noopener">Open in WhatsApp ↗</a>` : ""}
+        <button class="ghost" data-sent="${m.id}">Mark as sent</button>
+      </div>` : ""}
     `;
     el.appendChild(card);
   }
@@ -195,6 +209,12 @@ async function renderMessages() {
     b.addEventListener("click", async () => {
       await api.post(`/api/messages/${b.dataset.cancel}/cancel`);
       toast("Message won't be sent");
+      refreshMessages();
+    }));
+  el.querySelectorAll("[data-sent]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api.post(`/api/messages/${b.dataset.sent}/sent`);
+      toast("Marked as sent");
       refreshMessages();
     }));
   el.querySelectorAll("[data-approve]").forEach((b) =>
@@ -423,8 +443,6 @@ async function renderTasks() {
 }
 
 // --- guest preferences / prep sheets ---
-const P_ARRIVAL = { early: "Before 15:00", afternoon: "15:00–18:00", evening: "18:00–21:00", late: "After 21:00" };
-const P_DRINK = { still_water: "Still water", sparkling_water: "Sparkling water", wine: "Regional wine", sparkling_wine: "Sparkling wine", beer: "Beer", alcohol_free: "Alcohol-free" };
 const P_BEDS = { separate: "Separate beds — check villa", extra: "Extra bed — check villa" };
 const P_ADAPTER = { uk: "UK", us: "US", other: "Other — ask guest" };
 const P_DIET = { vegetarian: "Vegetarian", vegan: "Vegan", pescatarian: "Pescatarian", gluten_free: "Gluten-free", lactose_free: "Lactose-free" };
@@ -450,11 +468,13 @@ function prefStatus(r) {
 function prepGrid(p) {
   if (!p) return "";
   const item = (k, v, extra = "") => `<div class="prep-item ${extra}"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`;
-  let html = item("Fireplace", p.fireplace ? "Lay & ready to light" : "Not needed")
-    + item("Fridge", p.drinks.length ? p.drinks.map((d) => P_DRINK[d]).join(", ") : "Nothing")
+  const extras = [...(p.minibarExtras || []), p.minibarRequest ? `"${p.minibarRequest}"` : ""].filter(Boolean);
+  let html = item("Arrival time", p.arrivalTime || "Not given")
+    + (p.earlyCheckIn ? item("Early check-in", "Requested — subject to availability", "alert") : "")
+    + item("Fireplace", p.fireplace ? "Lay & ready to light" : "Not needed")
+    + item("Minibar extras", extras.length ? extras.join(", ") : "Standard only", extras.length ? "todo" : "")
     + (p.beds !== "as_booked" ? item("Beds", P_BEDS[p.beds], "alert") : item("Beds", "As booked"))
-    + (p.adapter !== "none" ? item("Plug adapter", P_ADAPTER[p.adapter]) : "")
-    + item("Arrival", P_ARRIVAL[p.arrival]);
+    + (p.adapter !== "none" ? item("Plug adapter", P_ADAPTER[p.adapter]) : "");
   if (p.allergies) html += item("Allergies · guest consented", p.allergies, "alert");
   else if (p.allergiesDeletedAt) html += item("Allergies", `Deleted after stay · ${fmt(p.allergiesDeletedAt)}`);
   if (p.dietary.length) html += item("Dietary", p.dietary.map((d) => P_DIET[d]).join(", "));
@@ -487,6 +507,17 @@ async function renderPrefs() {
         <span class="ppill ${st.cls}">${st.label}</span>
       </div>
       <div class="prep-status">${esc(st.text)}</div>
+      <div class="profile">
+        <span><b>Email</b> ${esc(r.guest.email)}</span>
+        <span><b>Phone</b> ${esc(r.guest.phone)}</span>
+        <span><b>From</b> ${esc([r.guest.city, r.guest.country].filter(Boolean).join(", "))}</span>
+        <span><b>Language</b> ${esc(LANG_NAME[r.guest.language])}</span>
+        <span><b>Stay</b> ${fmtDate(r.checkIn)} → ${fmtDate(r.checkOut)}</span>
+        <span><b>Channels</b> ${esc(r.guest.preferredChannels.map((c) => CHANNEL_LABEL[c]).join(", "))}</span>
+        <span>${r.guest.marketingConsent
+          ? `<span class="consent-chip yes">Marketing: subscribed</span>`
+          : `<span class="consent-chip no">Not subscribed to marketing communications</span>`}</span>
+      </div>
       ${prepGrid(r.preferences)}
       ${r.open ? `
       <div class="prep-actions">
@@ -521,8 +552,11 @@ async function renderEvents() {
         <div>${e.audience === "everyone"
           ? `Guests staying + opted-in past guests (invited ${e.inviteLeadDays} days before)`
           : "Only guests staying at the time"}</div></div>
+      <button class="ghost" data-editev="${e.id}">Edit</button>
       <button class="ghost" data-del="${e.id}">Remove</button>
     </div>`).join("") : `<p class="empty">No upcoming events.</p>`;
+  $("#events").querySelectorAll("[data-editev]").forEach((b) =>
+    b.addEventListener("click", () => startEventEdit(events.find((x) => x.id === b.dataset.editev))));
   $("#events").querySelectorAll("[data-del]").forEach((b) =>
     b.addEventListener("click", async () => {
       await api.post(`/api/events/${b.dataset.del}/delete`);
@@ -534,15 +568,43 @@ async function renderEvents() {
     : `<p class="empty">Everyone eligible is being invited.</p>`;
 }
 
+/** "2026-12-05T20:30" in resort time, for the datetime-local input. */
+function resortInputValue(iso) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: RESORT_TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+function startEventEdit(ev) {
+  if (!ev) return;
+  const f = $("#eventForm");
+  const set = (n, v) => { f.elements[n].value = v ?? ""; };
+  set("id", ev.id); set("titleEn", ev.title.en); set("titlePt", ev.title.pt); set("titleFr", ev.title.fr);
+  set("descEn", ev.description.en); set("descPt", ev.description.pt); set("descFr", ev.description.fr);
+  set("place", ev.place); set("audience", ev.audience); set("inviteLeadDays", ev.inviteLeadDays);
+  set("start", resortInputValue(ev.start));
+  $("#eventFormTitle").textContent = `Edit: ${ev.title.en}`;
+  $("#eventSubmit").textContent = "Save changes";
+  $("#eventCancelEdit").classList.remove("hidden");
+  f.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function resetEventForm() {
+  $("#eventForm").reset();
+  $("#eventForm").elements.id.value = "";
+  $("#eventFormTitle").textContent = "Add an event";
+  $("#eventSubmit").textContent = "Add event";
+  $("#eventCancelEdit").classList.add("hidden");
+}
+$("#eventCancelEdit").addEventListener("click", resetEventForm);
 $("#eventForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
   const body = Object.fromEntries(f.entries());
   body.inviteLeadDays = Number(body.inviteLeadDays);
-  const res = await api.post("/api/events", body);
-  if (!res.ok) { toast(res.error || "Couldn't add event"); return; }
-  e.target.reset();
-  toast("Event added — invites planned");
+  const id = body.id; delete body.id;
+  const res = await api.post(id ? `/api/events/${id}` : "/api/events", body);
+  if (!res.ok) { toast(res.error || "Couldn't save event"); return; }
+  resetEventForm();
+  toast(id ? "Event updated — invites re-planned" : "Event added — invites planned");
   renderEvents(); renderOverview();
 });
 
@@ -569,7 +631,7 @@ async function renderWeather() {
   const price = (a) => a.price.free ? "free" : a.price.onRequest ? "price on request" : `from €${a.price.from}`;
   $("#activities").innerHTML = acts.map((a) => `
     <div class="act ${a.enabled ? "" : "off"}">
-      <div class="info"><b>${esc(a.name.en)}</b> · ${price(a)}${a.source === "team idea" ? ` · <i>team idea</i>` : ""}
+      <div class="info"><b>${esc(a.name.en)}</b> · ${price(a)}${a.source !== "brochure" ? ` · <i>${esc(a.source)}</i>` : ""}
         <div>Best in: ${a.goodIn.map((c) => COND_LABEL[c] ?? c).join(", ") || "any weather"}${a.notIn.length ? ` · not in: ${a.notIn.map((c) => COND_LABEL[c] ?? c).join(", ")}` : ""}${a.needs?.length ? ` · needs: ${a.needs.map((c) => COND_LABEL[c] ?? c).join(", ")}` : ""}${a.finale ? " · good last-day ending" : ""}</div>
       </div>
       <button class="ghost" data-act="${a.id}">${a.enabled ? "Switch off" : "Switch on"}</button>
@@ -580,20 +642,73 @@ async function renderWeather() {
       toast("Suggestions in upcoming welcome emails updated");
       renderWeather();
     }));
+  renderTurndown();
 }
+
+// --- day-by-day suggestions / turndown cards ---
+let tdDay = null;
+async function renderTurndown() {
+  const rows = await api.get("/api/turndown");
+  const days = [...new Set(rows.map((r) => r.date))].sort();
+  if (!days.includes(tdDay)) tdDay = days[0] ?? null;
+  $("#tdDays").innerHTML = days.map((d) =>
+    `<button class="chip ${d === tdDay ? "on" : ""}" data-td="${d}">${esc(resortDate(d + "T12:00:00Z"))}</button>`).join("");
+  $("#tdDays").querySelectorAll("[data-td]").forEach((b) => b.addEventListener("click", () => { tdDay = b.dataset.td; renderTurndown(); }));
+  const today = rows.filter((r) => r.date === tdDay);
+  $("#tdCards").innerHTML = today.length ? today.map((r) => `
+    <div class="td-card">
+      <div class="who">${esc(r.guest)}</div>
+      <div class="meta">${esc(r.place)} · card in ${esc(LANG_NAME[r.language])}${r.edited ? " · edited" : ""}</div>
+      <textarea data-tdkey="${escAttr(r.key)}">${esc(r.card)}</textarea>
+      <div class="why">Agent's pick: <b>${esc(r.activity)}</b> — ${esc(r.reason)}</div>
+      <div class="row-btns"><button class="ghost" data-tdsave="${escAttr(r.key)}">Save wording</button>${r.edited ? `<button class="ghost" data-tdreset="${escAttr(r.key)}">Back to suggestion</button>` : ""}</div>
+    </div>`).join("") : `<p class="empty">No guests staying in the next days.</p>`;
+  $("#tdCards").querySelectorAll("[data-tdsave]").forEach((b) => b.addEventListener("click", async () => {
+    const card = $("#tdCards").querySelector(`[data-tdkey="${CSS.escape(b.dataset.tdsave)}"]`).value;
+    await api.post(`/api/turndown/${encodeURIComponent(b.dataset.tdsave)}`, { card });
+    toast("Card wording saved"); renderTurndown();
+  }));
+  $("#tdCards").querySelectorAll("[data-tdreset]").forEach((b) => b.addEventListener("click", async () => {
+    await api.post(`/api/turndown/${encodeURIComponent(b.dataset.tdreset)}`, { reset: true });
+    renderTurndown();
+  }));
+  $("#printCards").innerHTML = today.map((r) =>
+    `<div class="print-card"><h2>${esc(r.firstName)}</h2><p>${esc(r.card)}</p><p style="font-size:13px;margin-top:30px">Vale Palheiro</p></div>`).join("");
+}
+$("#tdPrint").addEventListener("click", () => window.print());
+
+const CONDS = ["sunny", "cloudy", "showers", "rainy", "windy", "calm", "big_sea", "surf_sea", "flat_sea", "warm"];
+function condPick(sel, name) {
+  $(sel).innerHTML = CONDS.map((c) => `<label class="check"><input type="checkbox" name="${name}" value="${c}" /> ${COND_LABEL[c]}</label>`).join("");
+}
+condPick("#actGood", "goodIn"); condPick("#actNot", "notIn");
+$("#actForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const res = await api.post("/api/activities", {
+    name: f.get("name"), pitch: f.get("pitch"), category: f.get("category"), priceFrom: f.get("priceFrom"),
+    goodIn: f.getAll("goodIn"), notIn: f.getAll("notIn"), family: f.get("family") === "on", indoor: f.get("indoor") === "on",
+  });
+  if (!res.ok) { toast(res.error || "Couldn't add it"); return; }
+  e.target.reset();
+  toast("Experience added — the agent can now suggest it");
+  renderWeather();
+});
 
 // --- property ---
 async function renderProperty() {
-  const info = await api.get("/api/property");
-  const long = new Set(["directions", "directionsPt", "directionsFr"]);
-  $("#propFields").innerHTML = Object.entries(info).map(([k, f]) => `
-    <div class="${long.has(k) ? "full" : ""}">
+  const [info, groups] = await Promise.all([api.get("/api/property"), api.get("/api/property/groups")]);
+  $("#propFields").innerHTML = Object.entries(groups).map(([g, title]) => {
+    const fields = Object.entries(info).filter(([, f]) => f.group === g);
+    return `<div class="settings-group">${esc(title)}</div>` + fields.map(([k, f]) => `
+    <div class="${f.long ? "full" : ""}">
       <div class="field-lbl">${esc(f.label)} ${f.sample ? `<span class="badge">sample</span>` : ""}</div>
-      ${long.has(k)
-        ? `<textarea name="${k}" rows="2" class="${f.sample ? "sample" : ""}">${esc(f.value)}</textarea>`
+      ${f.long
+        ? `<textarea name="${k}" rows="3" class="${f.sample ? "sample" : ""}">${esc(f.value)}</textarea>`
         : `<input name="${k}" value="${escAttr(f.value)}" class="${f.sample ? "sample" : ""}" />`}
       ${f.help ? `<div class="field-help">${esc(f.help)}</div>` : ""}
     </div>`).join("");
+  }).join("");
 }
 
 $("#propForm").addEventListener("submit", async (e) => {
@@ -613,19 +728,29 @@ const NUM_KEYS = [
   "preArrivalDaysBefore", "arrivalHoursBefore", "inStayHoursAfterCheckIn", "postStayHoursAfterCheckOut",
   "sendWindowStart", "sendWindowEnd", "inviteMinDaysBetween", "inviteQuietDaysAroundStay", "inviteMaxPerYear",
 ];
-const BOOL_KEYS = ["arrivalTextReminder"];
+const CHANNEL_KINDS = [
+  ["pre_arrival", "3 days before arrival"], ["arrival_day", "Arrival day"], ["in_stay", "Welcome, after check-in"],
+  ["post_stay", "Thank you, after check-out"], ["event_invite", "Event invitations"],
+];
 
 async function loadConfig() {
-  const cfg = await api.get("/api/config");
+  const [cfg, integ] = await Promise.all([api.get("/api/config"), api.get("/api/integrations")]);
   for (const k of NUM_KEYS) $(`#c_${k}`).value = cfg[k];
-  for (const k of BOOL_KEYS) $(`#c_${k}`).checked = !!cfg[k];
   $("#c_approvalPolicy").value = cfg.approvalPolicy;
+  $("#channelGrid").innerHTML = CHANNEL_KINDS.map(([k, l]) => `
+    <div><div class="field-lbl">${l}</div>
+      <select data-channel="${k}">
+        ${[["email", "Email"], ["whatsapp", "WhatsApp"], ["both", "Email + WhatsApp"]].map(([v, t]) =>
+          `<option value="${v}" ${cfg.channels[k] === v ? "selected" : ""}>${t}</option>`).join("")}
+      </select></div>`).join("");
+  $("#integrations").innerHTML = integ.map((i) => `
+    <div class="integ"><b>${esc(i.name)}</b><span class="st ${i.status}">${esc(i.status)}</span><span class="d">${esc(i.detail)}</span></div>`).join("");
 }
 
 $("#applyConfig").addEventListener("click", async () => {
   const body = {};
   for (const k of NUM_KEYS) body[k] = Number($(`#c_${k}`).value);
-  for (const k of BOOL_KEYS) body[k] = $(`#c_${k}`).checked;
+  body.channels = Object.fromEntries([...document.querySelectorAll("[data-channel]")].map((s) => [s.dataset.channel, s.value]));
   body.approvalPolicy = $("#c_approvalPolicy").value;
   await api.post("/api/config", body);
   toast("Settings saved — schedule updated");

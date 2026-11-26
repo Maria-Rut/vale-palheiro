@@ -20,7 +20,8 @@ import {
   type Window,
 } from "./timezone.ts";
 import { OCCASION } from "./brand.ts";
-import { preferenceTasks, purgeAfterStay } from "./preferences.ts";
+import { expectedArrival, getPreferences, preferenceTasks, purgeAfterStay } from "./preferences.ts";
+import { prop, propMinutes } from "./property.ts";
 import { createWeather, type CachedWeather, type Forecast } from "./weather.ts";
 import { recommend } from "./recommender.ts";
 
@@ -52,6 +53,8 @@ import { recommend } from "./recommender.ts";
  */
 export type ApprovalPolicy = "personal" | "personal_and_suggestions" | "all" | "none";
 
+export type ChannelChoice = "email" | "whatsapp" | "both";
+
 export interface SchedulerConfig {
   preArrivalDaysBefore: number;
   arrivalHoursBefore: number;
@@ -60,8 +63,11 @@ export interface SchedulerConfig {
   /** Guest-local hours in which non-urgent messages may arrive. */
   sendWindowStart: number;
   sendWindowEnd: number;
-  /** Also send a short WhatsApp/SMS on arrival day if the guest opted in. */
-  arrivalTextReminder: boolean;
+  /**
+   * Which channel each message goes on. WhatsApp only reaches guests who
+   * agreed to it at booking; "whatsapp" falls back to email for the others.
+   */
+  channels: Record<MessageKind, ChannelChoice>;
   approvalPolicy: ApprovalPolicy;
   inviteMinDaysBetween: number;
   inviteQuietDaysAroundStay: number;
@@ -75,7 +81,13 @@ export const DEFAULT_CONFIG: SchedulerConfig = {
   postStayHoursAfterCheckOut: 24,
   sendWindowStart: 9,
   sendWindowEnd: 20,
-  arrivalTextReminder: true,
+  channels: {
+    pre_arrival: "email",
+    arrival_day: "both",
+    in_stay: "email",
+    post_stay: "email",
+    event_invite: "email",
+  },
   approvalPolicy: "personal",
   inviteMinDaysBetween: 30,
   inviteQuietDaysAroundStay: 7,
@@ -182,6 +194,14 @@ export class Scheduler {
     });
   }
 
+  /** The channels a message of this kind goes out on, for this guest. */
+  private channelsFor(kind: MessageKind, g: Guest): Channel[] {
+    const choice = this.config.channels[kind] ?? "email";
+    const canWhatsApp = !!g.phone && g.preferredChannels.includes("whatsapp");
+    if (choice === "email" || !canWhatsApp) return ["email"];
+    return choice === "whatsapp" ? ["whatsapp"] : ["email", "whatsapp"];
+  }
+
   private win(): Window {
     return { startHour: this.config.sendWindowStart, endHour: this.config.sendWindowEnd };
   }
@@ -204,55 +224,60 @@ export class Scheduler {
       const hold = r.occasion && c.approvalPolicy !== "none"
         ? `Mentions ${staffOccasion(r)} — add a personal line, then approve.`
         : undefined;
-      plans.push({
-        ...base, key: `pre_arrival:${r.id}:email`, kind: "pre_arrival", channel: "email",
-        sendAt, timeZone: g.timeZone, hold,
-        timingNote: `10:00 guest time, ${c.preArrivalDaysBefore} days before arrival`,
-        expiresAt: new Date(checkIn.getTime() - 12 * HOUR),
-      });
+      for (const ch of this.channelsFor("pre_arrival", g)) {
+        plans.push({
+          ...base, key: `pre_arrival:${r.id}:${ch}`, kind: "pre_arrival", channel: ch,
+          sendAt, timeZone: g.timeZone, hold,
+          timingNote: `10:00 guest time, ${c.preArrivalDaysBefore} days before arrival`,
+          expiresAt: new Date(checkIn.getTime() - 12 * HOUR),
+        });
+      }
     }
 
     // 2. Arrival day — N hours before arrival. The guest is travelling to us,
     //    so this uses the resort's clock, and must land *before* they arrive.
+    //    "Arrival" is the time the guest gave us on their page, if they did.
     {
-      const raw = new Date(checkIn.getTime() - c.arrivalHoursBefore * HOUR);
+      const arrive = expectedArrival(r);
+      const told = !!getPreferences(r.id)?.arrivalTime;
+      const raw = new Date(arrive.getTime() - c.arrivalHoursBefore * HOUR);
       const fit = fitToWindow(raw, RESORT_TZ, { startHour: 7, endHour: 22 }, "earlier");
-      const channels: Channel[] = ["email"];
-      if (c.arrivalTextReminder) {
-        const text = g.preferredChannels.find((ch) => ch !== "email");
-        if (text) channels.push(text);
-      }
-      for (const ch of channels) {
+      for (const ch of this.channelsFor("arrival_day", g)) {
         plans.push({
           ...base, key: `arrival_day:${r.id}:${ch}`, kind: "arrival_day", channel: ch,
-          sendAt: fit.date, timeZone: RESORT_TZ, timingNote: fit.note ?? `${c.arrivalHoursBefore}h before arrival`,
-          expiresAt: checkIn,
+          sendAt: fit.date, timeZone: RESORT_TZ,
+          timingNote: fit.note ?? `${c.arrivalHoursBefore}h before ${told ? "the arrival time they gave us" : "arrival"}`,
+          expiresAt: arrive,
         });
       }
     }
 
     // 3. In-stay — after check-in, on the resort's clock.
     {
-      const raw = new Date(checkIn.getTime() + c.inStayHoursAfterCheckIn * HOUR);
+      const raw = new Date(Math.max(checkIn.getTime(), expectedArrival(r).getTime()) + c.inStayHoursAfterCheckIn * HOUR);
       const fit = fitToWindow(raw, RESORT_TZ, { startHour: 8, endHour: 21 }, "later");
-      plans.push({
-        ...base, key: `in_stay:${r.id}:email`, kind: "in_stay", channel: "email",
-        sendAt: fit.date, timeZone: RESORT_TZ,
-        timingNote: fit.note ?? `${c.inStayHoursAfterCheckIn}h after check-in`,
-        expiresAt: new Date(checkOut.getTime() - 12 * HOUR),
-      });
+      for (const ch of this.channelsFor("in_stay", g)) {
+        plans.push({
+          ...base, key: `in_stay:${r.id}:${ch}`, kind: "in_stay", channel: ch,
+          sendAt: fit.date, timeZone: RESORT_TZ,
+          timingNote: fit.note ?? `${c.inStayHoursAfterCheckIn}h after check-in`,
+          expiresAt: new Date(checkOut.getTime() - 12 * HOUR),
+        });
+      }
     }
 
     // 4. Post-stay — after check-out, in the guest's time zone (they're home).
     {
       const raw = new Date(checkOut.getTime() + c.postStayHoursAfterCheckOut * HOUR);
       const fit = fitToWindow(raw, g.timeZone, this.win(), "later");
-      plans.push({
-        ...base, key: `post_stay:${r.id}:email`, kind: "post_stay", channel: "email",
-        sendAt: fit.date, timeZone: g.timeZone,
-        timingNote: fit.note ?? `${c.postStayHoursAfterCheckOut}h after check-out`,
-        expiresAt: new Date(checkOut.getTime() + 7 * DAY),
-      });
+      for (const ch of this.channelsFor("post_stay", g)) {
+        plans.push({
+          ...base, key: `post_stay:${r.id}:${ch}`, kind: "post_stay", channel: ch,
+          sendAt: fit.date, timeZone: g.timeZone,
+          timingNote: fit.note ?? `${c.postStayHoursAfterCheckOut}h after check-out`,
+          expiresAt: new Date(checkOut.getTime() + 7 * DAY),
+        });
+      }
     }
     return plans;
   }
@@ -291,7 +316,7 @@ export class Scheduler {
         const skip = (reason: string) =>
           this.suppressions.push({ guestName: name, eventTitle: event.title.en, reason });
 
-        if (!guest.marketingConsent) { skip("Didn't opt in to news after their stay"); continue; }
+        if (!guest.marketingConsent) { skip("Not subscribed to marketing communications"); continue; }
         const staying = stays.some((r) => Date.parse(r.checkIn) <= evStart && Date.parse(r.checkOut) > evStart);
         if (staying) { skip("Will be staying during the event — told in their stay messages instead"); continue; }
 
@@ -330,12 +355,14 @@ export class Scheduler {
 
       mine.push(t);
       accepted.set(guest.id, mine);
-      out.push({
-        key: `event_invite:${guest.id}:${event.id}`, kind: "event_invite", channel: "email",
-        reservation: lastStay, guest, event, sendAt, timeZone: guest.timeZone,
-        timingNote: `10:00 guest time, ${event.inviteLeadDays} days before the event`,
-        expiresAt: new Date(Date.parse(event.start) - DAY),
-      });
+      for (const ch of this.channelsFor("event_invite", guest)) {
+        out.push({
+          key: `event_invite:${guest.id}:${event.id}:${ch}`, kind: "event_invite", channel: ch,
+          reservation: lastStay, guest, event, sendAt, timeZone: guest.timeZone,
+          timingNote: `10:00 guest time, ${event.inviteLeadDays} days before the event`,
+          expiresAt: new Date(Date.parse(event.start) - DAY),
+        });
+      }
     }
     return out;
   }
@@ -357,9 +384,20 @@ export class Scheduler {
       if (r.occasion) {
         add("occasion", `${who} is celebrating ${staffOccasion(r)} — handwritten note in ${where}.`);
       }
-      const { hour } = zonedParts(new Date(r.checkIn), RESORT_TZ);
-      if (hour >= 20 || hour < 7) {
-        add("late_arrival", `${who} arrives after reception closes (~${localLabel(new Date(r.checkIn), RESORT_TZ)}) — arrange someone to meet them.`);
+      // Late arrival: after the front office closes (Resort settings).
+      const arrive = expectedArrival(r);
+      const { hour, minute } = zonedParts(arrive, RESORT_TZ);
+      const mins = hour * 60 + minute;
+      const close = propMinutes("receptionClose", 20 * 60);
+      if (mins >= close || hour < 7) {
+        const hhmm = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+        const fee = prop().lateArrivalFee;
+        add("late_arrival", `Guest ${who} arriving at ${hhmm} – Arrange late check-in for ${where}${fee ? ` (late-arrival fee may apply: ${fee}, to be confirmed with the guest)` : ""}.`);
+      }
+      // Early check-in: asked for on their page, always subject to availability.
+      const prefs = getPreferences(r.id);
+      if (prefs?.earlyCheckIn) {
+        add("early_check_in", `${who} asked for early check-in (before ${prop().checkInTime}) — check if ${where} can be ready and confirm with them.`);
       }
       // What the guest asked for on their "prepare your stay" page.
       for (const t of preferenceTasks(r, where)) {
@@ -391,7 +429,7 @@ export class Scheduler {
 
     for (const p of plans) {
       const existing = [...this.messages.values()].find((m) => m.key === p.key);
-      if (existing && ["sent", "cancelled", "skipped"].includes(existing.status)) continue;
+      if (existing && ["sent", "cancelled", "skipped", "manual", "failed"].includes(existing.status)) continue;
       // A moment that had already passed before the system first saw the booking
       // (e.g. a last-minute reservation) is simply not planned.
       if (!existing && p.expiresAt.getTime() <= now.getTime()) continue;
@@ -512,6 +550,16 @@ export class Scheduler {
     return true;
   }
 
+  /** A WhatsApp sent by hand (or a failed message dealt with) — record it as sent. */
+  markSent(id: string): boolean {
+    const m = this.messages.get(id);
+    if (!m || (m.status !== "manual" && m.status !== "failed")) return false;
+    m.status = "sent";
+    m.sentAt = new Date().toISOString();
+    m.statusNote = "Sent by hand";
+    return true;
+  }
+
   toggleTask(id: string): boolean {
     const t = this.tasks.get(id);
     if (!t) return false;
@@ -547,6 +595,7 @@ export class Scheduler {
     for (const m of [...this.messages.values()].sort((a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt))) {
       if (m.status !== "scheduled" && m.status !== "held") continue;
       if (Date.parse(m.sendAt) > now.getTime()) continue;
+      
 
       if (now.getTime() > Date.parse(m.expiresAt)) {
         m.status = "skipped";
@@ -559,11 +608,22 @@ export class Scheduler {
 
       const reservation = this.getReservation(m.reservationId);
       if (!reservation) continue;
-      const result = await senderFor(m.channel).send(m, reservation);
+      const sender = senderFor(m.channel);
+      if (!sender.connected) {
+        // No provider connected (WhatsApp Business API not set up yet):
+        // the team sends it by hand from the Outbox and marks it sent.
+        m.status = "manual";
+        m.statusNote = sender.manualNote;
+        continue;
+      }
+      const result = await sender.send(m, reservation);
       if (result.ok) {
         m.status = "sent";
         m.sentAt = now.toISOString();
         sent.push(m);
+      } else {
+        m.status = "failed";
+        m.statusNote = result.detail;
       }
     }
     return sent;

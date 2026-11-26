@@ -263,9 +263,11 @@ export const events: ResortEvent[] = [
  */
 export const preferenceSeeds: Record<string, GuestPreferences> = {
   res_003: {
-    arrival: "evening",
+    arrivalTime: "21:30",
+    earlyCheckIn: false,
     fireplace: true,
-    drinks: ["sparkling_water", "sparkling_wine"],
+    minibarExtras: ["Sparkling wine"],
+    minibarRequest: "A few strawberries if possible",
     beds: "as_booked",
     adapter: "none",
     dietary: ["vegetarian"],

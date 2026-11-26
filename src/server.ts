@@ -3,10 +3,10 @@ import { fileURLToPath } from "node:url";
 import fs from "node:fs";
 import path from "node:path";
 import { Scheduler, DEFAULT_CONFIG, type SchedulerConfig } from "./scheduler.ts";
-import { getSentLog } from "./channels.ts";
+import { channelStatus, getSentLog } from "./channels.ts";
 import { MockBookingSource, InMemoryEventSource } from "./sources.ts";
 import { preferenceSeeds } from "./mockData.ts";
-import { getPropertyInfo, updatePropertyInfo, sampleFieldCount } from "./property.ts";
+import { GROUP_LABEL, getPropertyInfo, propList, updatePropertyInfo, sampleFieldCount } from "./property.ts";
 import { placeLabel } from "./generator.ts";
 import type { Language, Reservation, ResortEvent } from "./types.ts";
 import { RESORT_TZ, zonedTime } from "./timezone.ts";
@@ -17,13 +17,14 @@ import {
   parsePreferences,
   preferencesOpen,
   preferencesUrl,
+  hasMinibar,
   setPreferences,
 } from "./preferences.ts";
 import { prop } from "./property.ts";
-import { getActivities, setActivityEnabled } from "./activities.ts";
+import { addActivity, getActivities, setActivityEnabled, type Category, type Condition } from "./activities.ts";
 import { DEFAULT_TEMPLATES, FIELDS, getTemplate, isEdited, isTemplateKey, resetTemplate, setTemplate, toEmailHtml, type TemplateKey } from "./templates.ts";
 import { exampleGuests } from "./examples.ts";
-import { conditionsFor } from "./recommender.ts";
+import { conditionsFor, recommend } from "./recommender.ts";
 
 /**
  * HTTP layer for the Vale Palheiro guest messaging app. Serves the staff dashboard and a small JSON API.
@@ -111,6 +112,7 @@ const MIME: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".ico": "image/x-icon",
+  ".pdf": "application/pdf",
 };
 
 function serveStatic(res: ServerResponse, urlPath: string): void {
@@ -155,6 +157,10 @@ function withReservationContext() {
       occasion: r?.occasion,
       eventTitle: m.eventId ? evById[m.eventId]?.title.en : undefined,
       html: m.channel === "email" ? toEmailHtml(m.body) : undefined,
+      // WhatsApp isn't connected yet: staff send it by hand from a pre-filled chat.
+      whatsappLink: m.channel === "whatsapp" && r?.guest.phone
+        ? `https://wa.me/${r.guest.phone.replace(/\D/g, "")}?text=${encodeURIComponent(m.body)}`
+        : undefined,
       englishHtml: m.channel === "email" && m.english ? toEmailHtml(m.english.body) : undefined,
     };
   });
@@ -165,19 +171,23 @@ const CONFIG_NUMBERS: (keyof SchedulerConfig)[] = [
   "postStayHoursAfterCheckOut", "sendWindowStart", "sendWindowEnd",
   "inviteMinDaysBetween", "inviteQuietDaysAroundStay", "inviteMaxPerYear",
 ];
-const CONFIG_BOOLS: (keyof SchedulerConfig)[] = ["arrivalTextReminder"];
+const CHANNEL_CHOICES = ["email", "whatsapp", "both"];
+const KINDS = ["pre_arrival", "arrival_day", "in_stay", "post_stay", "event_invite"] as const;
 const APPROVAL_POLICIES = ["personal", "personal_and_suggestions", "all", "none"];
 
 /** The journey, in order, as the Emails tab shows it. */
 const STEPS: { key: TemplateKey; title: string; when: string }[] = [
-  { key: "pre_arrival", title: "3 days before arrival", when: "10:00 in the guest's own time zone" },
-  { key: "arrival_day", title: "3 hours before arrival", when: "Directions, where we meet them, their villa" },
-  { key: "arrival_text", title: "Arrival-day text message", when: "Sent with the email above, by WhatsApp / SMS if the guest opted in" },
-  { key: "in_stay", title: "Welcome, after check-in", when: "2 hours after they arrive: Wi-Fi, contacts, and suggestions from the weather forecast" },
-  { key: "post_stay", title: "Thank you, after check-out", when: "24 hours after they leave, with a review button" },
+  { key: "pre_arrival", title: "3 days before arrival", when: "10:00 in the guest's own time zone: directions, The Barn, experiences, and the link to personalise their stay" },
+  { key: "arrival_day", title: "3 hours before arrival", when: "Timed from the arrival time the guest gave us: where we meet them, their villa, contacts" },
+  { key: "arrival_text", title: "Arrival-day WhatsApp", when: "The short version, for guests who agreed to WhatsApp (channel set in Settings)" },
+  { key: "in_stay", title: "Welcome, after check-in", when: "2 hours after they arrive: Wi-Fi, reception, restaurant, bar, wellness, check-out, and ideas from the weather forecast" },
+  { key: "post_stay", title: "Thank you, after check-out", when: "24 hours after they leave (timing in Settings), with the TripAdvisor button" },
   { key: "event_invite", title: "Event invitation", when: "To past guests who agreed to hear from us, before each event" },
 ];
 const LANGS: Language[] = ["en", "pt", "fr"];
+
+/** Staff wording for a turndown card, keyed "reservationId:date". */
+const turndownEdits = new Map<string, string>();
 
 /** Kept for the whole run so answers on an example guest's page stick. */
 const exampleReservations = exampleGuests().map((e) => e.reservation);
@@ -227,6 +237,14 @@ function guestView(r: Reservation) {
     wifi: { network: p.wifiNetwork, password: p.wifiPassword },
     phone: p.receptionPhone,
     meetingPoint: p.meetingPoint,
+    checkInTime: p.checkInTime,
+    earlyCheckIn: p.earlyCheckIn,
+    receptionHours: p.receptionHours,
+    receptionClose: p.receptionClose,
+    lateArrivalFee: p.lateArrivalFee,
+    brochureLink: p.brochureLink,
+    minibar: hasMinibar(placeLabel(r)) ? propList("minibarStandard") : null,
+    minibarExtras: propList("minibarExtras"),
   };
 }
 
@@ -354,14 +372,19 @@ const server = http.createServer(async (req, res) => {
         const v = body[k];
         if (typeof v === "number" && Number.isFinite(v) && v >= 0) patch[k] = v;
       }
-      for (const k of CONFIG_BOOLS) if (typeof body[k] === "boolean") patch[k] = body[k];
+      if (body.channels && typeof body.channels === "object") {
+        const ch = { ...scheduler.getConfig().channels };
+        const given = body.channels as Record<string, unknown>;
+        for (const k of KINDS) if (typeof given[k] === "string" && CHANNEL_CHOICES.includes(given[k] as string)) ch[k] = given[k] as typeof ch[typeof k];
+        patch.channels = ch;
+      }
       if (typeof body.approvalPolicy === "string" && APPROVAL_POLICIES.includes(body.approvalPolicy)) patch.approvalPolicy = body.approvalPolicy;
       scheduler.setConfig(patch as Partial<SchedulerConfig>);
       await scheduler.plan();
       return sendJson(res, 200, scheduler.getConfig());
     }
 
-    const msgAction = pathname.match(/^\/api\/messages\/([^/]+)\/(edit|cancel|approve)$/);
+    const msgAction = pathname.match(/^\/api\/messages\/([^/]+)\/(edit|cancel|approve|sent)$/);
     if (msgAction && method === "POST") {
       const [, id, action] = msgAction;
       let ok = false;
@@ -372,6 +395,7 @@ const server = http.createServer(async (req, res) => {
           body: typeof body === "string" ? body : undefined,
         });
       } else if (action === "cancel") ok = scheduler.cancelMessage(id);
+      else if (action === "sent") ok = scheduler.markSent(id);
       else ok = scheduler.approveMessage(id);
       return sendJson(res, ok ? 200 : 400, { ok });
     }
@@ -388,7 +412,8 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/events" && method === "GET") {
       return sendJson(res, 200, { events: scheduler.getEvents(), suppressions: scheduler.getSuppressions() });
     }
-    if (pathname === "/api/events" && method === "POST") {
+    const evMatch = pathname.match(/^\/api\/events(?:\/([^/]+))?$/);
+    if (evMatch && method === "POST") {
       const b = await readBody(req);
       const start = str(b.start);
       const titleEn = str(b.titleEn);
@@ -406,11 +431,13 @@ const server = http.createServer(async (req, res) => {
         start: resortTime(start).toISOString(),
         place: str(b.place) || "Vale Palheiro",
         audience: b.audience === "in_house" ? "in_house" : "everyone",
-        inviteLeadDays: typeof b.inviteLeadDays === "number" ? b.inviteLeadDays : 14,
+        inviteLeadDays: typeof b.inviteLeadDays === "number" && b.inviteLeadDays >= 0 ? b.inviteLeadDays : 7,
       };
-      const created = await scheduler.getEventSource().addEvent(event);
+      const src = scheduler.getEventSource();
+      const saved = evMatch[1] ? await src.updateEvent(evMatch[1], event) : await src.addEvent(event);
+      if (!saved) return sendJson(res, 404, { ok: false, error: "Event not found" });
       await scheduler.plan();
-      return sendJson(res, 200, { ok: true, event: created });
+      return sendJson(res, 200, { ok: true, event: saved });
     }
     const evDelete = pathname.match(/^\/api\/events\/([^/]+)\/delete$/);
     if (evDelete && method === "POST") {
@@ -421,6 +448,20 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === "/api/property" && method === "GET") {
       return sendJson(res, 200, getPropertyInfo());
+    }
+    if (pathname === "/api/property/groups" && method === "GET") {
+      return sendJson(res, 200, GROUP_LABEL);
+    }
+    if (pathname === "/api/integrations" && method === "GET") {
+      const ch = channelStatus();
+      const w = scheduler.getWeatherStatus();
+      return sendJson(res, 200, [
+        { name: "Bookings — GuestCentric", status: "planned", detail: "Demo bookings for now. Waiting on Carmine: API, webhook or export? Which fields?" },
+        { name: "Email", status: "simulated", detail: "Messages are recorded in the sent log, not delivered. Needs an email provider (SMTP / SendGrid / Postmark) and the sending address." },
+        { name: "WhatsApp", status: ch.whatsapp === "configured" ? "configured" : "manual", detail: ch.whatsapp === "configured" ? "Credentials found; Meta-approved templates still to map." : "WhatsApp Business API planned. Until then, due WhatsApps wait in the Outbox under \"To send by hand\"." },
+        { name: "Weather & sea forecast", status: w.source === "open-meteo" && !w.error ? "live" : "simulated", detail: w.source === "open-meteo" && !w.error ? "Live from Open-Meteo (land + marine), free, no key needed." : `Simulated forecast for the demo${w.error ? ` (${w.error})` : ""}. Set WEATHER_SOURCE=open-meteo for the live one.` },
+        { name: "Message writing", status: "templates", detail: "Staff-edited templates. An AI model (hosted, or local on a Mac Mini) can be added for extra variety." },
+      ]);
     }
     if (pathname === "/api/property" && method === "POST") {
       const b = await readBody(req);
@@ -448,6 +489,58 @@ const server = http.createServer(async (req, res) => {
       const ok = !!a && setActivityEnabled(a.id, !a.enabled);
       await scheduler.plan(); // re-pick suggestions in unsent welcome emails
       return sendJson(res, ok ? 200 : 400, { ok });
+    }
+
+    if (pathname === "/api/activities" && method === "POST") {
+      const b = await readBody(req);
+      const name = str(b.name), pitch = str(b.pitch);
+      if (!name) return sendJson(res, 400, { ok: false, error: "A name is required" });
+      const CATS: Category[] = ["land", "sea", "wellbeing", "table", "craft"];
+      const CONDS: Condition[] = ["sunny", "cloudy", "showers", "rainy", "windy", "calm", "big_sea", "surf_sea", "flat_sea", "warm"];
+      const conds = (v: unknown) => (Array.isArray(v) ? v.filter((c): c is Condition => CONDS.includes(c as Condition)) : []);
+      const from = Number(b.priceFrom);
+      const a = addActivity({
+        name, pitch: pitch || name,
+        category: CATS.includes(b.category as Category) ? (b.category as Category) : "land",
+        goodIn: conds(b.goodIn), notIn: conds(b.notIn),
+        price: b.priceFrom === "" || b.priceFrom === undefined || !Number.isFinite(from) ? { onRequest: true } : from === 0 ? { free: true } : { from },
+        indoor: b.indoor === true, family: b.family === true,
+      });
+      await scheduler.plan();
+      return sendJson(res, 200, { ok: true, activity: a });
+    }
+
+    // Day-by-day suggestions for guests staying in the next days — the
+    // back-office view of the recommendation agent, and the turndown cards.
+    if (pathname === "/api/turndown" && method === "GET") {
+      const now = Date.now();
+      const f = scheduler.getForecast();
+      const rows: unknown[] = [];
+      for (const r of scheduler.getReservations()) {
+        if (r.cancelled || Date.parse(r.checkOut) <= now || Date.parse(r.checkIn) > now + 7 * 86400_000) continue;
+        const from = new Date(Math.max(now, Date.parse(r.checkIn)));
+        const plan = recommend(r, from, f);
+        for (const d of plan?.days ?? []) {
+          const lang = r.guest.language;
+          const key = `${r.id}:${d.date}`;
+          rows.push({
+            key, date: d.date, guest: `${r.guest.firstName} ${r.guest.lastName}`, firstName: r.guest.firstName,
+            place: placeLabel(r), language: lang, activity: d.activity.name.en, reason: d.reason,
+            card: turndownEdits.get(key) ?? `${d.activity.name[lang]} — ${d.activity.pitch[lang]}`,
+            edited: turndownEdits.has(key),
+            conditions: d.conditions,
+          });
+        }
+      }
+      return sendJson(res, 200, rows);
+    }
+    const tdEdit = pathname.match(/^\/api\/turndown\/([^/]+)$/);
+    if (tdEdit && method === "POST") {
+      const b = await readBody(req);
+      const key = decodeURIComponent(tdEdit[1]);
+      if (b.reset === true || !str(b.card)) turndownEdits.delete(key);
+      else turndownEdits.set(key, str(b.card).slice(0, 400));
+      return sendJson(res, 200, { ok: true });
     }
 
     if (pathname === "/api/simulate" && method === "POST") {

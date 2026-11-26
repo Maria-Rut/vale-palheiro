@@ -191,6 +191,10 @@
       font-size: 11px; font-weight: 600; color: var(--sage-dark); background: #e6ecd9; border-radius: 999px;
       padding: 2px 8px; margin-left: 6px;
     }
+    .brochure-link { display: inline-block; margin-top: 12px; font-size: 14px; font-weight: 600; color: var(--clay); }
+    .late-note { color: var(--clay); }
+    input[type="time"] { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card, #fff); color: inherit; margin-top: 8px; min-width: 140px; }
+    input[type="time"]:focus { outline: none; border-color: var(--clay); }
     textarea, input[type="text"] {
       width: 100%; font-family: var(--sans); font-size: 16px; padding: 11px 13px; border: 1px solid var(--line);
       border-radius: 10px; background: var(--white); color: var(--earth-900); resize: vertical;
@@ -276,6 +280,20 @@
         <h2 class="card-title" id="villaTitle"></h2>
 
         <div class="row">
+          <div class="icon" data-icon="clock"></div>
+          <div class="row-body">
+            <label class="row-label" for="arrivalTime" data-t="arrival"></label>
+            <input type="time" id="arrivalTime" step="900" required />
+            <div class="sub row-hint" id="arrivalHint"></div>
+            <div class="sub row-hint late-note hidden" id="lateNote"></div>
+            <div class="toggle-row" style="margin-top:12px">
+              <div><div class="row-label" data-t="early"></div><div class="sub" id="earlySub"></div></div>
+              <button type="button" class="toggle" id="earlyCheckIn" role="switch" aria-checked="false" data-t-aria="early"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
           <div class="icon" data-icon="fire"></div>
           <div class="row-body toggle-row">
             <div><div class="row-label" data-t="fireplace"></div><div class="sub" data-t="fireplaceSub"></div></div>
@@ -286,9 +304,12 @@
         <div class="row">
           <div class="icon" data-icon="bottle"></div>
           <div class="row-body">
-            <div class="row-label" data-t="fridge"></div>
-            <div class="chips" data-field="drinks" data-multi data-options="still_water,sparkling_water,wine,sparkling_wine,beer,alcohol_free"></div>
-            <div class="sub row-hint" data-t="fridgeHint"></div>
+            <div class="row-label" data-t="minibar"></div>
+            <div class="sub row-hint" id="minibarInfo" style="margin-top:4px"></div>
+            <div class="sub row-hint" data-t="minibarExtrasLabel" style="margin:12px 0 8px"></div>
+            <div class="chips" data-field="minibarExtras" data-multi data-dynamic></div>
+            <input type="text" id="minibarRequest" maxlength="300" data-t-ph="minibarPh" style="margin-top:10px" />
+            <div class="sub row-hint" data-t="minibarHint"></div>
           </div>
         </div>
 
@@ -310,13 +331,6 @@
           </div>
         </div>
 
-        <div class="row">
-          <div class="icon" data-icon="clock"></div>
-          <div class="row-body">
-            <div class="row-label" data-t="arrival"></div>
-            <div class="chips" data-field="arrival" data-options="early,afternoon,evening,late"></div>
-          </div>
-        </div>
       </section>
 
       <div class="extras-head">
@@ -370,6 +384,7 @@
             <div id="allExperiences"></div>
           </details>
           <div class="sub row-hint" data-t="expHint"></div>
+          <a class="brochure-link" id="brochureLink" target="_blank" rel="noopener" data-t="brochure"></a>
         </div>
       </details>
 

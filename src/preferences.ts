@@ -1,10 +1,10 @@
 import { createHmac } from "node:crypto";
+import { propList, propMinutes, prop } from "./property.ts";
+import { RESORT_TZ, zonedParts, zonedTime } from "./timezone.ts";
 import type {
   Adapter,
-  ArrivalWindow,
   Beds,
   Dietary,
-  Drink,
   Experience,
   GuestOccasion,
   GuestPreferences,
@@ -91,11 +91,22 @@ function occasionFromBooking(r: Reservation): GuestOccasion {
   return r.occasion === "celebration" ? "other" : r.occasion;
 }
 
+/** Check-in time from Resort settings, as the default arrival time. */
+function defaultArrival(r: Reservation): string {
+  const m = propMinutes("checkInTime", 15 * 60);
+  // If the booking already carries a later expected time, start from that.
+  const p = zonedParts(new Date(r.checkIn), RESORT_TZ);
+  const booked = p.hour * 60 + p.minute;
+  const v = booked > m ? booked : m;
+  return `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
+}
+
 export function defaultPreferences(r: Reservation): Omit<GuestPreferences, "submittedAt"> {
   return {
-    arrival: "afternoon",
+    arrivalTime: defaultArrival(r),
+    earlyCheckIn: false,
     fireplace: true,
-    drinks: ["still_water"],
+    minibarExtras: [],
     beds: "as_booked",
     adapter: likelyAdapter(r.guest.country),
     dietary: [],
@@ -106,8 +117,6 @@ export function defaultPreferences(r: Reservation): Omit<GuestPreferences, "subm
   };
 }
 
-const ARRIVALS: ArrivalWindow[] = ["early", "afternoon", "evening", "late"];
-const DRINKS: Drink[] = ["still_water", "sparkling_water", "wine", "sparkling_wine", "beer", "alcohol_free"];
 const BEDS: Beds[] = ["as_booked", "separate", "extra"];
 const ADAPTERS: Adapter[] = ["none", "uk", "us", "other"];
 const OCCASIONS: GuestOccasion[] = ["none", "birthday", "anniversary", "honeymoon", "treat", "other"];
@@ -151,9 +160,11 @@ export function parsePreferences(r: Reservation, input: Record<string, unknown>)
   return {
     ok: true,
     preferences: {
-      arrival: pick(input.arrival, ARRIVALS, d.arrival),
+      arrivalTime: typeof input.arrivalTime === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(input.arrivalTime) ? input.arrivalTime : d.arrivalTime,
+      earlyCheckIn: input.earlyCheckIn === true,
       fireplace: typeof input.fireplace === "boolean" ? input.fireplace : d.fireplace,
-      drinks: Array.isArray(input.drinks) ? pickMany(input.drinks, DRINKS) : d.drinks,
+      minibarExtras: pickMany(input.minibarExtras, propList("minibarExtras")),
+      minibarRequest: text(input.minibarRequest, 300),
       beds: pick(input.beds, BEDS, d.beds),
       adapter: pick(input.adapter, ADAPTERS, d.adapter),
       dietary: pickMany(input.dietary, DIETARY),
@@ -186,10 +197,6 @@ export function purgeAfterStay(reservations: Reservation[], now: Date): void {
 
 // ---------------------------------------------------------------- for the team
 
-const DRINK_EN: Record<Drink, string> = {
-  still_water: "still water", sparkling_water: "sparkling water", wine: "regional wine",
-  sparkling_wine: "sparkling wine", beer: "beer", alcohol_free: "alcohol-free drinks",
-};
 export const EXPERIENCE_EN: Record<Experience, string> = {
   trail: "Vale Palheiro Trail", picnic: "Picnic", jeep: "Jeep tour", horse: "Horse riding",
   balloon: "Balloon flight", bikes: "Bicycles", surf: "Surf lessons", boat: "Boat trip (Lagos)",
@@ -209,39 +216,50 @@ export function preferenceTasks(r: Reservation, place: string): { key: string; t
   if (!p) return [];
   const who = `${r.guest.firstName} ${r.guest.lastName}`;
   const out: { key: string; text: string }[] = [];
-  const paid = p.drinks.filter((d) => d !== "still_water" && d !== "sparkling_water");
-  if (paid.length) {
-    out.push({ key: "drinks", text: `${who} would like ${paid.map((d) => DRINK_EN[d]).join(", ")} in the fridge — confirm price with them, then stock ${place}.` });
+  if (p.minibarExtras.length || p.minibarRequest) {
+    const bits = [...p.minibarExtras.map((x) => x.toLowerCase()), p.minibarRequest ? `"${p.minibarRequest}"` : ""].filter(Boolean);
+    out.push({ key: "minibar", text: `Special minibar request for ${place} (${who}): ${bits.join(", ")} — confirm any price with them, then stock it before arrival.` });
   }
   if (p.beds !== "as_booked") {
-    out.push({ key: "beds", text: `${who} asked for ${p.beds === "extra" ? "an extra bed" : "separate beds"} — check ${place} can do it and confirm with them.` });
+    out.push({ key: "beds", text: `${who} asked for ${p.beds === "extra" ? "an additional bed" : "separate beds"} — check ${place} can do it and confirm with them.` });
+  }
+  if (p.adapter !== "none") {
+    out.push({ key: "adapter", text: `Prepare a ${p.adapter === "uk" ? "UK" : p.adapter === "us" ? "US" : "travel (ask which)"} plug adapter in ${place} for ${who}.` });
+  }
+  if (p.dietary.length || p.allergies) {
+    const diet = [...p.dietary.map((d) => d.replace("_", "-")), p.allergies ? `allergies: ${p.allergies}` : ""].filter(Boolean).join("; ");
+    out.push({ key: "kitchen", text: `Tell the kitchen (breakfast and The Barn) about ${who}: ${diet}.` });
   }
   if (p.experiences.length) {
     out.push({ key: "experiences", text: `${who} would like help arranging: ${p.experiences.map((e) => EXPERIENCE_EN[e]).join(", ")} — get in touch with times and prices.` });
   }
-  // Only when Host has no occasion noted (otherwise the existing occasion task covers it).
+  // Only when the booking has no occasion noted (otherwise the occasion task covers it).
   if (p.occasion !== "none" && !r.occasion) {
-    out.push({ key: "occasion", text: `${who} says they're celebrating ${OCCASION_EN[p.occasion]}${p.occasionNote ? ` ("${p.occasionNote}")` : ""} — a small touch in ${place}?` });
+    out.push({ key: "occasion", text: `${who} says they're celebrating ${OCCASION_EN[p.occasion]}${p.occasionNote ? ` ("${p.occasionNote}")` : ""} — prepare a small arrangement in ${place}.` });
   }
   return out;
 }
 
+/**
+ * When the guest expects to arrive: their answer on the page if they gave one
+ * (same day as the booking, resort clock), otherwise the booking's time.
+ */
+export function expectedArrival(r: Reservation): Date {
+  const p = store.get(r.id);
+  if (!p?.arrivalTime) return new Date(r.checkIn);
+  const [h, m] = p.arrivalTime.split(":").map(Number);
+  const d = zonedParts(new Date(r.checkIn), RESORT_TZ);
+  return zonedTime(d.year, d.month, d.day, h, m, RESORT_TZ);
+}
+
+/** Most villas have a standard minibar; a few small ones don't (Resort settings). */
+export function hasMinibar(placeLabel: string): boolean {
+  const without = propList("villasWithoutMinibar").map((x) => x.toLowerCase());
+  return !without.includes(placeLabel.toLowerCase());
+}
+
 // ---------------------------------------------------------------- for the guest emails
 
-const DRINK_PHRASE: Record<Language, Record<Drink, string>> = {
-  en: {
-    still_water: "still water", sparkling_water: "sparkling water", wine: "a bottle of regional wine",
-    sparkling_wine: "something sparkling", beer: "cold beer", alcohol_free: "alcohol-free drinks",
-  },
-  pt: {
-    still_water: "água sem gás", sparkling_water: "água com gás", wine: "uma garrafa de vinho da região",
-    sparkling_wine: "um espumante", beer: "cerveja fresca", alcohol_free: "bebidas sem álcool",
-  },
-  fr: {
-    still_water: "de l'eau plate", sparkling_water: "de l'eau pétillante", wine: "une bouteille de vin de la région",
-    sparkling_wine: "des bulles", beer: "de la bière fraîche", alcohol_free: "des boissons sans alcool",
-  },
-};
 
 const ADAPTER_PHRASE: Record<Language, Record<Exclude<Adapter, "none">, string>> = {
   en: { uk: "a UK plug adapter", us: "a US plug adapter", other: "a plug adapter" },
@@ -285,7 +303,8 @@ export function welcomePreferencesLine(r: Reservation, lang: Language): string {
   const p = store.get(r.id);
   if (!p) return "";
   const parts: string[] = [];
-  const drinks = joinList(p.drinks.map((d) => DRINK_PHRASE[lang][d]), lang);
+  const extras = [...p.minibarExtras.map((x) => x.toLowerCase()), p.minibarRequest ?? ""].filter(Boolean);
+  const drinks = extras.length ? joinList(extras, lang) : "";
   const adapter = p.adapter !== "none" ? ADAPTER_PHRASE[lang][p.adapter] : "";
   const food = p.dietary.length > 0 || !!p.allergies;
 

@@ -6,8 +6,9 @@ import type {
   ResortEvent,
 } from "./types.ts";
 import { LOCALE, OCCASION, POST_STAY_LINE } from "./brand.ts";
-import { prop } from "./property.ts";
-import { getPreferences, postStayPreferencesLine, preferencesOpen, preferencesUrl, welcomePreferencesLine } from "./preferences.ts";
+import { prop, propMinutes } from "./property.ts";
+import { expectedArrival, getPreferences, hasMinibar, postStayPreferencesLine, preferencesOpen, preferencesUrl, publicBaseUrl, welcomePreferencesLine } from "./preferences.ts";
+import { zonedParts } from "./timezone.ts";
 import { fill, getTemplate, toPlainText, type TemplateKey } from "./templates.ts";
 import { RESORT_TZ } from "./timezone.ts";
 import { renderStayPlan, type StayPlan } from "./recommender.ts";
@@ -125,6 +126,38 @@ function fieldValues(input: GenerationInput): Record<string, string> {
   const ev = eventsDuringStay.map((e) => eventLine(e, l));
   const city = r.guest.city ? (CITY[r.guest.city]?.[l] ?? r.guest.city) : undefined;
   const pick = <T,>(o: Record<Language, T>) => o[l];
+  const absolute = (link: string) => (link.startsWith("/") ? publicBaseUrl() + link : link);
+  // Arrival: the time they gave us on their page, else the booking's.
+  const arrive = expectedArrival(r);
+  const ap = zonedParts(arrive, RESORT_TZ);
+  const late = ap.hour * 60 + ap.minute >= propMinutes("receptionClose", 20 * 60) || ap.hour < 7;
+  const arrivalLine = (): string => {
+    if (!prefs?.arrivalTime) {
+      if (late) {
+        const hhmm = time(arrive.toISOString());
+        return pick({
+          en: `We have you arriving around ${hhmm}${preferencesOpen(r) ? " — if that changes, just update it on your page" : ""}.`,
+          pt: `Temos a sua chegada prevista por volta das ${hhmm}${preferencesOpen(r) ? " — se mudar, atualize-a na sua página" : ""}.`,
+          fr: `Nous avons noté votre arrivée vers ${hhmm}${preferencesOpen(r) ? " — si cela change, mettez-la à jour sur votre page" : ""}.`,
+        });
+      }
+      return !preferencesOpen(r) ? "" : pick({
+        en: "Let us know your arrival time on your page, so we're ready for you.",
+        pt: "Indique-nos a sua hora de chegada na sua página, para estarmos prontos.",
+        fr: "Indiquez-nous votre heure d'arrivée sur votre page, pour que nous soyons prêts.",
+      });
+    }
+    const early = prefs.earlyCheckIn ? pick({
+      en: ` You asked for early check-in: we'll do our best (${p.earlyCheckIn.toLowerCase()}).`,
+      pt: ` Pediu check-in antecipado: faremos o possível (sujeito a disponibilidade).`,
+      fr: ` Vous avez demandé une arrivée anticipée : nous ferons de notre mieux (selon disponibilité).`,
+    }) : "";
+    return pick({
+      en: `You told us you'll arrive around ${prefs.arrivalTime} — noted.`,
+      pt: `Disse-nos que chega por volta das ${prefs.arrivalTime} — está anotado.`,
+      fr: `Vous nous avez indiqué une arrivée vers ${prefs.arrivalTime} — c'est noté.`,
+    }) + early;
+  };
 
   const v: Record<string, string> = {
     first_name: r.guest.firstName,
@@ -133,7 +166,24 @@ function fieldValues(input: GenerationInput): Record<string, string> {
     party: party(r, l),
     for_party: headcountPhrase(r, l),
     breakfast_note: r.breakfastIncluded ? pick({ en: " · breakfast included", pt: " · pequeno-almoço incluído", fr: " · petit-déjeuner inclus" }) : "",
-    arrival_time: time(r.checkIn),
+    arrival_time: time(arrive.toISOString()),
+    check_in_time: p.checkInTime,
+    arrival_line: arrivalLine(),
+    late_arrival_line: !late ? "" : pick({
+      en: `As you'll arrive after the front office closes at ${p.receptionClose}, we'll arrange a late check-in for you${p.lateArrivalFee ? ` (a late-arrival fee of ${p.lateArrivalFee} may apply)` : ""}.`,
+      pt: `Como vai chegar depois de a receção fechar (${p.receptionClose}), preparamos um check-in tardio para si${p.lateArrivalFee ? ` (pode aplicar-se uma taxa de chegada tardia de ${p.lateArrivalFee})` : ""}.`,
+      fr: `Comme vous arriverez après la fermeture de la réception (${p.receptionClose}), nous organiserons une arrivée tardive${p.lateArrivalFee ? ` (des frais d'arrivée tardive de ${p.lateArrivalFee} peuvent s'appliquer)` : ""}.`,
+    }),
+    restaurant_intro: pick({ en: p.restaurantIntro, pt: p.restaurantIntroPt, fr: p.restaurantIntroFr }),
+    bar_line: !p.barHours ? "" : `• ${pick({ en: "Bar", pt: "Bar", fr: "Bar" })}: ${p.barHours}`,
+    minibar_line: !hasMinibar(place) || !p.minibarStandard ? "" : pick({
+      en: `• In your minibar: ${p.minibarStandard} — ask us for anything else`,
+      pt: `• No seu minibar: ${p.minibarStandard} — peça-nos o que mais quiser`,
+      fr: `• Dans votre minibar : ${p.minibarStandard} — demandez-nous ce qui vous ferait plaisir`,
+    }),
+    wellness_line: !p.wellnessInfo ? "" : `• ${pick({ en: "Wellness", pt: "Bem-estar", fr: "Bien-être" })}: ${p.wellnessInfo}${p.wellnessMenuLink ? ` — ${absolute(p.wellnessMenuLink)}` : ""}`,
+    brochure_link: absolute(p.brochureLink),
+    tripadvisor_link: p.tripadvisorLink,
     checkout: `${p.checkOutTime}, ${shortDay(r.checkOut, l)}`,
     reception_hours: p.receptionHours,
     reception_phone: p.receptionPhone,
@@ -159,9 +209,9 @@ function fieldValues(input: GenerationInput): Record<string, string> {
           fr: "Merci de nous avoir dit comment vous aimez les choses — tout est noté. Vous pouvez encore tout modifier :",
         })
       : pick({
-          en: "We've already set things up the way most guests love them: the fireplace laid and ready to light, and fresh water in the fridge. Fancy a bottle of regional wine, an extra bed or a sunset horse ride? Tell us your arrival time and adjust anything you like — it takes 30 seconds.",
-          pt: "Já deixámos tudo como a maioria dos hóspedes gosta: a lareira pronta a acender e água fresca no frigorífico. Apetece-lhe uma garrafa de vinho da região, uma cama extra ou um passeio a cavalo ao pôr do sol? Diga-nos a hora de chegada e ajuste o que quiser — demora 30 segundos.",
-          fr: "Tout est déjà réglé comme la plupart de nos hôtes l'aiment : la cheminée prête à être allumée et de l'eau fraîche au réfrigérateur. Envie d'une bouteille de vin de la région, d'un lit supplémentaire ou d'une balade à cheval au coucher du soleil ? Indiquez votre heure d'arrivée et ajustez ce que vous voulez — cela prend 30 secondes.",
+          en: "Tell us your arrival time, any dietary needs or celebration, and add anything you'd like waiting for you — a bottle of regional wine, an extra bed, a plug adapter, a sunset horse ride. It takes a minute.",
+          pt: "Diga-nos a hora de chegada, as suas necessidades alimentares ou o que vai celebrar, e acrescente o que gostaria de ter à sua espera — uma garrafa de vinho da região, uma cama extra, um adaptador, um passeio a cavalo ao pôr do sol. Demora um minuto.",
+          fr: "Indiquez-nous votre heure d'arrivée, vos besoins alimentaires ou ce que vous célébrez, et ajoutez ce qui vous ferait plaisir à l'arrivée — une bouteille de vin de la région, un lit supplémentaire, un adaptateur, une balade à cheval au coucher du soleil. Cela prend une minute.",
         }),
     returning_line: !returning ? "" : pick({
       en: "It's lovely to have you back. As a thank-you for returning, a small welcome-back gift will be waiting for you.",

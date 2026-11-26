@@ -69,17 +69,24 @@ const T = {
     leadTime: "Takes about 30 seconds",
     fireplace: "Fireplace",
     fireplaceSub: "Laid and ready to light when you arrive",
-    fridge: "Waiting in your fridge",
-    fridgeHint: "Pick as many as you like. We'll confirm prices with you before stocking anything beyond water.",
-    drinkOpts: { still_water: "Still water", sparkling_water: "Sparkling water", wine: "Regional wine", sparkling_wine: "Something sparkling", beer: "Cold beer", alcohol_free: "Alcohol-free drinks" },
+    minibar: "Your minibar",
+    minibarStd: (list) => `Already in your villa: ${list}.`,
+    noMinibar: "Your villa doesn't have a minibar — but we can bring you anything you'd like.",
+    minibarExtrasLabel: "Anything extra waiting for you?",
+    minibarPh: "Something else? Tell us (optional)",
+    minibarHint: "We'll confirm any price with you before your arrival.",
     beds: "How would you like to sleep?",
     bedOpts: { as_booked: "Just as booked", separate: "Separate beds, please", extra: "One more bed for someone" },
     bedsHint: "We'll check what's possible in your villa and confirm with you.",
     adapter: "Need a plug adapter?",
     adapterHint: "Portugal uses European two-pin sockets (230V).",
     adapterOpts: { none: "No, all set", uk: "UK plug", us: "US plug", other: "Another type" },
-    arrival: "When do you think you'll arrive?",
-    arrivalOpts: { early: "Before 3pm", afternoon: "3–6pm", evening: "6–9pm", late: "After 9pm" },
+    arrival: "What time do you expect to arrive?",
+    arrivalHint: (ci, hrs) => `Check-in is from ${ci}. The front office is open ${hrs}.`,
+    lateNote: (close, fee) => `That's after the front office closes at ${close} — no problem, we'll arrange a late check-in for you${fee ? ` (a late-arrival fee of ${fee} may apply)` : ""}.`,
+    early: "Early check-in",
+    earlySub: (ci) => `Arriving before ${ci}? Subject to availability — we'll confirm with you.`,
+    brochure: "See the full Experiences Menu (PDF) →",
     extrasTitle: "Make it even more yours",
     extrasSub: "All optional — open only what matters to you.",
     foodTitle: "Food & allergies",
@@ -134,10 +141,11 @@ const T = {
     doneSub: (place, d) => `We'll have ${place} ready exactly like this. See you ${d <= 1 ? "tomorrow" : `in ${d} days`}.`,
     sum: {
       fire: "Fireplace ready to light",
-      drinks: (list) => `${list} in your fridge`,
+      drinks: (list) => `Minibar extras: ${list}`,
       beds: { separate: "Separate beds requested — we'll confirm", extra: "Extra bed requested — we'll confirm" },
       adapter: { uk: "A UK plug adapter waiting", us: "A US plug adapter waiting", other: "A plug adapter waiting" },
-      arrival: (a) => `Expecting you ${({ early: "before 3pm", afternoon: "between 3 and 6pm", evening: "between 6 and 9pm", late: "after 9pm" })[a]}`,
+      arrival: (a) => `Expecting you around ${a}`,
+      early: "Early check-in requested — we'll confirm",
       food: "Your dietary notes are with the kitchen",
       occasion: (o) => ({ birthday: "Ready to celebrate your birthday", anniversary: "Ready to celebrate your anniversary", honeymoon: "Ready to celebrate your honeymoon", treat: "No reason needed — we'll spoil you anyway", other: "Ready to celebrate with you" }[o]),
       experiences: (list) => `We'll be in touch about: ${list}`,
@@ -164,17 +172,24 @@ const T = {
     leadTime: "Demora cerca de 30 segundos",
     fireplace: "Lareira",
     fireplaceSub: "Pronta a acender quando chegar",
-    fridge: "À sua espera no frigorífico",
-    fridgeHint: "Escolha quantas quiser. Confirmamos os preços consigo antes de colocar algo além de água.",
-    drinkOpts: { still_water: "Água sem gás", sparkling_water: "Água com gás", wine: "Vinho da região", sparkling_wine: "Um espumante", beer: "Cerveja fresca", alcohol_free: "Bebidas sem álcool" },
+    minibar: "O seu minibar",
+    minibarStd: (list) => `Já na sua casa: ${list}.`,
+    noMinibar: "A sua casa não tem minibar — mas trazemos-lhe o que quiser.",
+    minibarExtrasLabel: "Quer algo extra à sua espera?",
+    minibarPh: "Outra coisa? Diga-nos (opcional)",
+    minibarHint: "Confirmamos qualquer preço consigo antes da sua chegada.",
     beds: "Como prefere dormir?",
     bedOpts: { as_booked: "Tal como reservado", separate: "Camas separadas, por favor", extra: "Mais uma cama para alguém" },
     bedsHint: "Vemos o que é possível no seu alojamento e confirmamos consigo.",
     adapter: "Precisa de um adaptador de tomada?",
     adapterHint: "Em Portugal as tomadas são europeias de dois pinos (230V).",
     adapterOpts: { none: "Não, obrigado", uk: "Britânico", us: "Americano", other: "Outro tipo" },
-    arrival: "A que horas pensa chegar?",
-    arrivalOpts: { early: "Antes das 15h", afternoon: "15h–18h", evening: "18h–21h", late: "Depois das 21h" },
+    arrival: "A que horas prevê chegar?",
+    arrivalHint: (ci, hrs) => `O check-in é a partir das ${ci}. A receção está aberta ${hrs}.`,
+    lateNote: (close, fee) => `É depois de a receção fechar (${close}) — não há problema, preparamos um check-in tardio${fee ? ` (pode aplicar-se uma taxa de chegada tardia de ${fee})` : ""}.`,
+    early: "Check-in antecipado",
+    earlySub: (ci) => `Chega antes das ${ci}? Sujeito a disponibilidade — confirmamos consigo.`,
+    brochure: "Ver o Menu de Experiências completo (PDF) →",
     extrasTitle: "Torne-o ainda mais seu",
     extrasSub: "Tudo opcional — abra só o que lhe interessa.",
     foodTitle: "Alimentação e alergias",
@@ -229,10 +244,11 @@ const T = {
     doneSub: (place, d) => `Vamos ter ${place} pronto exatamente assim. Até ${d <= 1 ? "amanhã" : `daqui a ${d} dias`}.`,
     sum: {
       fire: "Lareira pronta a acender",
-      drinks: (list) => `${list} no frigorífico`,
+      drinks: (list) => `Extras no minibar: ${list}`,
       beds: { separate: "Camas separadas pedidas — vamos confirmar", extra: "Cama extra pedida — vamos confirmar" },
       adapter: { uk: "Um adaptador britânico à sua espera", us: "Um adaptador americano à sua espera", other: "Um adaptador de tomada à sua espera" },
-      arrival: (a) => `Esperamos por si ${({ early: "antes das 15h", afternoon: "entre as 15h e as 18h", evening: "entre as 18h e as 21h", late: "depois das 21h" })[a]}`,
+      arrival: (a) => `Esperamos por si por volta das ${a}`,
+      early: "Check-in antecipado pedido — vamos confirmar",
       food: "As suas notas alimentares estão com a cozinha",
       occasion: (o) => ({ birthday: "Prontos para celebrar o seu aniversário", anniversary: "Prontos para celebrar o vosso aniversário", honeymoon: "Prontos para celebrar a vossa lua de mel", treat: "Sem motivo nenhum — vamos mimá-lo na mesma", other: "Prontos para celebrar consigo" }[o]),
       experiences: (list) => `Vamos falar consigo sobre: ${list}`,
@@ -259,17 +275,24 @@ const T = {
     leadTime: "Environ 30 secondes",
     fireplace: "Cheminée",
     fireplaceSub: "Prête à être allumée à votre arrivée",
-    fridge: "Au frais pour vous",
-    fridgeHint: "Choisissez-en autant que vous voulez. Nous confirmerons les prix avec vous avant d'ajouter autre chose que de l'eau.",
-    drinkOpts: { still_water: "Eau plate", sparkling_water: "Eau pétillante", wine: "Vin de la région", sparkling_wine: "Des bulles", beer: "Bière fraîche", alcohol_free: "Boissons sans alcool" },
+    minibar: "Votre minibar",
+    minibarStd: (list) => `Déjà dans votre villa : ${list}.`,
+    noMinibar: "Votre villa n'a pas de minibar — mais nous vous apportons volontiers ce que vous souhaitez.",
+    minibarExtrasLabel: "Un petit extra à votre arrivée ?",
+    minibarPh: "Autre chose ? Dites-le-nous (facultatif)",
+    minibarHint: "Nous vous confirmerons tout prix avant votre arrivée.",
     beds: "Comment souhaitez-vous dormir ?",
     bedOpts: { as_booked: "Comme réservé", separate: "Lits séparés, s'il vous plaît", extra: "Un lit de plus pour quelqu'un" },
     bedsHint: "Nous vérifions ce qui est possible dans votre hébergement et vous confirmons.",
     adapter: "Besoin d'un adaptateur de prise ?",
     adapterHint: "Le Portugal utilise des prises européennes à deux broches (230V).",
     adapterOpts: { none: "Non, merci", uk: "Prise UK", us: "Prise US", other: "Autre type" },
-    arrival: "Vers quelle heure pensez-vous arriver ?",
-    arrivalOpts: { early: "Avant 15h", afternoon: "15h–18h", evening: "18h–21h", late: "Après 21h" },
+    arrival: "À quelle heure pensez-vous arriver ?",
+    arrivalHint: (ci, hrs) => `L'arrivée se fait à partir de ${ci}. La réception est ouverte ${hrs}.`,
+    lateNote: (close, fee) => `C'est après la fermeture de la réception (${close}) — aucun souci, nous organiserons une arrivée tardive${fee ? ` (des frais d'arrivée tardive de ${fee} peuvent s'appliquer)` : ""}.`,
+    early: "Arrivée anticipée",
+    earlySub: (ci) => `Vous arrivez avant ${ci} ? Selon disponibilité — nous vous confirmerons.`,
+    brochure: "Voir la carte complète des Expériences (PDF) →",
     extrasTitle: "Rendez-le encore plus personnel",
     extrasSub: "Tout est facultatif — ouvrez seulement ce qui compte pour vous.",
     foodTitle: "Repas et allergies",
@@ -324,10 +347,11 @@ const T = {
     doneSub: (place, d) => `${place} sera prêt exactement ainsi. À ${d <= 1 ? "demain" : `dans ${d} jours`}.`,
     sum: {
       fire: "Cheminée prête à être allumée",
-      drinks: (list) => `${list} au frais`,
+      drinks: (list) => `Extras au minibar : ${list}`,
       beds: { separate: "Lits séparés demandés — nous confirmons", extra: "Lit supplémentaire demandé — nous confirmons" },
       adapter: { uk: "Un adaptateur UK vous attend", us: "Un adaptateur US vous attend", other: "Un adaptateur de prise vous attend" },
-      arrival: (a) => `Nous vous attendons ${({ early: "avant 15h", afternoon: "entre 15h et 18h", evening: "entre 18h et 21h", late: "après 21h" })[a]}`,
+      arrival: (a) => `Nous vous attendons vers ${a}`,
+      early: "Arrivée anticipée demandée — nous confirmerons",
       food: "Vos préférences alimentaires sont transmises à la cuisine",
       occasion: (o) => ({ birthday: "Prêts à fêter votre anniversaire", anniversary: "Prêts à fêter votre anniversaire de mariage", honeymoon: "Prêts à fêter votre lune de miel", treat: "Aucune raison — on vous gâte quand même", other: "Prêts à faire la fête avec vous" }[o]),
       experiences: (list) => `Nous vous contacterons pour : ${list}`,
@@ -362,8 +386,9 @@ function dateRange(a, b) {
   const f = (d) => new Date(d).toLocaleDateString(loc, { weekday: "short", day: "numeric", month: "short" });
   return `${f(a)} – ${f(b)}`;
 }
-const OPT_MAP = { drinks: "drinkOpts", beds: "bedOpts", adapter: "adapterOpts", arrival: "arrivalOpts", dietary: "dietOpts", occasion: "occasionOpts" };
-function optLabel(field, v) { return t(OPT_MAP[field])[v]; }
+const OPT_MAP = { beds: "bedOpts", adapter: "adapterOpts", dietary: "dietOpts", occasion: "occasionOpts" };
+function optLabel(field, v) { return OPT_MAP[field] ? t(OPT_MAP[field])[v] : v; }
+function toMinutes(hhmm) { const m = /^(\d{1,2}):(\d{2})/.exec(hhmm || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : null; }
 function listJoin(items) {
   const and = { en: " and ", pt: " e ", fr: " et " }[lang];
   return items.length <= 1 ? items[0] || "" : items.slice(0, -1).join(", ") + and + items[items.length - 1];
@@ -392,6 +417,10 @@ function renderStatic() {
   $("#leadTime").textContent = t("leadTime");
   $("#villaTitle").textContent = stay.accommodation;
   $("#actionNote").textContent = t("actionNote");
+  $("#arrivalHint").textContent = t("arrivalHint")(stay.checkInTime, stay.receptionHours);
+  $("#earlySub").textContent = t("earlySub")(stay.checkInTime);
+  $("#minibarInfo").textContent = stay.minibar ? t("minibarStd")(stay.minibar.join(", ")) : t("noMinibar");
+  $("#brochureLink").href = stay.brochureLink || "/brochure.pdf";
   renderInfo("#infoCard");
   renderInfo("#doneInfo");
 }
@@ -418,7 +447,8 @@ function renderChips() {
     const multi = wrap.hasAttribute("data-multi");
     const toggle = wrap.hasAttribute("data-toggle"); // single choice that can be un-picked
     wrap.innerHTML = "";
-    for (const v of wrap.dataset.options.split(",")) {
+    const options = wrap.hasAttribute("data-dynamic") ? (stay[field] || []) : wrap.dataset.options.split(",");
+    for (const v of options) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "chip";
@@ -486,6 +516,11 @@ function renderExperiences() {
 
 function renderState() {
   $("#fireplace").setAttribute("aria-checked", String(prefs.fireplace));
+  $("#earlyCheckIn").setAttribute("aria-checked", String(prefs.earlyCheckIn));
+  const mins = toMinutes($("#arrivalTime").value), close = toMinutes(stay.receptionClose);
+  const late = mins !== null && close !== null && (mins >= close || mins < 7 * 60);
+  $("#lateNote").classList.toggle("hidden", !late);
+  if (late) $("#lateNote").textContent = t("lateNote")(stay.receptionClose, stay.lateArrivalFee);
   $("#bedsHint").classList.toggle("hidden", prefs.beds === "as_booked");
 
   const hasAllergy = $("#allergies").value.trim().length > 0;
@@ -508,20 +543,21 @@ function badge(sel, n) {
 
 /** A comparable picture of the form, to tell "untouched" from "changed". */
 function snapshot() {
-  return JSON.stringify({ ...prefs, allergies: $("#allergies").value.trim(), note: $("#note").value.trim(), occasionNote: $("#occasionNote").value.trim(), remember: $("#remember").checked });
+  return JSON.stringify({ ...prefs, arrivalTime: $("#arrivalTime").value, minibarRequest: $("#minibarRequest").value.trim(), allergies: $("#allergies").value.trim(), note: $("#note").value.trim(), occasionNote: $("#occasionNote").value.trim(), remember: $("#remember").checked });
 }
 
 function renderDone() {
   const p = stay.preferences;
   const s = t("sum");
-  const drinkNames = p.drinks.map((d, i) => (i ? t("drinkOpts")[d].toLowerCase() : t("drinkOpts")[d]));
+  const extras = [...p.minibarExtras, p.minibarRequest].filter(Boolean).map((x, i) => (i ? x.toLowerCase() : x));
   const expNames = p.experiences.map((id) => t("exp")[id][0]);
   const items = [
+    p.arrivalTime && ["clock", s.arrival(p.arrivalTime)],
+    p.earlyCheckIn && ["clock", s.early],
     p.fireplace && ["fire", s.fire],
-    drinkNames.length && ["bottle", s.drinks(listJoin(drinkNames))],
+    extras.length && ["bottle", s.drinks(listJoin(extras))],
     p.beds !== "as_booked" && ["bed", s.beds[p.beds]],
     p.adapter !== "none" && ["plug", s.adapter[p.adapter]],
-    ["clock", s.arrival(p.arrival)],
     (p.dietary.length || p.allergies) && ["leaf", s.food],
     p.occasion !== "none" && ["spark", s.occasion(p.occasion)],
     expNames.length && ["path", s.experiences(listJoin(expNames))],
@@ -560,9 +596,11 @@ function message(kind) {
 function startForm() {
   const p = stay.preferences;
   prefs = {
-    arrival: p.arrival, fireplace: p.fireplace, drinks: [...p.drinks], beds: p.beds, adapter: p.adapter,
+    earlyCheckIn: !!p.earlyCheckIn, fireplace: p.fireplace, minibarExtras: [...(p.minibarExtras || [])], beds: p.beds, adapter: p.adapter,
     dietary: [...p.dietary], occasion: p.occasion, experiences: [...p.experiences],
   };
+  $("#arrivalTime").value = p.arrivalTime || "";
+  $("#minibarRequest").value = p.minibarRequest || "";
   $("#allergies").value = p.allergies || "";
   $("#allergyConsent").checked = !!p.allergyConsent;
   $("#note").value = p.note || "";
@@ -575,7 +613,8 @@ function startForm() {
 // ---------- events ----------
 
 $("#fireplace").addEventListener("click", () => { prefs.fireplace = !prefs.fireplace; renderState(); });
-["#allergies", "#note", "#occasionNote", "#remember"].forEach((s) => $(s).addEventListener("input", renderState));
+$("#earlyCheckIn").addEventListener("click", () => { prefs.earlyCheckIn = !prefs.earlyCheckIn; renderState(); });
+["#arrivalTime", "#minibarRequest", "#allergies", "#note", "#occasionNote", "#remember"].forEach((s) => $(s).addEventListener("input", renderState));
 $("#allergyConsent").addEventListener("change", () => {
   $("#consentBox").classList.remove("needs");
   $("#consentErr").classList.add("hidden");
@@ -609,6 +648,8 @@ $("#form").addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...prefs,
+        arrivalTime: $("#arrivalTime").value,
+        minibarRequest: $("#minibarRequest").value,
         allergies, allergyConsent: consent && !!allergies,
         note: $("#note").value, occasionNote: prefs.occasion === "none" ? "" : $("#occasionNote").value,
         rememberForNextTime: $("#remember").checked,
