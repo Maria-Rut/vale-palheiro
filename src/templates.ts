@@ -1,4 +1,5 @@
 import type { Language, MessageKind } from "./types.ts";
+import { publicBaseUrl } from "./preferences.ts";
 
 /**
  * Editable email templates.
@@ -456,34 +457,6 @@ function inline(s: string): string {
 const C = { ink: "#2f2f2f", muted: "#938a7c", accent: "#934d3f", bg: "#f2eee8", card: "#f8f5ef", line: "#e0d8ca", terracotta: "#934d3f", offwhite: "#f2eee8", anthracite: "#2f2f2f" };
 
 /**
- * The editorial wordmark as inline SVG for email — the real letterforms
- * (triangular V/A, three-bar E, round O) with "EARTH RESORT" beneath.
- * `color` sets the stroke/fill; `w` is the rendered width in px.
- */
-function wordmarkHtml(color: string, w = 230, withSub = true): string {
-  const sub = withSub
-    ? `<text x="256" y="138" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" letter-spacing="8" fill="${color}">EARTH RESORT</text>`
-    : "";
-  const vb = withSub ? "0 0 680 150" : "0 0 530 120";
-  const h = Math.round(w * (withSub ? 150 / 680 : 120 / 530));
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${w}" height="${h}" fill="none" style="display:inline-block;vertical-align:middle">`
-    + `<g stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none">`
-    + `<path d="M12 52 L24 100 L36 52"/>`
-    + `<path d="M52 100 L64 52 L76 100 M57 84 H71"/>`
-    + `<path d="M92 52 V100 H112"/>`
-    + `<path d="M128 52 H150 M128 76 H146 M128 100 H150"/>`
-    + `<path d="M232 100 V52 H248 a12 12 0 0 1 0 24 H232"/>`
-    + `<path d="M272 100 L284 52 L296 100 M277 84 H291"/>`
-    + `<path d="M312 52 V100 H332"/>`
-    + `<path d="M348 52 V100 M374 52 V100 M348 76 H374"/>`
-    + `<path d="M390 52 H412 M390 76 H408 M390 100 H412"/>`
-    + `<path d="M428 52 V100"/>`
-    + `<path d="M444 100 V52 H460 a12 12 0 0 1 0 24 H444 M458 76 L472 100"/>`
-    + `<circle cx="500" cy="76" r="22"/>`
-    + `</g>${sub}</svg>`;
-}
-
-/**
  * The email as the guest sees it: a simple, inline-styled HTML email that
  * works in mail apps and in the dashboard preview.
  */
@@ -520,9 +493,12 @@ export function toEmailHtml(body: string): string {
     return out.join("");
   }).join("");
 
-  // Brand email signature (guide pp.42–44): editorial wordmark + contact.
+  // The resort's own logo files (PNG — inline SVG doesn't show in Gmail/Outlook).
+  const logo = (file: string, w: number, h: number) =>
+    `<img src="${publicBaseUrl()}/brand/${file}" width="${w}" height="${h}" alt="Vale Palheiro — Earth Resort" style="display:inline-block;border:0;width:${w}px;height:${h}px">`;
+  // Brand email signature (guide pp.42–44): logo + contact.
   const signature = `<div style="border-top:1px solid ${C.line};margin-top:8px;padding:20px 24px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${C.muted};font-size:12px;line-height:1.55">`
-    + `<div style="margin-bottom:10px">${wordmarkHtml(C.terracotta, 150)}</div>`
+    + `<div style="margin-bottom:10px">${logo("logo-horizontal-terracotta.png", 160, 25)}</div>`
     + `<div style="color:${C.ink};font-weight:600">Vale Palheiro — Earth Resort</div>`
     + `Rua Vale Palheiro, 8670-016 Aljezur · Costa Vicentina<br>`
     + `<a href="https://www.valepalheiro.com" style="color:${C.ink};font-weight:600;text-decoration:none">valepalheiro.com</a> · +351 933 979 043`
@@ -530,7 +506,7 @@ export function toEmailHtml(body: string): string {
 
   return `<div style="background:${C.bg};padding:24px 12px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;background:${C.card};border:1px solid ${C.line};border-radius:14px;overflow:hidden">
-<div style="background:${C.anthracite};padding:24px;text-align:center">${wordmarkHtml(C.offwhite, 200)}</div>
+<div style="background:${C.anthracite};padding:30px 24px 26px;text-align:center">${logo("logo-stacked-offwhite.png", 64, 112)}</div>
 <div style="padding:26px 24px;color:${C.ink};font-size:15px;line-height:1.6">${html}</div>
 ${signature}
 </div></div>`.replace(/\n/g, "");

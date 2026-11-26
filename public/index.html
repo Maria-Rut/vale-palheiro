@@ -408,13 +408,93 @@
       .tabbtn { margin-right: 12px; font-size: 17px; }
       .msg-head .book { width: 100%; }
     }
+
+    /* ================= side-panel layout (like valepalheiro.com's menu) ================= */
+    :root { --side-w: 272px; --side-bg: #ebe7e0; --nav-ink: #5b4c42; }
+    #app { min-height: 100vh; }
+    aside.side {
+      position: fixed; inset: 0 auto 0 0; width: var(--side-w); background: var(--side-bg);
+      display: flex; flex-direction: column; align-items: center; padding: 34px 22px 24px;
+      border-right: 1px solid #ddd6ca; z-index: 30; overflow-y: auto;
+    }
+    .side-logo { display: block; width: 92px; margin: 4px auto 10px; }
+    .side-logo img { width: 100%; display: block; }
+    .side-kicker { font-family: var(--label); text-transform: uppercase; letter-spacing: .32em; font-size: 10px; color: var(--muted); margin-bottom: 30px; text-align: center; }
+    .side-nav { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+    .side-nav .tabbtn {
+      font-family: var(--label); text-transform: uppercase; letter-spacing: .24em; font-size: 12.5px;
+      color: var(--nav-ink); background: none; border: none; border-radius: 0; margin: 0; padding: 10px 6px;
+      width: 100%; text-align: center; cursor: pointer; position: relative; transition: color .2s;
+      white-space: normal; line-height: 1.5;
+    }
+    .side-nav .tabbtn:hover { color: var(--terracotta); }
+    .side-nav .tabbtn.active { color: var(--terracotta); border: none; }
+    .side-nav .tabbtn.active::after {
+      content: ""; display: block; width: 22px; height: 1px; background: var(--terracotta); margin: 6px auto 0;
+    }
+    .side-nav .tab-count { font-family: var(--sans); letter-spacing: 0; font-size: 11px; color: var(--muted); margin-left: 2px; }
+    .side-foot { margin-top: auto; padding-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+    .side-foot a { font-family: var(--label); text-transform: uppercase; letter-spacing: .2em; font-size: 10.5px; color: var(--muted); text-decoration: none; }
+    .side-foot a:hover { color: var(--terracotta); }
+    .side-foot button {
+      background: transparent; border: 1px solid #cfc6b8; color: var(--nav-ink); border-radius: 999px;
+      padding: 7px 18px; font-family: var(--sans); font-size: 12.5px; cursor: pointer;
+    }
+    .side-foot button:hover { background: #e2dcd2; }
+    .side-close { display: none; }
+
+    .main-wrap { margin-left: var(--side-w); }
+    .main-wrap main { max-width: 1060px; padding: 44px 44px 80px; }
+    .page-kicker { font-family: var(--label); text-transform: uppercase; letter-spacing: .3em; font-size: 10.5px; color: var(--terracotta); margin-bottom: 8px; }
+    .intro h1 { font-size: 40px; line-height: 1.15; }
+    .overview-block.hidden { display: none; }
+
+    /* mobile top bar + full-screen menu */
+    .mobile-bar { display: none; }
+    @media (max-width: 900px) {
+      .mobile-bar {
+        display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20;
+        background: var(--side-bg); padding: 14px 16px; border-bottom: 1px solid #ddd6ca;
+      }
+      .mobile-bar img { height: 30px; display: block; }
+      .menu-btn {
+        background: none; border: none; display: flex; align-items: center; gap: 10px; cursor: pointer;
+        font-family: var(--label); text-transform: uppercase; letter-spacing: .25em; font-size: 11px; color: var(--nav-ink); padding: 6px 0;
+      }
+      .menu-btn .bars { width: 22px; height: 10px; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+      aside.side { width: 100%; transform: translateX(-100%); transition: transform .3s ease; border-right: none; justify-content: center; }
+      body.menu-open aside.side { transform: none; }
+      body.menu-open { overflow: hidden; }
+      .side-close {
+        display: block; position: absolute; top: 18px; left: 18px; background: none; border: none; cursor: pointer;
+        width: 34px; height: 34px; color: var(--nav-ink);
+      }
+      .side-logo { width: 74px; }
+      .side-nav .tabbtn { font-size: 17px; letter-spacing: .2em; padding: 9px 6px; }
+      .main-wrap { margin-left: 0; }
+      .main-wrap main { padding: 26px 16px 64px; }
+      .intro h1 { font-size: 30px; }
+    }
+
+    /* login: split like the website menu — form on off-white, logo on anthracite */
+    .login-wrap { background: var(--side-bg); padding: 0; display: grid; grid-template-columns: minmax(340px, 42%) 1fr; align-items: stretch; }
+    .login-side { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+    .login-art { background: var(--anthracite); display: flex; align-items: center; justify-content: center; }
+    .login-art img { width: min(240px, 40%); opacity: .92; }
+    .login-card { background: transparent; box-shadow: none; padding: 0; width: 100%; max-width: 340px; }
+    .login-card .login-logo { width: 84px; margin: 0 auto 10px; display: block; }
+    .login-card .login-title { font-family: var(--label); text-transform: uppercase; letter-spacing: .32em; font-size: 11px; color: var(--muted); margin-bottom: 30px; }
+    @media (max-width: 760px) { .login-wrap { grid-template-columns: 1fr; } .login-art { display: none; } }
+    .login-wrap.hidden, aside.side.hidden { display: none; }
   </style>
 </head>
 <body>
   <!-- LOGIN -->
   <div id="login" class="login-wrap">
+    <div class="login-side">
     <form class="login-card" id="loginForm">
-      <span class="vp-logo" style="color:var(--rust);--logo-w:240px;--logo-h:53px;margin:0 auto 28px"></span>
+      <img class="login-logo" src="/brand/logo-stacked-terracotta.png" alt="Vale Palheiro — Earth Resort" />
+      <div class="login-title">Guest messaging</div>
       <input id="username" placeholder="Staff username" autocomplete="username" />
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
       <button class="primary" type="submit">Enter</button>
@@ -424,39 +504,53 @@
         user <b>palheiro</b> · pass <b>costa-vicentina</b>
       </div>
     </form>
+    </div>
+    <div class="login-art"><img src="/brand/logo-stacked-offwhite.png" alt="" /></div>
   </div>
 
   <!-- APP -->
   <div id="app" class="hidden">
-    <header class="topbar">
-      <div style="display:flex;align-items:center;gap:18px">
-        <span class="vp-logo" style="color:#f2eee8;--logo-w:205px;--logo-h:45px"></span>
-        <span class="topbar-sub" style="font-family:var(--label);text-transform:uppercase;letter-spacing:.28em;font-size:10px;color:var(--rust-soft);padding-left:18px;border-left:1px solid #4a4440">Guest Messaging</span>
-      </div>
-      <button id="logoutBtn">Sign out</button>
-    </header>
+    <div class="mobile-bar">
+      <img src="/brand/logo-horizontal-terracotta.png" alt="Vale Palheiro — Earth Resort" />
+      <button class="menu-btn" id="menuOpen" aria-label="Open menu"><span>Menu</span><span class="bars"></span></button>
+    </div>
 
-    <main>
-      <div class="intro">
-        <h1>Guest emails</h1>
-        <p>
-          We email every guest at the right moments of their stay, in their own language
-          and at a good hour where they live. Click a step to read and edit its email.
-        </p>
-      </div>
-
-      <div class="journey" id="journey"></div>
-      <div class="stats" id="stats"></div>
-
-      <div class="tabs">
-        <button class="tabbtn active" data-tab="emails">Email templates</button>
+    <aside class="side" id="side" aria-label="Sections">
+      <button class="side-close" id="menuClose" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 4l16 16M20 4L4 20"/></svg>
+      </button>
+      <a class="side-logo" href="#" data-home><img src="/brand/logo-stacked-terracotta.png" alt="Vale Palheiro — Earth Resort" /></a>
+      <div class="side-kicker">Guest messaging</div>
+      <nav class="side-nav">
+        <button class="tabbtn active" data-tab="emails">Messages</button>
         <button class="tabbtn" data-tab="messages">Outbox <span class="tab-count" id="msgCount"></span></button>
         <button class="tabbtn" data-tab="prefs">Guests <span class="tab-count" id="prefCount"></span></button>
         <button class="tabbtn" data-tab="tasks">Team tasks <span class="tab-count" id="taskCount"></span></button>
         <button class="tabbtn" data-tab="events">Events</button>
-        <button class="tabbtn" data-tab="weather">Weather &amp; activities</button>
+        <button class="tabbtn" data-tab="weather">Weather &amp; experiences</button>
         <button class="tabbtn" data-tab="property">Resort settings</button>
         <button class="tabbtn" data-tab="settings">Settings</button>
+      </nav>
+      <div class="side-foot">
+        <a href="https://www.valepalheiro.com/" target="_blank" rel="noopener">valepalheiro.com ↗</a>
+        <button id="logoutBtn">Sign out</button>
+      </div>
+    </aside>
+
+    <div class="main-wrap">
+    <main>
+      <div class="intro">
+        <div class="page-kicker" id="pageKicker">Vale Palheiro · Earth Resort</div>
+        <h1 id="pageTitle">Guest messages</h1>
+        <p id="pageIntro">
+          We write to every guest at the right moments of their stay, in their own language
+          and at a good hour where they live — by email and WhatsApp. Click a step to read and edit it.
+        </p>
+      </div>
+
+      <div class="overview-block" id="overviewBlock">
+        <div class="journey" id="journey"></div>
+        <div class="stats" id="stats"></div>
       </div>
 
       <section id="tab-emails">
@@ -465,7 +559,7 @@
       </section>
 
       <section id="tab-messages" class="hidden">
-        <p class="hint muted" style="margin-top:0">Every email planned for real bookings, and what has already been sent. Shown in English; open "what the guest receives" to see their language.</p>
+        <p class="hint muted" style="margin-top:0">Shown in English; open "what the guest receives" to see their language.</p>
         <div class="panel demo" style="margin-bottom:18px">
           <h3>Demo tools <span class="demo-tag">demo only</span></h3>
           <p class="hint" style="margin-bottom:10px">Messages send on their own at the right time. Jump the clock forward to watch it happen.</p>
@@ -489,16 +583,10 @@
       </section>
 
       <section id="tab-tasks" class="hidden">
-        <p class="hint muted" style="margin-top:0">Created automatically from bookings and guest answers — late check-in, minibar requests, extra beds, adapters, celebrations, kitchen notes. Things the system can't (and shouldn't) do on its own.</p>
         <div id="tasks"></div>
       </section>
 
       <section id="tab-prefs" class="hidden">
-        <p class="prefs-intro">
-          Everyone arriving soon, staying now or just left. The 3-days-before email has a button to the guest's
-          own "prepare your stay" page; what they choose shows up here, and anything that needs a person
-          (late arrival, minibar request, extra bed, adapter, celebration, experiences) becomes a team task.
-        </p>
         <div id="prefs"></div>
       </section>
 
@@ -532,10 +620,6 @@
       </section>
 
       <section id="tab-weather" class="hidden">
-        <p class="hint muted" style="margin-top:0">
-          The recommendation agent reads the forecast for the estate and the sea, and picks one experience
-          for each day of a guest's stay. The picks go into the welcome email after check-in.
-        </p>
         <div id="wxSource"></div>
         <div class="wx-grid" id="forecast"></div>
         <div class="section-title">Suggestions day by day · turndown cards</div>
@@ -613,6 +697,7 @@
 
 
     </main>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>

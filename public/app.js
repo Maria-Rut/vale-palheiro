@@ -46,11 +46,29 @@ const RENDER = {
   emails: renderEmails, messages: renderMessages, tasks: renderTasks, prefs: renderPrefs, events: renderEvents,
   weather: renderWeather, property: renderProperty, settings: loadConfig,
 };
+const PAGE = {
+  emails: ["Guest messages", "We write to every guest at the right moments of their stay, in their own language and at a good hour where they live — by email and WhatsApp. Click a step to read and edit it."],
+  messages: ["Outbox", "Every message planned for real bookings, and what has already gone out. WhatsApps wait here to be sent by hand until the Business API is connected."],
+  prefs: ["Guests", "Everyone arriving soon, staying now or just left: their profile, consent, and what they told us on their page."],
+  tasks: ["Team tasks", "Created automatically from bookings and guest answers — the human touches the system leaves to the team."],
+  events: ["Events", "The resort calendar, and who gets invited — personalised, about a week ahead, never to guests who didn't subscribe."],
+  weather: ["Weather & experiences", "The forecast for the estate and the sea, the suggestion for each guest each day, and the experiences the agent may suggest."],
+  property: ["Resort settings", "The resort's practical information, kept in one place. It goes straight into every email, WhatsApp and the guest page."],
+  settings: ["Settings", "When each message goes out, on which channel, what needs approval — and the state of each connection."],
+};
 function openTab(tab) {
   document.querySelectorAll(".tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   for (const t of TABS) $(`#tab-${t}`).classList.toggle("hidden", t !== tab);
+  $("#pageTitle").textContent = PAGE[tab][0];
+  $("#pageIntro").textContent = PAGE[tab][1];
+  $("#overviewBlock").classList.toggle("hidden", tab !== "emails" && tab !== "messages");
+  document.body.classList.remove("menu-open");
+  window.scrollTo(0, 0);
   RENDER[tab]();
 }
+$("#menuOpen").addEventListener("click", () => document.body.classList.add("menu-open"));
+$("#menuClose").addEventListener("click", () => document.body.classList.remove("menu-open"));
+document.querySelector("[data-home]").addEventListener("click", (e) => { e.preventDefault(); openTab("emails"); });
 document.querySelectorAll(".tabbtn").forEach((btn) => btn.addEventListener("click", () => openTab(btn.dataset.tab)));
 
 // --- labels ---
