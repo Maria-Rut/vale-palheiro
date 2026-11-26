@@ -73,6 +73,17 @@ function time(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** "12:00–21:30, closed on Mondays" in the guest's language. */
+function barnHours(hours: string, closed: string, lang: Language): string {
+  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const i = days.indexOf(closed.trim().toLowerCase());
+  if (i < 0) return hours;
+  const pt = ["ao domingo", "à segunda-feira", "à terça-feira", "à quarta-feira", "à quinta-feira", "à sexta-feira", "ao sábado"][i];
+  const fr = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"][i];
+  const en = closed.trim().charAt(0).toUpperCase() + closed.trim().slice(1).toLowerCase();
+  return { en: `${hours}, closed on ${en}s`, pt: `${hours}, encerrado ${pt}`, fr: `${hours}, fermé le ${fr}` }[lang];
+}
+
 /** "Casa Lyra" or "Suite 4". */
 export function placeLabel(r: Reservation): string {
   return r.unit ? `${r.accommodation} ${r.unit}` : r.accommodation;
@@ -200,7 +211,7 @@ function fieldValues(input: GenerationInput): Record<string, string> {
     breakfast_line: r.breakfastIncluded
       ? `${p.breakfastHours} ${pick({ en: "(included)", pt: "(incluído)", fr: "(inclus)" })}`
       : `${p.breakfastHours} — ${pick({ en: "you can add it any time", pt: "pode acrescentá-lo a qualquer momento", fr: "vous pouvez l'ajouter à tout moment" })}`,
-    dinner_hours: p.restaurantHours,
+    dinner_hours: barnHours(p.restaurantHours, p.restaurantClosedDay, l),
     review_link: p.reviewLink,
 
     personalise_link: preferencesOpen(r) ? preferencesUrl(r) : "",

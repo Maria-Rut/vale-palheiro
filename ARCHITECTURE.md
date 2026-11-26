@@ -120,7 +120,7 @@ The app has no dependencies beyond Node, so it runs on a Mac Mini at the resort:
 From **Vale Palheiro**:
 - Confirm every *sample* field in Resort settings: check-in time (14:00 or
   15:00), late-arrival fee (~€30), early check-in policy, Wi-Fi, out-of-hours
-  number, meal and bar hours, directions, minibar contents and extras menu with
+  number, breakfast and bar hours, directions, minibar contents and extras menu with
   prices, which villas have no minibar, TripAdvisor and Google review links,
   wellness menu.
 - The sending email address and who can set DNS records on valepalheiro.com.

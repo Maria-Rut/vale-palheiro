@@ -41,7 +41,7 @@ export type PropertyKey =
   | "receptionHours" | "receptionClose" | "checkInTime" | "earlyCheckIn" | "lateArrivalFee"
   | "meetingPoint" | "mapsLink" | "directions" | "directionsPt" | "directionsFr"
   | "restaurantIntro" | "restaurantIntroPt" | "restaurantIntroFr"
-  | "breakfastHours" | "restaurantHours" | "barHours"
+  | "breakfastHours" | "restaurantHours" | "restaurantClosedDay" | "barHours"
   | "wifiNetwork" | "wifiPassword" | "checkOutTime"
   | "brochureLink" | "wellnessInfo" | "wellnessMenuLink"
   | "minibarStandard" | "minibarExtras" | "villasWithoutMinibar"
@@ -97,7 +97,8 @@ const initial: PropertyInfo = {
     value: "The Barn est notre restaurant : une cuisine de saison avec les produits de la région et de notre potager. Mieux vaut réserver une table à l'avance.",
   },
   breakfastHours: { group: "dining", label: "Breakfast hours", value: "08:00–10:30", sample: true },
-  restaurantHours: { group: "dining", label: "The Barn — dinner hours", value: "19:30–22:00", sample: true },
+  restaurantHours: { group: "dining", label: "The Barn — opening hours", value: "12:00–21:30", sample: false, help: "Lunch and dinner. From the Google listing." },
+  restaurantClosedDay: { group: "dining", label: "The Barn — closed on", value: "Monday", sample: false, help: "Day of the week in English (e.g. Monday). Leave empty if open every day." },
   barHours: { group: "dining", label: "Bar hours", value: "", sample: true, help: "Leave empty and the bar line is left out of emails." },
 
   // ---- during the stay
