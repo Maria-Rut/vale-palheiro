@@ -690,7 +690,7 @@ async function renderWeather() {
     <div class="wx">
       <div class="d">${esc(resortDate(d.date + "T12:00:00Z"))}</div>
       <div class="wx-icon" title="${esc(d.conditions.map((c) => COND_LABEL[c] ?? c).join(", "))}">${weatherIcon(d.weatherCode)}</div>
-      <div class="t">${Math.round(d.tempMax)}°C <span class="muted" style="font-size:13px">/ ${Math.round(d.tempMin)}°C</span></div>
+      <div class="t">${Math.round(d.tempMax)}<span class="unit">°C</span> <span class="muted" style="font-size:13px">/ ${Math.round(d.tempMin)}<span class="unit">°C</span></span></div>
       <div>Rain ${Math.round(d.rainChance)}% · gusts ${Math.round(d.gustMaxKmh)} km/h</div>
       <div>Waves ${d.waveHeightM.toFixed(1)} m</div>
       <div class="chips">${d.conditions.map((c) => `<span class="cond ${c}">${COND_LABEL[c] ?? c}</span>`).join("")}</div>
