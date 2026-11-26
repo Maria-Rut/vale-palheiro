@@ -216,6 +216,11 @@ function fieldValues(input: GenerationInput): Record<string, string> {
     email: p.email,
     wifi_network: p.wifiNetwork,
     wifi_password: p.wifiPassword,
+    wifi_line: pick({
+      en: `• Wi-Fi: free across the property — network ${p.wifiNetwork}${p.wifiPassword ? `, password ${p.wifiPassword}` : ""}`,
+      pt: `• Wi-Fi: gratuito em toda a propriedade — rede ${p.wifiNetwork}${p.wifiPassword ? `, palavra-passe ${p.wifiPassword}` : ""}`,
+      fr: `• Wi-Fi : gratuit dans toute la propriété — réseau ${p.wifiNetwork}${p.wifiPassword ? `, mot de passe ${p.wifiPassword}` : ""}`,
+    }),
     meeting_point: p.meetingPoint,
     directions: pick({ en: p.directions, pt: p.directionsPt, fr: p.directionsFr }),
     map_link: p.mapsLink,

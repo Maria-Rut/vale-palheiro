@@ -58,29 +58,29 @@ const initial: PropertyInfo = {
   receptionPhone: { group: "contact", label: "Reception phone", value: "+351 933 979 043", sample: false, help: "From the Experiences Menu." },
   email: { group: "contact", label: "Guest email", value: "info@valepalheiro.com", sample: false },
   address: { group: "contact", label: "Address", value: "Rua Vale Palheiro, 8670-016 Aljezur", sample: false },
-  whatsappNumber: { group: "contact", label: "WhatsApp (front office)", value: "+351 933 979 043", sample: true, help: "The number guests can write to on WhatsApp." },
-  emergencyPhone: { group: "contact", label: "Out-of-hours number", value: "+351 910 000 001", sample: true, help: "Who guests call after reception closes." },
+  whatsappNumber: { group: "contact", label: "WhatsApp (front office)", value: "+351 933 979 043", sample: false, help: "The number guests can write to on WhatsApp. Mobile coverage can be limited here, so we suggest WhatsApp." },
+  emergencyPhone: { group: "contact", label: "All-hours contact number", value: "+351 933 979 043", sample: false, help: "One number, reachable at any time." },
 
   // ---- arrival & check-in
   receptionHours: { group: "arrival", label: "Front office hours", value: "08:00–20:00", sample: false },
   receptionClose: { group: "arrival", label: "Front office closes at", value: "20:00", sample: false, help: "Arrivals after this time create a late check-in task for the team." },
-  checkInTime: { group: "arrival", label: "Standard check-in from", value: "15:00", sample: true, help: "To confirm with management: 14:00 or 15:00." },
+  checkInTime: { group: "arrival", label: "Standard check-in from", value: "15:00", sample: false, help: "Confirmed by management." },
   earlyCheckIn: { group: "arrival", label: "Early check-in", value: "Subject to availability", sample: true, help: "Shown to guests who ask for early check-in." },
-  lateArrivalFee: { group: "arrival", label: "Late-arrival fee (after the front office closes)", value: "€30", sample: true, help: "Approximate — to confirm with management. Leave empty for no fee." },
+  lateArrivalFee: { group: "arrival", label: "Late-arrival fee (20:00–08:00)", value: "€35", sample: false, help: "Charged for arrivals after the front office closes (20:00). Leave empty for no fee." },
   meetingPoint: { group: "arrival", label: "Where we welcome guests", value: "Casa da Ribeira", sample: false, help: "The welcome lounge where stays begin." },
   mapsLink: { group: "arrival", label: "Google Maps link", value: "https://maps.google.com/?q=Rua+Vale+Palheiro+8670-016+Aljezur", sample: true },
   directions: {
-    group: "arrival", long: true, label: "Directions & access road (English)", sample: true,
-    value: "From Aljezur, take the road towards Vale Palheiro. There are few signs in the village, so follow the map link rather than the signposts. The last stretch is an unpaved road — drive slowly; any car can make it.",
-    help: "Which road to take, where the signs are missing, what the last stretch is like.",
+    group: "arrival", long: true, label: "Directions & access road (English)", sample: false,
+    value: "Set your GPS to Aljezur; once you reach Aljezur, update it to Vale Palheiro. Entering Aljezur, follow the historic centre towards the Igreja da Misericórdia. By the church, turn right and go down on the left, following the signs for Fonte das Mentiras. At the bottom you'll meet an unpaved track — keep straight ahead until you see the entrance gate of Vale Palheiro Earth Resort.\n\nLarge, heavy or low vehicles: head towards Praia da Amoreira, continuing past the municipal pools. Just after the picnic area, take the entrance on the left. Continue along this road to a bend/junction; there, take the dirt road away from the Aljezur entrance, keeping right, and continue to the Vale Palheiro gate.\n\nMobile coverage can be limited in the area — for any contact, we suggest WhatsApp.",
+    help: "Full driving directions, the alternative route for large vehicles, and the mobile-coverage note.",
   },
   directionsPt: {
-    group: "arrival", long: true, label: "Directions & access road (Portuguese)", sample: true,
-    value: "A partir de Aljezur, siga a estrada em direção a Vale Palheiro. Há poucas placas na vila, por isso siga o link do mapa em vez das indicações. O último troço é em terra batida — conduza devagar; qualquer carro passa.",
+    group: "arrival", long: true, label: "Directions & access road (Portuguese)", sample: false,
+    value: "Defina o GPS com destino a Aljezur; ao chegar a Aljezur, atualize o GPS para Vale Palheiro. Ao entrar em Aljezur, siga pela zona histórica em direção à Igreja da Misericórdia. Junto à igreja, vire à direita e desça pela esquerda, seguindo as indicações para a Fonte das Mentiras. No final da descida encontrará um caminho de terra batida — siga sempre em frente até avistar o portão de entrada do Vale Palheiro Earth Resort.\n\nPercurso alternativo (veículos grandes, pesados ou baixos): siga na direção da Praia da Amoreira, continuando em frente depois das piscinas municipais. Imediatamente após a zona de merendas, vire na entrada à esquerda. Continue em frente por esta estrada até chegar a uma curva/interseção. Nesse ponto, entre na estrada de terra em sentido contrário à entrada de Aljezur, mantendo-se à direita, e siga até ao portão de entrada de Vale Palheiro.\n\nA rede móvel poderá ser limitada na zona — para qualquer contacto, sugerimos a utilização do WhatsApp.",
   },
   directionsFr: {
-    group: "arrival", long: true, label: "Directions & access road (French)", sample: true,
-    value: "Depuis Aljezur, prenez la route vers Vale Palheiro. Il y a peu de panneaux dans le village : suivez plutôt le lien du plan. Le dernier tronçon est une piste non goudronnée — roulez doucement, toute voiture passe.",
+    group: "arrival", long: true, label: "Directions & access road (French)", sample: false,
+    value: "Réglez votre GPS sur Aljezur ; une fois à Aljezur, mettez-le à jour vers Vale Palheiro. En entrant dans Aljezur, suivez le centre historique en direction de l'Igreja da Misericórdia. Près de l'église, tournez à droite et descendez par la gauche en suivant les panneaux « Fonte das Mentiras ». En bas, vous trouverez une piste en terre — continuez tout droit jusqu'au portail d'entrée de Vale Palheiro Earth Resort.\n\nItinéraire alternatif (véhicules grands, lourds ou bas) : dirigez-vous vers la Praia da Amoreira, en continuant après les piscines municipales. Juste après l'aire de pique-nique, prenez l'entrée à gauche. Continuez jusqu'à un virage/une intersection ; là, prenez la piste en terre dans le sens opposé à l'entrée d'Aljezur, en gardant la droite, jusqu'au portail de Vale Palheiro.\n\nLe réseau mobile peut être limité dans la zone — pour tout contact, nous suggérons WhatsApp.",
   },
 
   // ---- restaurant & bar
@@ -102,21 +102,21 @@ const initial: PropertyInfo = {
   barHours: { group: "dining", label: "Bar hours", value: "", sample: true, help: "Leave empty and the bar line is left out of emails." },
 
   // ---- during the stay
-  wifiNetwork: { group: "stay", label: "Wi-Fi network", value: "ValePalheiro", sample: true },
-  wifiPassword: { group: "stay", label: "Wi-Fi password", value: "terra-guest", sample: true },
+  wifiNetwork: { group: "stay", label: "Wi-Fi network", value: "Vale Palheiro", sample: false, help: "Free Wi-Fi across the whole property." },
+  wifiPassword: { group: "stay", label: "Wi-Fi password", value: "", sample: true, help: "Leave empty if the network is open / given on arrival. Free Wi-Fi across the property." },
   checkOutTime: { group: "stay", label: "Check-out time", value: "11:00", sample: true },
 
   // ---- brochure, minibar, wellness
   brochureLink: { group: "menus", label: "Experiences brochure (link or file)", value: "/brochure.pdf", sample: false, help: "The Experiences Menu (v4). Replace with a new PDF link when it changes." },
-  wellnessInfo: { group: "menus", label: "Wellness (one line)", value: "Massages in your villa, yoga, Pilates and barre", sample: true, help: "Shown in the welcome message. From the Experiences Menu." },
-  wellnessMenuLink: { group: "menus", label: "Wellness menu link", value: "/brochure.pdf#page=11", sample: true, help: "For now: the Body, movement & wellbeing pages of the Experiences Menu (p. 11–13). Replace with the wellness menu when it exists." },
-  minibarStandard: { group: "menus", label: "Standard minibar (already in the villa)", value: "Still water, sparkling water, Coca-Cola, Fanta", sample: true, help: "Comma-separated. Shown to guests as information — not something they need to ask for." },
-  minibarExtras: { group: "menus", label: "Extras guests can ask for", value: "A bottle of regional wine, Sparkling wine, Local craft beer, Alcohol-free drinks, Fresh fruit", sample: true, help: "Comma-separated. Placeholder until the minibar menu arrives. Guests can also write their own request." },
-  villasWithoutMinibar: { group: "menus", label: "Villas without a minibar", value: "Casita 1, Casita 2, Casita 3", sample: true, help: "Comma-separated, as written in the booking (e.g. Casita 2)." },
+  wellnessInfo: { group: "menus", label: "Wellness (one line)", value: "Wellness da Ribeira — massages and treatments, in the spa or the privacy of your villa", sample: false, help: "Shown in the welcome message. Book at least 24h ahead." },
+  wellnessMenuLink: { group: "menus", label: "Wellness menu link", value: "/wellness.html", sample: false, help: "The Wellness da Ribeira massages menu." },
+  minibarStandard: { group: "menus", label: "Standard minibar (already in the villa)", value: "Still water, sparkling water, Coca-Cola, Fanta", sample: false, help: "Comma-separated. Shown to guests as information — not something they need to ask for." },
+  minibarExtras: { group: "menus", label: "Extras guests can ask for", value: "A bottle of regional wine, Sparkling wine, Local craft beer, Alcohol-free drinks, Fresh fruit", sample: false, help: "Comma-separated. Guests can also write their own request." },
+  villasWithoutMinibar: { group: "menus", label: "Villas without a minibar", value: "Casita Jasmim, Casita Lavanda, Casita Alecrim", sample: false, help: "All villas have a minibar except the Casitas. Comma-separated, as written in the booking." },
 
   // ---- reviews
-  tripadvisorLink: { group: "reviews", label: "TripAdvisor review page", value: "https://www.tripadvisor.com/Search?q=Vale%20Palheiro%20Earth%20Resort", sample: true, help: "Paste the resort's direct \"write a review\" link." },
-  reviewLink: { group: "reviews", label: "Google review link (optional)", value: "https://g.page/r/vale-palheiro/review", sample: true, help: "Shown under the TripAdvisor button. Leave empty to hide." },
+  tripadvisorLink: { group: "reviews", label: "TripAdvisor review page", value: "https://www.tripadvisor.com.br/ShowUserReviews-g1021467-d33410224-r1041781103-Vale_Palheiro_Earth_Resort-Aljezur_Faro_District_Algarve.html", sample: false, help: "The resort's TripAdvisor review page." },
+  reviewLink: { group: "reviews", label: "Google review link", value: "https://maps.app.goo.gl/4qwaaYqz6PNLxm8T8", sample: false, help: "Google Maps / Reviews link. Shown under the TripAdvisor button." },
   newsletterLink: { group: "menus", label: "Newsletter / stay-in-touch sign-up", value: "https://www.valepalheiro.com/newsletter", sample: true, help: "Where guests subscribe for events, Fado nights and updates. Shown as the \"Stay in touch\" button in the good-morning message." },
 };
 

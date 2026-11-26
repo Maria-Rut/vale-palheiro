@@ -282,8 +282,12 @@ export function expectedArrival(r: Reservation): Date {
 
 /** Most villas have a standard minibar; a few small ones don't (Resort settings). */
 export function hasMinibar(placeLabel: string): boolean {
+  const label = placeLabel.toLowerCase();
+  // Rule from management: every villa has a minibar except the Casitas.
+  if (label.includes("casita")) return false;
+  // Plus any specific names listed in Resort settings.
   const without = propList("villasWithoutMinibar").map((x) => x.toLowerCase());
-  return !without.includes(placeLabel.toLowerCase());
+  return !without.includes(label);
 }
 
 // ---------------------------------------------------------------- for the guest emails

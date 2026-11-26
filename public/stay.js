@@ -83,8 +83,8 @@ const T = {
     adapterHint: "Portugal uses European two-pin sockets (230V).",
     adapterOpts: { none: "No, all set", uk: "UK plug", us: "US plug", other: "Another type" },
     arrival: "What time do you expect to arrive?",
-    arrivalHint: (ci, hrs) => `Check-in is from ${ci}. The front office is open ${hrs}.`,
-    lateNote: (close, fee) => `That's after the front office closes at ${close} — no problem, we'll arrange a late check-in for you${fee ? ` (a late-arrival fee of ${fee} may apply)` : ""}.`,
+    arrivalHint: (ci, hrs, fee) => `Check-in is from ${ci}. The front office is open ${hrs}.${fee ? ` Arrivals between 20:00 and 08:00 are subject to a late-arrival fee of ${fee} — just let us know and we'll arrange your welcome.` : ""}`,
+    lateNote: (close, fee) => `That's after the front office closes at ${close} — no problem, we'll arrange a late check-in for you${fee ? ` (late-arrival fee of ${fee})` : ""}.`,
     early: "Early check-in",
     earlySub: (ci) => `Arriving before ${ci}? Subject to availability — we'll confirm with you.`,
     brochure: "See the full Experiences Menu (PDF) →",
@@ -187,8 +187,8 @@ const T = {
     adapterHint: "Em Portugal as tomadas são europeias de dois pinos (230V).",
     adapterOpts: { none: "Não, obrigado", uk: "Britânico", us: "Americano", other: "Outro tipo" },
     arrival: "A que horas prevê chegar?",
-    arrivalHint: (ci, hrs) => `O check-in é a partir das ${ci}. A receção está aberta ${hrs}.`,
-    lateNote: (close, fee) => `É depois de a receção fechar (${close}) — não há problema, preparamos um check-in tardio${fee ? ` (pode aplicar-se uma taxa de chegada tardia de ${fee})` : ""}.`,
+    arrivalHint: (ci, hrs, fee) => `O check-in é a partir das ${ci}. A receção está aberta ${hrs}.${fee ? ` As chegadas entre as 20:00 e as 08:00 estão sujeitas a uma taxa de chegada tardia de ${fee} — avise-nos e preparamos a sua receção.` : ""}`,
+    lateNote: (close, fee) => `É depois de a receção fechar (${close}) — não há problema, preparamos um check-in tardio${fee ? ` (taxa de chegada tardia de ${fee})` : ""}.`,
     early: "Check-in antecipado",
     earlySub: (ci) => `Chega antes das ${ci}? Sujeito a disponibilidade — confirmamos consigo.`,
     brochure: "Ver o Menu de Experiências completo (PDF) →",
@@ -291,8 +291,8 @@ const T = {
     adapterHint: "Le Portugal utilise des prises européennes à deux broches (230V).",
     adapterOpts: { none: "Non, merci", uk: "Prise UK", us: "Prise US", other: "Autre type" },
     arrival: "À quelle heure pensez-vous arriver ?",
-    arrivalHint: (ci, hrs) => `L'arrivée se fait à partir de ${ci}. La réception est ouverte ${hrs}.`,
-    lateNote: (close, fee) => `C'est après la fermeture de la réception (${close}) — aucun souci, nous organiserons une arrivée tardive${fee ? ` (des frais d'arrivée tardive de ${fee} peuvent s'appliquer)` : ""}.`,
+    arrivalHint: (ci, hrs, fee) => `L'arrivée se fait à partir de ${ci}. La réception est ouverte ${hrs}.${fee ? ` Les arrivées entre 20h00 et 08h00 sont soumises à des frais d'arrivée tardive de ${fee} — prévenez-nous et nous préparerons votre accueil.` : ""}`,
+    lateNote: (close, fee) => `C'est après la fermeture de la réception (${close}) — aucun souci, nous organiserons une arrivée tardive${fee ? ` (frais d'arrivée tardive de ${fee})` : ""}.`,
     early: "Arrivée anticipée",
     earlySub: (ci) => `Vous arrivez avant ${ci} ? Selon disponibilité — nous vous confirmerons.`,
     brochure: "Voir la carte complète des Expériences (PDF) →",
@@ -420,7 +420,7 @@ function renderStatic() {
   $("#leadTime").textContent = t("leadTime");
   $("#villaTitle").textContent = stay.accommodation;
   $("#actionNote").textContent = t("actionNote");
-  $("#arrivalHint").textContent = t("arrivalHint")(stay.checkInTime, stay.receptionHours);
+  $("#arrivalHint").textContent = t("arrivalHint")(stay.checkInTime, stay.receptionHours, stay.lateArrivalFee);
   $("#earlySub").textContent = t("earlySub")(stay.checkInTime);
   $("#minibarInfo").textContent = stay.minibar ? t("minibarStd")(stay.minibar.join(", ")) : t("noMinibar");
   $("#brochureLink").href = stay.brochureLink || "/brochure.pdf";

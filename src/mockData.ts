@@ -98,7 +98,7 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_001", reference: "VP-7F3A", guest: guests.charlotte,
-    accommodation: "Casa Atlantica",
+    accommodation: "Villa Terracota",
     // Arrives in 3 days, late in the evening (after reception closes).
     checkIn: day(3, 21, 30), checkOut: day(8, 11),
     adults: 2, children: 3,
@@ -108,7 +108,7 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_002", reference: "VP-2B9C", guest: guests.miguel,
-    accommodation: "Casa Lyra",
+    accommodation: "Villa Lyra I",
     // Returning guest arriving this afternoon.
     checkIn: day(0, 16), checkOut: day(4, 11),
     adults: 2, motive: "both",
@@ -117,7 +117,7 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_003", reference: "VP-5K1D", guest: guests.sophie,
-    accommodation: "Suite", unit: "4",
+    accommodation: "Suite da Ribeira",
     checkIn: day(5, 16), checkOut: day(8, 11),
     adults: 2, occasion: "anniversary",
     ratePlan: "Early Booking Rate",
@@ -126,7 +126,7 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_004", reference: "VP-9Q4E", guest: guests.lukas,
-    accommodation: "Casita", unit: "2",
+    accommodation: "Casita Jasmim",
     // Checked in yesterday — in-stay info message already went out.
     checkIn: day(-1, 16), checkOut: day(3, 11),
     adults: 1, motive: "business",
@@ -138,7 +138,7 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_005", reference: "VP-3T8F", guest: guests.ana,
-    accommodation: "Villa", unit: "7",
+    accommodation: "Villa Vicentina II",
     checkIn: day(-5, 16), checkOut: day(-2, 11),
     adults: 4,
     notes: "Group of friends. Enjoyed dinner at The Barn.",
@@ -146,7 +146,7 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_006", reference: "VP-6M2H", guest: guests.emma,
-    accommodation: "Suite", unit: "1",
+    accommodation: "Villa Vicentina I",
     checkIn: day(-3, 16), checkOut: day(0, 11),
     adults: 2, occasion: "birthday",
     source: "Booking.com",
@@ -155,21 +155,21 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_h01", reference: "VP-1A0M", guest: guests.miguel,
-    accommodation: "Casa Lyra",
+    accommodation: "Villa Lyra I",
     checkIn: day(-240, 16), checkOut: day(-236, 11),
     adults: 2,
   },
   {
     ...base,
     id: "res_h02", reference: "VP-4C7R", guest: guests.jean,
-    accommodation: "Casita", unit: "3",
+    accommodation: "Casita Lavanda",
     checkIn: day(-95, 16), checkOut: day(-91, 11),
     adults: 2,
   },
   {
     ...base,
     id: "res_h03", reference: "VP-8D2S", guest: guests.hanna,
-    accommodation: "Suite", unit: "2",
+    accommodation: "Villa Taipa I",
     checkIn: day(-150, 16), checkOut: day(-143, 11),
     adults: 1, motive: "both",
     notes: "Stayed a week, working remotely.",
@@ -177,7 +177,7 @@ export const reservations: Reservation[] = [
   {
     ...base,
     id: "res_h04", reference: "VP-2E9T", guest: guests.oliver,
-    accommodation: "Villa", unit: "5",
+    accommodation: "Villa Vicentina III",
     checkIn: day(-60, 16), checkOut: day(-56, 11),
     adults: 3,
   },
