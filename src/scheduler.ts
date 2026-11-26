@@ -24,6 +24,7 @@ import { expectedArrival, getPreferences, preferenceTasks, purgeAfterStay } from
 import { prop, propMinutes } from "./property.ts";
 import { createWeather, type CachedWeather, type Forecast } from "./weather.ts";
 import { recommend } from "./recommender.ts";
+import { supabaseEnabled, selectAll, upsert } from "./supabase.ts";
 
 /**
  * The scheduler is the scheduler is the brain. For every reservation and every event it:
@@ -180,7 +181,28 @@ export class Scheduler {
     const r = this.getReservation(reservationId);
     if (!r) return undefined;
     r.guest.marketingConsent = consent;
+    if (supabaseEnabled) {
+      void upsert("guest_consent", {
+        reservation_id: reservationId,
+        marketing_consent: consent,
+        updated_at: new Date().toISOString(),
+      });
+    }
     return consent;
+  }
+
+  /** Apply any persisted consent overrides onto the reservations (startup). */
+  async loadConsent(): Promise<number> {
+    if (!supabaseEnabled) return 0;
+    const rows = await selectAll<{ reservation_id: string; marketing_consent: boolean }>(
+      "guest_consent",
+      "reservation_id,marketing_consent",
+    );
+    for (const row of rows) {
+      const r = this.getReservation(row.reservation_id);
+      if (r) r.guest.marketingConsent = row.marketing_consent;
+    }
+    return rows.length;
   }
   getEvents(): ResortEvent[] { return this.events; }
   getSuppressions(): Suppression[] { return this.suppressions; }

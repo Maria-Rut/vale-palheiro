@@ -32,14 +32,42 @@ import type {
 export const PREFERENCES_CUTOFF_HOURS = 24;
 
 // ---------------------------------------------------------------- store
+//
+// In-memory map is the synchronous source of truth (all callers stay sync).
+// When Supabase is configured, it is loaded into the map at startup and every
+// save is written through to Supabase. A Supabase outage never blocks a guest:
+// the in-memory copy always holds, the write is best-effort.
+
+import { supabaseEnabled, selectAll, upsert } from "./supabase.ts";
 
 const store = new Map<string, GuestPreferences>();
 
 export function getPreferences(reservationId: string): GuestPreferences | undefined {
   return store.get(reservationId);
 }
+
 export function setPreferences(reservationId: string, p: GuestPreferences): void {
   store.set(reservationId, p);
+  if (supabaseEnabled) {
+    void upsert("guest_preferences", {
+      reservation_id: reservationId,
+      data: p,
+      updated_at: new Date().toISOString(),
+    });
+  }
+}
+
+/** Load persisted preferences into memory at startup (no-op without Supabase). */
+export async function loadPreferences(): Promise<number> {
+  if (!supabaseEnabled) return 0;
+  const rows = await selectAll<{ reservation_id: string; data: GuestPreferences }>(
+    "guest_preferences",
+    "reservation_id,data",
+  );
+  for (const row of rows) {
+    if (row.reservation_id && row.data) store.set(row.reservation_id, row.data);
+  }
+  return rows.length;
 }
 
 // ---------------------------------------------------------------- links

@@ -22,3 +22,9 @@ services:
       #   value: "open-meteo"
       # - key: OPEN_METEO_API_KEY   # commercial key from open-meteo.com
       #   sync: false
+      # Supabase persistence (guest preferences + events consent).
+      # Set both in the Render dashboard; without them the app stays in-memory.
+      # - key: SUPABASE_URL
+      #   value: "https://nnmgcemoxuoahrhourpe.supabase.co"
+      # - key: SUPABASE_KEY         # Supabase service_role key — keep secret
+      #   sync: false

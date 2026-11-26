@@ -19,8 +19,10 @@ import {
   preferencesUrl,
   hasMinibar,
   setPreferences,
+  loadPreferences,
 } from "./preferences.ts";
 import { prop } from "./property.ts";
+import { supabaseEnabled, supabaseStatus } from "./supabase.ts";
 import { addActivity, getActivities, setActivityEnabled, type Category, type Condition } from "./activities.ts";
 import { TEXT_TEMPLATES, toPlainText, DEFAULT_TEMPLATES, FIELDS, getTemplate, isEdited, isTemplateKey, resetTemplate, setTemplate, toEmailHtml, type TemplateKey } from "./templates.ts";
 import { exampleGuests } from "./examples.ts";
@@ -49,6 +51,13 @@ const scheduler = new Scheduler(new MockBookingSource(), new InMemoryEventSource
 
 // Demo: one guest has already filled in their "prepare your stay" page.
 for (const [id, prefs] of Object.entries(preferenceSeeds)) setPreferences(id, prefs);
+
+// If Supabase is configured, load persisted preferences + consent so they
+// survive restarts (overriding the demo seeds above). No-op without Supabase.
+if (supabaseEnabled) {
+  const [prefCount, consentCount] = await Promise.all([loadPreferences(), scheduler.loadConsent()]);
+  console.log(`[supabase] loaded ${prefCount} saved preferences, ${consentCount} consent records`);
+}
 
 // Build the initial plan, then send anything already due so the demo opens
 // with a realistic mix of sent / scheduled / held / skipped.
@@ -475,6 +484,7 @@ const server = http.createServer(async (req, res) => {
         { name: "Email", status: "simulated", detail: "Messages are recorded in the sent log, not delivered. Needs an email provider (SMTP / SendGrid / Postmark) and the sending address." },
         { name: "WhatsApp", status: ch.whatsapp === "configured" ? "configured" : "manual", detail: ch.whatsapp === "configured" ? "Credentials found; Meta-approved templates still to map." : "WhatsApp Business API planned. Until then, due WhatsApps wait in the Outbox under \"To send by hand\"." },
         { name: "Weather & sea forecast", status: w.source === "open-meteo" && !w.error ? "live" : "simulated", detail: w.source === "open-meteo" && !w.error ? "Live from Open-Meteo (land + marine), free, no key needed." : `Simulated forecast for the demo${w.error ? ` (${w.error})` : ""}. Set WEATHER_SOURCE=open-meteo for the live one.` },
+        { name: "Database — Supabase", status: supabaseStatus().configured ? "live" : "planned", detail: supabaseStatus().configured ? `Guest preferences and events consent persist to Supabase (${supabaseStatus().url}).` : "In-memory for now (resets on restart). Set SUPABASE_URL and SUPABASE_KEY to persist preferences and consent." },
         { name: "Message writing", status: "templates", detail: "Staff-edited templates. An AI model (hosted, or local on a Mac Mini) can be added for extra variety." },
       ]);
     }
