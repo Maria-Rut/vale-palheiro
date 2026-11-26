@@ -174,13 +174,20 @@ export class OpenMeteoWeather implements WeatherSource {
 
 // ----------------------------------------------------------- caching + choice
 
-/** Caches the forecast for an hour; on a failed refresh keeps the last good one. */
+/**
+ * Caches the forecast and is careful with the API's rate limits.
+ *   - Serves the cached forecast for `ttlMs` (default 3h).
+ *   - On a failure, keeps showing the last good forecast (up to 2 days old).
+ *   - On a rate-limit (HTTP 429), backs off until the next day before trying
+ *     again, so we don't keep burning the daily quota with every page view.
+ */
 export class CachedWeather {
   private last?: Forecast;
   private lastError?: string;
+  private retryNotBefore = 0; // epoch ms; don't call the source before this
   private readonly source: WeatherSource;
   private readonly ttlMs: number;
-  constructor(source: WeatherSource, ttlMs = 3600_000) {
+  constructor(source: WeatherSource, ttlMs = 3 * 3600_000) {
     this.source = source;
     this.ttlMs = ttlMs;
   }
@@ -189,15 +196,24 @@ export class CachedWeather {
   get error() { return this.lastError; }
 
   async get(): Promise<Forecast | undefined> {
-    const fresh = this.last && Date.now() - Date.parse(this.last.fetchedAt) < this.ttlMs;
+    const now = Date.now();
+    const fresh = this.last && now - Date.parse(this.last.fetchedAt) < this.ttlMs;
     if (fresh) return this.last;
+    // Still in a back-off window (e.g. after a 429) — serve what we have.
+    if (now < this.retryNotBefore) return this.last;
+
     try {
       this.last = await this.source.getForecast();
       this.lastError = undefined;
+      this.retryNotBefore = 0;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
-      // A forecast older than a day is not worth showing guests.
-      if (this.last && Date.now() - Date.parse(this.last.fetchedAt) > 24 * 3600_000) this.last = undefined;
+      const rateLimited = /\b429\b|request limit/i.test(this.lastError);
+      // 429 = daily cap: wait 6h before trying again (quota resets ~midnight UTC).
+      // Other errors: short back-off so a blip doesn't spam retries.
+      this.retryNotBefore = now + (rateLimited ? 6 * 3600_000 : 10 * 60_000);
+      // Keep a good forecast for up to 2 days; only then is it too stale to show.
+      if (this.last && now - Date.parse(this.last.fetchedAt) > 2 * 24 * 3600_000) this.last = undefined;
     }
     return this.last;
   }

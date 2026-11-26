@@ -140,7 +140,16 @@ function serveStatic(res: ServerResponse, urlPath: string): void {
   }
   fs.readFile(filePath, (err, content) => {
     if (err) {
-      // SPA fallback: serve index.html for unknown paths.
+      // A request for a real asset (has a file extension, e.g. .pdf .png .css)
+      // that doesn't exist is a genuine 404 — never fall back to index.html,
+      // or a missing PDF would silently open the dashboard page instead.
+      const ext = path.extname(filePath).toLowerCase();
+      if (ext && ext !== ".html") {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end(`Not found: ${rel} is not uploaded yet.`);
+        return;
+      }
+      // Otherwise it's an app route — serve the SPA shell.
       fs.readFile(path.join(PUBLIC_DIR, "index.html"), (e2, idx) => {
         if (e2) {
           res.writeHead(404);

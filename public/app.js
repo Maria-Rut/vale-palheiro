@@ -682,10 +682,14 @@ function weatherIcon(code) {
 async function renderWeather() {
   const [wx, acts] = await Promise.all([api.get("/api/weather"), api.get("/api/activities")]);
   const live = wx.source === "open-meteo";
+  const rateLimited = wx.error && /429|request limit/i.test(wx.error);
+  const errHtml = !wx.error ? "" : rateLimited
+    ? ` · <span style="color:#9b3b2f">free Open-Meteo daily limit reached — add a free <code>OPEN_METEO_API_KEY</code> to lift it. Showing the last forecast meanwhile.</span>`
+    : ` · <span style="color:#9b3b2f">last refresh failed: ${esc(wx.error)}</span>`;
   $("#wxSource").innerHTML = `<div class="src-banner">${live
     ? `<b>Live forecast</b> from Open-Meteo (land + marine)`
     : `<b>Simulated forecast</b> for the demo. Set <code>WEATHER_SOURCE=open-meteo</code> to use the live Open-Meteo forecast and sea state.`}
-    ${wx.fetchedAt ? ` · updated ${fmt(wx.fetchedAt)}` : ""}${wx.error ? ` · <span style="color:#9b3b2f">last refresh failed: ${esc(wx.error)}</span>` : ""}</div>`;
+    ${wx.fetchedAt ? ` · updated ${fmt(wx.fetchedAt)}` : ""}${errHtml}</div>`;
   $("#forecast").innerHTML = wx.days.length ? wx.days.map((d) => `
     <div class="wx">
       <div class="d">${esc(resortDate(d.date + "T12:00:00Z"))}</div>
