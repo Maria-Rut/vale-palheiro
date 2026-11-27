@@ -17,7 +17,10 @@ services:
         value: "palheiro"
       - key: TERRA_PASS
         value: "costa-vicentina"
-      # Live weather for the recommendation agent (leave unset for the simulated demo forecast):
+      # Live weather — WeatherAPI.com (free 100k calls/month, no card). Get a key at weatherapi.com:
+      # - key: WEATHERAPI_KEY
+      #   sync: false
+      # Alternative: Open-Meteo (free, no key, but a small daily cap):
       # - key: WEATHER_SOURCE
       #   value: "open-meteo"
       # - key: OPEN_METEO_API_KEY   # commercial key from open-meteo.com

@@ -35,7 +35,7 @@ export interface DayForecast {
 }
 
 export interface Forecast {
-  source: "simulated" | "open-meteo";
+  source: "simulated" | "open-meteo" | "weatherapi";
   fetchedAt: string;
   days: DayForecast[];
 }
@@ -172,6 +172,109 @@ export class OpenMeteoWeather implements WeatherSource {
   }
 }
 
+// ----------------------------------------------------------- WeatherAPI.com
+
+/**
+ * WeatherAPI.com — a generous free tier (100,000 calls/month) with a key and
+ * NO credit card. Land forecast comes from here; wave height still comes from
+ * Open-Meteo's marine API (called at most once per cache window, so it won't
+ * hit the daily limit). Needs WEATHERAPI_KEY.
+ *
+ * WeatherAPI returns its own condition codes, so we map them to the WMO codes
+ * the rest of the app expects (icons, conditions).
+ */
+function weatherApiToWmo(code: number, isDay = true): number {
+  // https://www.weatherapi.com/docs/weather_conditions.json
+  const map: Record<number, number> = {
+    1000: isDay ? 0 : 1,       // Sunny / Clear
+    1003: 2,                   // Partly cloudy
+    1006: 3,                   // Cloudy
+    1009: 3,                   // Overcast
+    1030: 45, 1135: 45, 1147: 48, // Mist / Fog
+    1063: 61, 1150: 51, 1153: 51, 1180: 61, 1183: 61, 1186: 63, 1189: 63, 1192: 65, 1195: 65,
+    1240: 80, 1243: 81, 1246: 82, // Rain showers
+    1066: 71, 1210: 71, 1213: 71, 1216: 73, 1219: 73, 1222: 75, 1225: 75, 1255: 85, 1258: 86,
+    1069: 66, 1198: 66, 1201: 67,
+    1087: 95, 1273: 95, 1276: 96, 1279: 95, 1282: 96, // Thunder
+  };
+  return map[code] ?? 3;
+}
+
+type WApiDay = {
+  date: string;
+  day: {
+    maxtemp_c: number; mintemp_c: number; daily_chance_of_rain: number;
+    totalprecip_mm: number; maxwind_kph: number; condition: { code: number };
+  };
+};
+
+export class WeatherApiWeather implements WeatherSource {
+  readonly name = "weatherapi" as const;
+  private readonly apiKey: string;
+  private readonly marine: OpenMeteoWeather;
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+    this.marine = new OpenMeteoWeather(); // used only for wave height
+  }
+
+  private async fetchJson(url: string, label: string): Promise<unknown> {
+    const opts: RequestInit = {
+      signal: AbortSignal.timeout(12_000),
+      headers: { "User-Agent": "ValePalheiro-GuestMessaging/1.0", Accept: "application/json" },
+    };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          throw new Error(`${label} HTTP ${res.status}${body ? ` — ${body.slice(0, 160)}` : ""}`);
+        }
+        return await res.json();
+      } catch (e) {
+        if (attempt === 1) throw e;
+        console.error(`[weather] ${label} attempt ${attempt + 1} failed — ${e instanceof Error ? e.message : e}`);
+        await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+    throw new Error(`${label} failed`);
+  }
+
+  async getForecast(): Promise<Forecast> {
+    // WeatherAPI free tier gives up to 14 forecast days.
+    const url = `https://api.weatherapi.com/v1/forecast.json?key=${encodeURIComponent(this.apiKey)}`
+      + `&q=${LOCATION.estate.lat},${LOCATION.estate.lon}&days=14&aqi=no&alerts=no`;
+    const land = (await this.fetchJson(url, "WeatherAPI")) as { forecast?: { forecastday?: WApiDay[] } };
+    const fdays = land.forecast?.forecastday;
+    if (!fdays || !fdays.length) throw new Error("WeatherAPI: no forecast days");
+
+    // Wave height from Open-Meteo marine (best-effort — never fails the forecast).
+    const waves = new Map<string, { h: number; p: number }>();
+    try {
+      const sea = await this.marine.getForecast();
+      for (const d of sea.days) waves.set(d.date, { h: d.waveHeightM, p: d.wavePeriodS });
+    } catch (e) {
+      console.error(`[weather] marine (waves) unavailable: ${e instanceof Error ? e.message : e}`);
+    }
+
+    const days: DayForecast[] = fdays.map((d) => {
+      const w = waves.get(d.date);
+      return {
+        date: d.date,
+        weatherCode: weatherApiToWmo(d.day.condition.code),
+        tempMax: d.day.maxtemp_c,
+        tempMin: d.day.mintemp_c,
+        rainChance: d.day.daily_chance_of_rain,
+        rainMm: d.day.totalprecip_mm,
+        windMaxKmh: d.day.maxwind_kph,
+        gustMaxKmh: Math.round(d.day.maxwind_kph * 1.4), // WeatherAPI daily has no gust; estimate
+        waveHeightM: w?.h ?? 0,
+        wavePeriodS: w?.p ?? 0,
+      };
+    });
+    return { source: this.name, fetchedAt: new Date().toISOString(), days };
+  }
+}
+
 // ----------------------------------------------------------- caching + choice
 
 /**
@@ -220,6 +323,15 @@ export class CachedWeather {
 }
 
 export function createWeather(): CachedWeather {
-  const live = process.env.WEATHER_SOURCE === "open-meteo";
-  return new CachedWeather(live ? new OpenMeteoWeather(process.env.OPEN_METEO_API_KEY) : new SimulatedWeather());
+  // Preference order:
+  //   1. WeatherAPI.com if WEATHERAPI_KEY is set — free 100k calls/month, no card.
+  //   2. Open-Meteo if WEATHER_SOURCE=open-meteo (free, no key, but daily cap).
+  //   3. Simulated demo forecast otherwise.
+  const weatherApiKey = process.env.WEATHERAPI_KEY;
+  if (weatherApiKey) return new CachedWeather(new WeatherApiWeather(weatherApiKey));
+
+  const openMeteo = process.env.WEATHER_SOURCE === "open-meteo";
+  if (openMeteo) return new CachedWeather(new OpenMeteoWeather(process.env.OPEN_METEO_API_KEY));
+
+  return new CachedWeather(new SimulatedWeather());
 }

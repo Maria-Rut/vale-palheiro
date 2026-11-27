@@ -681,14 +681,15 @@ function weatherIcon(code) {
 }
 async function renderWeather() {
   const [wx, acts] = await Promise.all([api.get("/api/weather"), api.get("/api/activities")]);
-  const live = wx.source === "open-meteo";
+  const SOURCE_NAME = { "open-meteo": "Open-Meteo (land + marine)", weatherapi: "WeatherAPI (land) + Open-Meteo (marine)" };
+  const live = wx.source === "open-meteo" || wx.source === "weatherapi";
   const rateLimited = wx.error && /429|request limit/i.test(wx.error);
   const errHtml = !wx.error ? "" : rateLimited
-    ? ` · <span style="color:#9b3b2f">free Open-Meteo daily limit reached — add a free <code>OPEN_METEO_API_KEY</code> to lift it. Showing the last forecast meanwhile.</span>`
+    ? ` · <span style="color:#9b3b2f">free weather daily limit reached — showing the last forecast meanwhile. For a bigger free quota, set a <code>WEATHERAPI_KEY</code>.</span>`
     : ` · <span style="color:#9b3b2f">last refresh failed: ${esc(wx.error)}</span>`;
   $("#wxSource").innerHTML = `<div class="src-banner">${live
-    ? `<b>Live forecast</b> from Open-Meteo (land + marine)`
-    : `<b>Simulated forecast</b> for the demo. Set <code>WEATHER_SOURCE=open-meteo</code> to use the live Open-Meteo forecast and sea state.`}
+    ? `<b>Live forecast</b> from ${SOURCE_NAME[wx.source] || wx.source}`
+    : `<b>Simulated forecast</b> for the demo. Set <code>WEATHERAPI_KEY</code> (free, no card) for the live forecast and sea state.`}
     ${wx.fetchedAt ? ` · updated ${fmt(wx.fetchedAt)}` : ""}${errHtml}</div>`;
   $("#forecast").innerHTML = wx.days.length ? wx.days.map((d) => `
     <div class="wx">
